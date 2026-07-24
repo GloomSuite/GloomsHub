@@ -4,15 +4,15 @@
 > UPDATE it at the end of any session that moves the suite.** Home of record: this repo.
 > Full design in [SUITE-PLAN.md](SUITE-PLAN.md). Shared contracts in [CONTRACTS.md](CONTRACTS.md).
 
-**Last updated:** 2026-07-24 (session that scaffolded GloomsHub).
+**Last updated:** 2026-07-24 (session that built Phase A; QA gate passed by the owner same day).
 
 ## Phase status
 
 | Phase | What | Status |
 |---|---|---|
 | — | Scaffold GloomsHub repo + symlink + docs (home of record) | **DONE (not QA'd — no code yet)** |
-| **A** | Stand up GloomsHub, media-only (registration + resolver + ST→Hub copy-migration + compat shim + asset folders). Touch nothing else. | **NOT STARTED** ← next |
-| **B** | Empty tabbed shell + Media tab. Add `/gloom`. Old windows still work. | not started |
+| **A** | Stand up GloomsHub, media-only (registration + resolver + ST→Hub copy-migration + compat shim + asset folders). Touch nothing else. | **DONE — QA'd by the owner 2026-07-24** (clean BugSack; DrukMedium serves from the Hub; catalog 1 font / 6 textures / 36 graphics, `migratedFromST = true`; Overlays unaffected). Known transition artifact: ST prints "skipped — already registered" lines at login because the Hub (loads first) now wins the LSM names — harmless, ST's own code, gone at Phase F. |
+| **B** | Empty tabbed shell + Media tab. Add `/gloom`. Old windows still work. | **NOT STARTED** ← next |
 | **C** | Migrate Gloom's Bars as the proof (Bars tab, `/gb` reroute, toolkit → LibGloomSkin). | not started |
 | **D** | Migrate Gloom's Auras (Auras tab; flip `CatStoneTweaks` → `GloomsHub:ListMedia`). | not started |
 | **E** | Rename VibeOverlay → Gloom's Overlays; mount Overlays tab; **reskin in one go**. | not started |
@@ -36,9 +36,15 @@
 
 ## What's physically in place right now
 - `~/GloomsHub` git repo, symlinked into AddOns as `GloomsHub` (matches GB/GA convention).
-- `GloomsHub.toc` (scaffold, no Lua files yet), `CLAUDE.md`, `docs/{SUITE-PLAN,SUITE-STATE,CONTRACTS,HANDOFF}.md`.
+- `Core.lua` (namespace, `GloomsHubDB`, ST copy-migration, dormant compat shim, `/gh` probe),
+  `Media.lua` (LSM registration, `ResolveAssetPath`, `ListMedia`, `Media:Add*/Remove*` API),
+  `GloomsHub.toc` (Libs → Core → Media), `CLAUDE.md`, the 4 docs.
+- `Libs/` (gitignored): LibStub, CallbackHandler-1.0, LibSharedMedia-3.0 (from `~/GloomsAuras/Libs/`).
+- `Fonts/` (8 files), `Textures/` (13), `Graphics/` (45) — committed assets copied from StoneTweaks.
+- **Live on the owner's account:** `GloomsHubDB` holds 1 font / 6 textures / 36 graphics,
+  `migratedFromST = true`; the Hub registers the LSM names first (wins over ST); the compat
+  shim is dormant (ST's real resolver still loaded). GB/GA/VibeOverlay/StoneTweaks untouched.
 - GB & GA `CLAUDE.md` carry a "part of the Gloom Suite → GloomsHub" pointer.
-- **No Lua, no assets, no runtime behavior yet.** Installing GloomsHub today does nothing in-game.
 
 ## Open (non-blocking) questions — see SUITE-PLAN §6
 Overlays slash name; shared-footer contents; compat-shim lifetime; final LibGloomSkin public surface; stray `BoordensStreet.otf` fate.

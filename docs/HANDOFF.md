@@ -1,120 +1,112 @@
 # Gloom's Hub — Session Handoff
 
-**Last updated: 2026-07-24.** GloomsHub is SCAFFOLDED (docs only, no code). **Next: build Phase A.**
-This file is a COLD-START briefing — a session that never saw the planning conversation should be
-able to execute Phase A from this file + the three docs it points to, alone.
+**Last updated: 2026-07-24.** Phase A is **DONE and QA'd** — the Hub's media plumbing is live
+in-game. **Next: build Phase B — the empty tabbed shell + the Media tab.** This file is a
+COLD-START briefing — a session that never saw the earlier conversations should be able to
+execute Phase B from this file + the three docs it points to, alone.
 
 ## Orientation (read in this order)
 1. This file.
 2. [SUITE-STATE.md](SUITE-STATE.md) — the phase ledger + all locked decisions. Source of truth
-   for "where are we." **Update it when Phase A completes.**
-3. [SUITE-PLAN.md](SUITE-PLAN.md) — full architecture + all 7 phases + rationale.
-4. [CONTRACTS.md](CONTRACTS.md) — the shared runtime shapes (tokens, tab API, resolver, LibGloomSkin).
+   for "where are we." **Update it when Phase B completes.**
+3. [SUITE-PLAN.md](SUITE-PLAN.md) — full architecture + all 7 phases. For Phase B read
+   §3 (the tabbed shell), §4.1 (the Media tab), §5.B (scope + QA).
+4. [CONTRACTS.md](CONTRACTS.md) — the shared runtime shapes. §2 is the `RegisterTab` API the
+   shell must implement exactly.
 
-## What exists now
-- `~/GloomsHub` git repo (2 commits+), symlinked into `…/Interface/AddOns/GloomsHub`. Remote
-  intended: `github.com/HandofDevastation/GloomsHub` (not pushed yet).
-- `GloomsHub.toc` (scaffold — no Lua files listed), `CLAUDE.md`, `.gitignore`, the 4 docs.
-- GB & GA `CLAUDE.md` carry a "part of the Gloom Suite → GloomsHub" pointer.
-- **No Lua, no `Media/`, no `Libs/`, no runtime behavior.** Installing GloomsHub today does nothing.
+## What exists now (Phase A shipped 2026-07-24)
+- `Core.lua` — `_G.GloomsHub` namespace, `GloomsHubDB` init at `PLAYER_LOGIN`, the one-time
+  ST copy-migration (**already ran on the owner's account** — `migratedFromST = true`, so no
+  migration prints will appear again), the dormant `StoneTweaks_ResolveAssetPath` compat shim,
+  media registration fired at `PLAYER_ENTERING_WORLD`, and a `/gh` QA probe (catalog counts +
+  migration flag).
+- `Media.lua` — LSM registration (fonts → `"font"`, textures → `"statusbar"`, graphics
+  deliberately NOT in LSM), `GloomsHub:ResolveAssetPath(name)`, `GloomsHub:ListMedia(kind)`,
+  and `GloomsHub.Media:AddFont/RemoveFont/AddTexture/RemoveTexture/AddGraphic/RemoveGraphic`
+  with ST's validation kept (`.otf` rejection, `.ttf/.blp/.tga/.png` gates, cross-catalog
+  name-conflict checks).
+- `Libs/` (gitignored, expected): LibStub, CallbackHandler-1.0, LibSharedMedia-3.0 — copied
+  from `~/GloomsAuras/Libs/`.
+- `Fonts/` (8 files), `Textures/` (13), `Graphics/` (45) — committed assets copied verbatim
+  from StoneTweaks. Every file the DB references exists here (verified).
+- **Live DB state:** `GloomsHubDB` = 1 font (DrukMedium) / 6 textures / 36 graphics.
+- **Runtime fact:** the Hub loads before StoneTweaks (alphabetical), so the Hub now WINS the
+  LSM name registrations. ST prints "skipped — already registered" lines at every login —
+  expected, harmless, ST's own untouched code; gone at Phase F. Do NOT "fix" this.
+- GB, GA, VibeOverlay, StoneTweaks: all still untouched, all still working.
 
 ## Locked decisions (do NOT reopen — full list in SUITE-STATE.md)
 Base = GloomsHub (permanent path `Interface\AddOns\GloomsHub\…`). **Hard dependency, no
-fallback.** StoneTweaks retired, its media half absorbed here. VibeOverlay → Gloom's Overlays
-(reskin). Four addons + one base, not a mega-addon. **Gloom's Build Barn is OUT** (cron/WCL
-pipeline). Never use "v1"/"later phase" framing. GUI over slash for user controls.
+fallback.** StoneTweaks retired at Phase F (installed until then — do not remove). VibeOverlay
+→ Gloom's Overlays (reskin, Phase E). Four addons + one base, not a mega-addon. **Gloom's
+Build Barn is OUT** (cron/WCL pipeline). Never use "v1"/"later phase" framing. GUI over slash
+for user controls.
 
 ---
 
-## ▶▶ PHASE A — stand up GloomsHub, MEDIA ONLY. Touch nothing but GloomsHub.
+## ▶▶ PHASE B — empty tabbed shell + Media tab. Still touch NOTHING but GloomsHub.
 
-**Goal:** GloomsHub registers the salvaged fonts/textures into LibSharedMedia and exposes the
-graphic/texture resolver — so when StoneTweaks is eventually deleted (Phase F, much later),
-nothing that depends on it breaks. **GB, GA, VibeOverlay, StoneTweaks are NOT edited in Phase A.**
+**Goal:** `/gloom` opens the one Suite window (product title "Gloom Suite") in the Gloom
+design language, with a working **Media** tab — the reskinned Fonts/Textures/Graphics manager
+reading `GloomsHubDB`. The old windows (`/gb`, `/ga`, `/vibe`, `/st`) are NOT rerouted and
+must keep working exactly as before. **GB, GA, VibeOverlay, StoneTweaks are NOT edited in
+Phase B** (GB is READ for reference only — see below).
 
-### Build these files under `~/GloomsHub/`
-1. **`Libs/`** — copy `LibStub`, `CallbackHandler-1.0`, `LibSharedMedia-3.0` from
-   **`~/GloomsAuras/Libs/`** (present there; GB's Libs are gitignored/absent locally). Add them
-   to the TOC to load FIRST. (`Libs/` is gitignored — that's expected; the packager refetches.)
-2. **`Core.lua`** — namespace `_G.GloomsHub`, `GloomsHubDB` saved-var init, and the migration
-   (below). Register events; do the media registration at `PLAYER_ENTERING_WORLD` (that's when
-   ST does it — LSM is fully up by then).
-3. **`Media.lua`** — the salvaged registration + resolver + public API (below).
-4. **TOC** — list `Libs/*` then `Core.lua`, `Media.lua`. Add `## SavedVariables: GloomsHubDB`
-   (already in the scaffold TOC).
+### Build these under `~/GloomsHub/`
+1. **`Shell.lua`** — the tabbed window, implementing CONTRACTS §2 exactly:
+   `GloomsHub:RegisterTab{id,title,order,icon,build,refresh}`, `GloomsHub:Open(id)`,
+   `GloomsHub:FocusTab(id)`. `build(container)` runs ONCE, lazily, on first show — never at
+   login. Frame `GloomsSuiteWindow` on UIParent, registered into `UISpecialFrames` (Escape
+   closes). Tab strip of flat buttons — purple `#936bff` unselected / orange active (family
+   convention). Reserved tab ids: `auras`, `bars`, `overlays`, `media`.
+2. **The Media tab** (in `Media.lua` or a separate file listed after `Shell.lua`) — register
+   id `"media"`, order 90. Functional reference: `StoneTweaks_UI.lua`'s Fonts/Textures/
+   Graphics sub-pages (list rows, add/remove, preview swatches) — read it, port the behavior,
+   but build the UI in the Gloom language (SUITE-PLAN §4.1 recommends the `makeSection`
+   accordion pattern). All mutations go through the existing `GloomsHub.Media` API.
+3. **`/gloom`** — opens the window on the last-used tab (persist in `GloomsHubDB`). Toggle
+   semantics per SUITE-PLAN §3.3: slash while open on that tab closes; on a different tab,
+   switches. (`/gh` probe can stay as-is.)
+4. **TOC** — add the new file(s) after `Media.lua` (or per §2.2's Core → Skin → Shell → Media
+   order if a `Skin.lua` is introduced — see next point).
 
-### Salvage — port these VERBATIM from `…/AddOns/StoneTweaks/StoneTweaks.lua`
-Exact source verified 2026-07-24:
-- `GetLSM()` (ST lines ~53-63): `pcall(LibStub, "LibSharedMedia-3.0")`.
-- `RegisterFont(entry)` → `lsm:Register("font", entry.name, FONT_PATH..entry.file)`.
-- `RegisterTexture(entry)` → `lsm:Register("statusbar", entry.name, TEXTURE_PATH..entry.file)`.
-- `RegisterAll()` (fired at `PLAYER_ENTERING_WORLD`) — loops `db.fonts`/`db.textures`, registers each.
-- `StoneTweaks_ResolveAssetPath(name)` (ST lines 142-155) — searches `textures` then `graphics`,
-  returns `TEXTURE_PATH..file` or `GRAPHIC_PATH..file`, else nil.
-- **Public API** (rename under the Hub, keep validation incl. `.otf` rejection +
-  `.ttf/.blp/.tga/.png` gates): `AddFont/RemoveFont/AddTexture/RemoveTexture/AddGraphic/RemoveGraphic`.
+### Design-token sourcing (decide at build time; recommendation below)
+The shell + Media tab need `COLOR`/`FONT` tokens and a few widgets BEFORE Phase C extracts
+the full `LibGloomSkin` from GB. The authoritative literals live in `~/GloomsBars/Core.lua`
+(`GB.COLOR`/`GB.FONT` — byte-identical to GA's) and the window chrome pattern (warm orange
+bottom-glow gradient) in GB `Config.lua` ~3264-3270. **Recommended:** lift the token literals
+into `GloomsHub.COLOR/.FONT` now and record them in CONTRACTS §1 (its placeholder expects
+this), plus hand-build only the few widgets the shell/Media tab need; Phase C still does the
+full toolkit extraction. GB is read-only reference in Phase B — no edits there.
 
-**Path constants change to the Hub's own folder:**
-```
-FONT_PATH    = "Interface\\AddOns\\GloomsHub\\Fonts\\"
-TEXTURE_PATH = "Interface\\AddOns\\GloomsHub\\Textures\\"
-GRAPHIC_PATH = "Interface\\AddOns\\GloomsHub\\Graphics\\"
-```
-Expose as `GloomsHub:ResolveAssetPath(name)`, `GloomsHub:ListMedia(kind)` (returns
-`{ {name=, tex=path}, … }` — GA will use this later), `GloomsHub.Media:AddFont(…)` etc. See CONTRACTS §3.
-**Do NOT port** any ElvUI code, the `[st:style:*]` tag engine, frame textures/backdrops, or glow
-suppression — none of it comes across.
+### Loose ends carried from Phase A (minor, resolvable in Phase B)
+- The TOC's `## IconTexture` points at `Media\ui\minimap.png`, which doesn't exist — the
+  addon-list icon is silently absent. Add the asset (GA has `Media\minimap.png` as a pattern)
+  or drop/adjust the line.
+- `Fonts/BoordensStreet.otf` still carried (harmless dead file — open Q in SUITE-PLAN §6).
 
-### Copy the asset folders into `~/GloomsHub/`
-From `…/AddOns/StoneTweaks/`: `Fonts/` (8 files), `Textures/` (13), `Graphics/` (45). These are
-bundled addon assets — commit them (they are NOT in `Libs/`, so not gitignored).
-- **Stray file:** `Fonts/BoordensStreet.otf` — WoW can't load `.otf` and `AddFont` rejects it.
-  Harmless to carry; optional to drop. (Minor — see SUITE-PLAN §6.)
+### ★ QA GATE for Phase B (the owner runs; ONE step at a time; verify before claiming)
+New files → **FULL CLIENT RESTART** (not `/reload`).
+1. Restart WoW. No BugSack errors from GloomsHub on login. (ST's "skipped" chat lines still
+   appear — expected, not a failure.)
+2. `/gloom` opens a Gloom-styled window; Escape closes it; `/gloom` again toggles.
+3. The Media tab lists the catalog: 1 font / 6 textures / 36 graphics, with previews.
+4. Add a test font via the tab (validation: an `.otf` name is rejected with the explanatory
+   message), then remove it. `/gh` counts return to 1/6/36.
+5. Old windows unaffected: `/gb`, `/ga`, `/vibe`, `/st` all open their own windows as before;
+   overlays still render.
 
-### The migration (one-time, NON-DESTRUCTIVE) — the "don't lose DrukMedium" requirement
-In `Core.lua` at `PLAYER_LOGIN`: if `GloomsHubDB.fonts` is empty AND `_G.StoneTweaksDB` exists,
-**COPY** (deepcopy, never move) `StoneTweaksDB.fonts/.textures/.graphics` into `GloomsHubDB`,
-then set `GloomsHubDB.migratedFromST = true` (runs once). COPY so ST's SV is untouched and
-rollback = just re-enable ST.
-- Copy **verbatim** — do not "clean" entries. The live DB contains a leftover `test-remove`
-  graphic and entries like `whitesquare`/`simplering`; carry them all.
-- ⚠ **Every `{name,file}` the DB references must have its file present in the copied folder**, or
-  the resolver returns a live-but-dead path. During QA, spot-check that DB-referenced files
-  (e.g. `DrukMedium.ttf`, `whitesquare.png`, `simplering.png`) actually exist in
-  `GloomsHub/Fonts|Textures|Graphics`. If a referenced file is missing from ST's folders too,
-  that's a pre-existing ST gap, not a migration bug — note it, don't invent the file.
-
-### The compat shim (so VibeOverlay keeps resolving graphics)
-In `Core.lua`, AFTER the Hub's resolver exists, define the global **only if** ST's real one
-isn't already loaded:
-```lua
-if not _G.StoneTweaks_ResolveAssetPath then
-  _G.StoneTweaks_ResolveAssetPath = function(n) return GloomsHub:ResolveAssetPath(n) end
-end
-```
-During Phase A, ST is still installed → its real function wins → the shim is dormant. That's
-fine; the shim matters later (Phase F) when ST is gone. VibeOverlay (`VibeOverlay.lua:155`) is
-NOT edited in Phase A.
-
-### ★ QA GATE for Phase A (the owner runs; ONE step at a time; verify before claiming)
-Because new files/assets were added, this needs a **FULL CLIENT RESTART**, not `/reload`.
-1. Restart WoW. No BugSack errors from GloomsHub on login.
-2. GloomsHub registered the fonts into LSM — confirm via an LSM-aware picker (e.g. GA's or GB's
-   font picker still lists "DrukMedium" — now it can come from EITHER ST or the Hub; both
-   register it, which is fine).
-3. `/dump GloomsHubDB.fonts` (or a small `/gh` probe if one is added) shows DrukMedium et al.
-   copied in, and `GloomsHubDB.migratedFromST == true`.
-4. **VibeOverlays still render their graphics** (they still resolve through ST's real function —
-   nothing should have changed for them). Nothing removed, game fully working.
-
-**If it passes:** update [SUITE-STATE.md](SUITE-STATE.md) Phase A → done, and this handoff → "Next: Phase B."
+**If it passes:** update [SUITE-STATE.md](SUITE-STATE.md) Phase B → done, and rewrite this
+handoff as the Phase C cold-start briefing (GB is the make-or-break container-mount proof —
+see SUITE-PLAN §5.C).
 
 ---
 
 ## Reminders
-- The owner QA's ONE copy-paste step at a time; verify before claiming; **ask for BugSack text first** on any error.
+- The owner QA's ONE copy-paste step at a time; verify before claiming; **ask for BugSack text
+  first** on any error.
 - New files/assets → FULL CLIENT RESTART (not /reload).
-- StoneTweaks stays installed until Phase F (it's the migration source; delete it LAST).
-- The `~/GloomsAuras/Libs/` folder is the source for LibStub/CallbackHandler/LibSharedMedia-3.0.
+- StoneTweaks stays installed until Phase F (migration already ran, but ST is still the live
+  resolver for VibeOverlay; delete it LAST).
 - Update [SUITE-STATE.md](SUITE-STATE.md) at the end of ANY session that moves the suite.
 - Cross-repo edits are fine (all under `~/`), but the Hub is the home of record — keep facts here.

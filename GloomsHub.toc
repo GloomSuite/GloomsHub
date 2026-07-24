@@ -7,7 +7,15 @@
 ## IconTexture: Interface\AddOns\GloomsHub\Media\ui\minimap.png
 ## X-Website: https://github.com/HandofDevastation/GloomsHub
 
-# NOTHING BUILT YET — this manifest is scaffolding. Files are added per the
-# phased plan in docs/SUITE-PLAN.md. Load order (planned):
-#   Libs (LibStub, CallbackHandler, LibSharedMedia-3.0, LibGloomSkin-1.0),
-#   then Core.lua, Skin.lua, Shell.lua, Media.lua.
+# Embedded libraries — load FIRST. LibSharedMedia is where the Hub registers
+# the suite's custom fonts/textures; needs LibStub + CallbackHandler first.
+# Local copies for dev (gitignored); the packager refetches at release time.
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\LibSharedMedia-3.0\LibSharedMedia-3.0.lua
+
+# Load order: Core (namespace + DB + ST migration + events) → Media (LSM
+# registration, resolver, catalog API). Skin.lua / Shell.lua arrive with the
+# tabbed shell per docs/SUITE-PLAN.md.
+Core.lua
+Media.lua
