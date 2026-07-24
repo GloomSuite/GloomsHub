@@ -1,0 +1,13 @@
+## Interface: 120007
+## Title: Gloom's Hub
+## Notes: Shared base for the Gloom addon suite — the tabbed Suite window, the shared design toolkit, and custom font/graphic media registration. Gloom's Auras, Bars, and Overlays plug tabs into it.
+## Author: Gloom
+## Version: @project-version@
+## SavedVariables: GloomsHubDB
+## IconTexture: Interface\AddOns\GloomsHub\Media\ui\minimap.png
+## X-Website: https://github.com/HandofDevastation/GloomsHub
+
+# NOTHING BUILT YET — this manifest is scaffolding. Files are added per the
+# phased plan in docs/SUITE-PLAN.md. Load order (planned):
+#   Libs (LibStub, CallbackHandler, LibSharedMedia-3.0, LibGloomSkin-1.0),
+#   then Core.lua, Skin.lua, Shell.lua, Media.lua.
