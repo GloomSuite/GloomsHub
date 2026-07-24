@@ -20,6 +20,13 @@
   into the Gloom design language in one go** when it is mounted (no interim native-looking
   state). The `Vibe`/`VibeOverlay` name is not preserved anywhere user-visible.
 - **StoneCast** — already deleted by the owner. Ignore.
+- **HARD dependency on GloomsHub — no standalone fallback.** Each tool deletes its own window;
+  its config renders only inside the Hub's shell. A tool installed WITHOUT the Hub has nowhere
+  to render its config — this fails loudly via `## Dependencies: GloomsHub` (WoWup + the addon
+  list flag it), not silently. Chosen over a graceful own-window fallback specifically to keep
+  ONE window / ONE toolkit and avoid a second UI path that could drift. Distribution is limited
+  to friends/guild, so the "installed one tool alone" case is a known, acceptable edge. This
+  supersedes §2.4's "recommended" hedging — the hard-dependency model IS the decision.
 - **The family after this work:** `GloomsHub` (base) + `Gloom's Auras`, `Gloom's Bars`,
   `Gloom's Overlays` as tabbed tools, with the **Media** tab living in the Hub.
 - **Gloom's Build Barn is OUT of the suite (the owner, 2026-07-24).** It's a data-fed pipeline — a

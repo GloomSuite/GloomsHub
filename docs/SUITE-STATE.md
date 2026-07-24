@@ -24,6 +24,14 @@
 - StoneTweaks fully retired; media half absorbed into the Hub as the **Media tab**. No standalone media addon.
 - VibeOverlay → **Gloom's Overlays**, reskinned in one go. `Vibe` name dropped.
 - Four separate addons + one shared base (NOT a mega-addon). Hub ships as its own release; GB/GA/Overlays hard-depend on it.
+- **HARD dependency on GloomsHub — NO standalone fallback (the owner, 2026-07-24).** Each tool
+  deletes its own window; its config renders ONLY inside the Hub's tabbed shell. Installing a
+  tool WITHOUT the Hub = its config has nowhere to render. This is the safer choice for keeping
+  the experience identical everywhere (one window, one toolkit, zero drift). `## Dependencies:
+  GloomsHub` makes WoWup + the in-game addon list flag the missing dep LOUDLY. Chosen over a
+  graceful-fallback (own-window-if-no-Hub) precisely to avoid two window paths that could drift.
+  Distribution is limited (friends/guild), so "someone installs one tool alone" is a known,
+  acceptable, loudly-failing edge — not a silent break.
 - **Gloom's Build Barn is OUT of the suite** (data-fed cron pipeline, not a tab tool). Do not fold it in.
 
 ## What's physically in place right now
