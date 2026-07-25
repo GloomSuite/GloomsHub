@@ -49,9 +49,15 @@ Everything below is polish. ✅ items are done and kept for the record.
 6. **Before sharing widely:** the public repo PAGES expose `CLAUDE.md` + `docs/` to anyone with the
    link. Excluded from the packaged zips and identity-clean, so not a privacy defect — just working
    notes being visible. The owner's call, flagged 2026-07-25.
-7. **Unverified:** do NEW TEXTURE files need a client restart the way new FONTS do? Fonts are
-   confirmed (see HANDOFF 2026-07-25d); textures are assumed `/reload`-able and untested. The Media
-   tab's Textures note currently claims `/reload` is enough — prove or correct it.
+7. ~~**Unverified:** do TEXTURE files need a client restart the way new FONTS do?~~ — **ANSWERED
+   2026-07-25, in the owner's client: `/reload` IS ENOUGH. The Media tab's Textures note is
+   CORRECT — leave it.** Evidence: he re-exported `GloomsAuras/Media/hidden.png` +
+   `unhidden.png` from purple to white **over the existing files**, and after a bare `/reload`
+   the new art rendered and tinted correctly. That is the *harder* case than a brand-new file —
+   the client already had those textures loaded, and it still picked up the replacements — so
+   textures are genuinely unlike FONTS, which WoW loads at launch and `/reload` will not
+   re-read (HANDOFF 2026-07-25d). Strictly, "a NEW texture file, never previously loaded" is
+   still untested, but a cache-busting replacement working makes it a safe assumption.
 
 **✅ Done 2026-07-25 (kept for the record)**
 - ~~Phase G QA — WoWup install + update cycle~~ — **DONE**, the plan is complete.
