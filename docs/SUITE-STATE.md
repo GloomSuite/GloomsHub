@@ -4,7 +4,11 @@
 > UPDATE it at the end of any session that moves the suite.** Home of record: this repo.
 > Full design in [SUITE-PLAN.md](SUITE-PLAN.md). Shared contracts in [CONTRACTS.md](CONTRACTS.md).
 
-**Last updated:** 2026-07-25 (**Phase G BUILT — all four addons now publish `v1.0.0` on GitHub
+**Last updated:** 2026-07-25b — **★ THE FOUR SUITE REPOS MOVED TO A NEW GITHUB ORG, `GloomSuite`.**
+`GloomsBuildBarn` + the guild website stayed with `HandofDevastation`. Install URLs are now
+`https://github.com/GloomSuite/<Repo>`; old URLs 301-redirect but should not be quoted anywhere.
+Membership is PRIVATE on both orgs (verified unauthenticated). Full record + the "second org, never
+a rename" reasoning in HANDOFF's session record. (**Phase G BUILT — all four addons now publish `v1.0.0` on GitHub
 Releases and the packages are verified. The 7-phase plan is code-complete; only the owner's
 fresh-WoWup-install QA remains.** Phases A–F were built + QA'd on 2026-07-24 —
 StoneTweaks is RETIRED and the identity scrub, TASK 0, is DONE with all five repos PUBLIC.
@@ -28,11 +32,36 @@ the **route-the-request rule** to all four `CLAUDE.md` files — see HANDOFF's s
 4. **Modifier symbols (⌘⇧⌃⌥) take no outline/shadow** — deferred, but the owner wants it; the approved
    path is in GB's handoff item (d). **No open GB bugs.**
 
+**★ LOGO / MARK REWORK (the owner, 2026-07-25) — new**
+5. **Redo all four logos to drop the baked-in name text.** Today each `logo.png` is the big stylized
+   two letters with the addon name in a small font underneath — which is why the files are portrait
+   (`GloomsHub` 197×295, `GloomsOverlays` 179×247, `GloomsBars` 115×128) rather than square. At the
+   size a tab-header mark is drawn, that text is a few pixels tall and **reads as an artifact, not
+   as type**. Settle on the **two-letter monogram convention** everywhere; the art then becomes
+   square, which is also the right shape for the in-tab mark. **Each tool's logo lives in ITS repo —
+   route accordingly.** Hub's is here.
+6. **Apply "small mark beside the tab name" to ALL tabs** — the owner saw it on one addon page, likes
+   it, and wants it as the suite pattern. Shared-toolkit change here + one call site per tool; a good
+   single cross-cutting pass **once the new art exists**. Don't start before item 5.
+7. **`GloomsOverlays` has NO `## IconTexture`** in its TOC, so it shows a generic default in the
+   in-game addon list while its three siblings show their marks. It already has `Media/ui/logo.png`.
+   **GO's repo — route it there.**
+8. **The Hub's `Media/ui/minimap.png` is only 64×64** where GB's and GA's are 256×256. It doubles as
+   the TOC `IconTexture`; regenerate at 256 while the art is being redone.
+9. **Org avatar for `GloomSuite`** — the ONLY way to change what WoWup shows at install (its GitHub
+   provider hardcodes `owner.avatar_url`; it never reads the addon TOC or zip). 1000×1000 PNG,
+   **solid background — NOT transparent** (GitHub renders avatars on white in light theme, so a
+   transparent near-black mark disappears), a little padding for the rounded corners, must read at
+   48px. Suite colors: background **`#060714`**, bottom glow **`#ff7729` @ 11% alpha** fading out by
+   ~55% height (≈ `#211316` at the very bottom edge).
+   ⚠ **`COLOR.dark` in Skin.lua is `#12131F`, NOT the on-screen color** — it is pre-compensated
+   because WoW darkens it. Artwork must use **`#060714`**, what actually lands on screen.
+
 **Small / housekeeping**
-5. Remove the leftover **`test-remove`** graphic from the Media catalog (inherited from StoneTweaks;
+10. Remove the leftover **`test-remove`** graphic from the Media catalog (inherited from StoneTweaks;
    removable in the Media tab).
-6. Open questions below: **shared-footer contents**; the stray **`BoordensStreet.otf`**.
-7. **Before sharing widely:** the public repo PAGES expose `CLAUDE.md` + `docs/` to anyone with the
+11. Open questions below: **shared-footer contents**; the stray **`BoordensStreet.otf`**.
+12. **Before sharing widely:** the public repo PAGES expose `CLAUDE.md` + `docs/` to anyone with the
    link. Excluded from the packaged zips and identity-clean, so not a privacy defect — just working
    notes being visible. The owner's call, flagged 2026-07-25.
 

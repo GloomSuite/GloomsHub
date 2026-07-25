@@ -101,13 +101,26 @@ shared toolkit), say so and give a recommendation — don't guess silently and d
 Symlinked into the client at `…/Interface/AddOns/GloomsHub`. QA by the owner (non-dev): ONE
 copy-paste step at a time, verify before claiming, BugSack error text first. New files/assets
 need a full client RESTART (not /reload). Ships via BigWigs packager → GitHub Releases (repo
-`HandofDevastation/GloomsHub`), WoWup installs/updates. GB/GA/Overlays all hard-depend on it
+`GloomSuite/GloomsHub`), WoWup installs/updates. GB/GA/Overlays all hard-depend on it
 (`## Dependencies: GloomsHub`) as of Phase E.
 
 ## ⚠ PRIVACY — no real-world identity in any repo (2026-07-24)
-The owner ships under the `HandofDevastation` org only. Neither his real name nor his personal
-GitHub account handle may appear anywhere: not in file content, not in commit messages, not in
-commit metadata.
+The owner ships under GitHub **orgs only, never a personal account**. Neither his real name nor his
+personal GitHub account handle may appear anywhere: not in file content, not in commit messages, not
+in commit metadata.
+
+**★ TWO orgs as of 2026-07-25 — know which is which:**
+- **`GloomSuite`** owns the four suite repos (`GloomsHub`, `GloomsBars`, `GloomsAuras`,
+  `GloomsOverlays`). Created 2026-07-25; the repos were transferred into it. **This is the suite's
+  home and the org whose URLs friends install from.**
+- **`HandofDevastation`** is the GUILD's org and keeps the guild website + `GloomsBuildBarn`.
+  It no longer owns any suite repo.
+
+**Why the split (the owner, 2026-07-25):** the guild is a guild; "Gloom" is his own identity and the
+prefix of all his characters. The suite is his work, not the guild's, and guild membership may not be
+permanent — so publishing the suite under the guild's name was factually wrong and would age badly.
+Build Barn genuinely IS a guild project, so it stayed. **Both orgs have PRIVATE membership** — that
+is what keeps the personal account from being linked, and it must stay that way on both.
 
 - **Never write the owner's first/last name in docs, comments or commit messages.** Say "the
   owner", "the author", or just state the decision. The old convention of attributing decisions

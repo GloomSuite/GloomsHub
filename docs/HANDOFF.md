@@ -67,6 +67,55 @@ addons publish **`v1.0.0`** and every package is verified. **The 7-phase plan is
 
 ---
 
+# SESSION RECORD — 2026-07-25b (the org move: HandofDevastation → GloomSuite)
+
+**The four suite repos now live under a new GitHub org, `GloomSuite`.** `GloomsBuildBarn` and the
+guild website stayed with `HandofDevastation`. Done mid-session, before the Phase G WoWup QA — on
+purpose, so the QA tests the URLs friends will actually use rather than ones about to change.
+
+**Why (the owner):** the guild is a guild; **"Gloom" is his own identity** — the prefix of all his
+characters, and what people call him. The suite is his work, not the guild's, and **guild membership
+may not be permanent**, so `HandofDevastation/GloomsHub` asserted something both wrong and fragile.
+Build Barn genuinely IS a guild project (it's fed by the guild website's cron), so it stayed put.
+
+**★ A second org, NOT a rename.** A rename would have dragged the guild site + Build Barn along and,
+worse, **vacated the name `HandofDevastation` for anyone to claim** — GitHub does not reserve a
+released org name, and a squatter would inherit every redirect *and* the URLs already in people's
+WoWup installs. Creating a second org leaves the old one alive, so its redirects live forever.
+
+### What was done, and what was verified
+- Org `GloomSuite` created; **membership PRIVATE** — verified unauthenticated
+  (`/orgs/GloomSuite/public_members` → `[]`, matching `HandofDevastation`).
+- All four repos transferred via `gh api -X POST repos/<old>/<repo>/transfer -f new_owner=GloomSuite`.
+  ⚠ **The transfer API is ASYNC and its response echoes the OLD `full_name`** — that is not a
+  failure. Verify by fetching the new path.
+- Verified after: new paths **200**; old paths **301** (redirects intact); `GloomsBuildBarn` still
+  200 under the guild org; **`/releases/latest` → `v1.0.0` on all four, ANONYMOUS** (the TASK 0
+  latest-pointer trap did not recur); all four `release.yml` workflows **`active`** on the new org;
+  the Hub's release zip downloads with **zero credentials** (200, 4.3 MB, 109 files).
+- Four git remotes re-pointed; every `HandofDevastation/Glooms{Hub,Bars,Auras,Overlays}` URL
+  rewritten across TOCs (`## X-Website`), READMEs and docs; the three `release.yml` permission
+  comments now name `GloomSuite`. **GA's README link to Build Barn deliberately still points at
+  `HandofDevastation` — that one is correct.**
+- The privacy block in [../CLAUDE.md](../CLAUDE.md) now documents BOTH orgs and which owns what.
+
+### Traps hit / worth keeping
+- ★ **zsh does NOT word-split unquoted variables.** `for f in $files` passed the entire newline-
+  separated list to `sed` as ONE filename; it printed "updated …" for every file while changing
+  **nothing**. Only the follow-up grep caught it. **Pipe into `while IFS= read -r f` instead** — and
+  never trust a loop's own success echo, verify the content.
+- The repo-transfer call is blocked by Claude Code's permission classifier in auto mode. The owner
+  switched to manual mode to approve it; the alternative is the GitHub UI
+  (repo → Settings → Danger Zone → Transfer ownership).
+- **Renaming an org is the trap to avoid** — see above. If a suite repo ever needs to move again,
+  transfer it; do not rename an org that has published releases.
+
+### Still to do from this move
+- **Org avatar:** the WoWup install dialog shows the **org's avatar** — WoWup's GitHub provider
+  hardcodes `thumbnailUrl = repository.owner.avatar_url` and never reads the addon's TOC or zip.
+  So per-addon art there is impossible; the org avatar is the only lever. The owner is making a GS
+  mark for it. Background `#060714`, bottom glow `#ff7729` @ 11% (see below).
+
 # SESSION RECORD — 2026-07-25 (Phase G build + a doc-truth sweep)
 
 **Nothing is in flight. All four repos are clean, pushed, and in sync.** This session shipped Phase G
@@ -227,7 +276,10 @@ org membership still private.
   identity".
 
 ### Known-good facts (verified 2026-07-24 — don't re-litigate)
-- Org membership IS private (`/orgs/HandofDevastation/public_members/<handle>` → 404).
+- Org membership IS private (`/orgs/<org>/public_members` → empty). Verified on
+  `HandofDevastation` 2026-07-24 and on the new `GloomSuite` org 2026-07-25. **Re-check this on ANY
+  org that ever holds a suite repo** — a one-member org with public membership points straight back
+  at the personal account.
 - Releases are authored by `github-actions[bot]`, not the owner's account.
 - The leak path was git config → GitHub auto-linking commits by registered email. The org setup
   itself was fine; it simply never covered local commit metadata.
@@ -362,8 +414,8 @@ verified. What remains is the owner's install check, below.
 Run this, then mark Phase G **DONE** in SUITE-STATE. One step at a time; BugSack text first.
 
 1. In **WoWup → Get Addons → Install from URL**, install
-   `https://github.com/HandofDevastation/GloomsHub`.
-2. Install one tool the same way, e.g. `https://github.com/HandofDevastation/GloomsBars`.
+   `https://github.com/GloomSuite/GloomsHub`.
+2. Install one tool the same way, e.g. `https://github.com/GloomSuite/GloomsBars`.
 3. **Full client restart** (new addon files — not a `/reload`).
 4. Check: BugSack clean · the addon list shows both, with **no missing-dependency flag** ·
    `/gloom` opens the Suite window · the Media tab shows **1 font / 6 textures / 36 graphics** ·

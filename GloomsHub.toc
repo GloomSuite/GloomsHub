@@ -5,7 +5,7 @@
 ## Version: @project-version@
 ## SavedVariables: GloomsHubDB
 ## IconTexture: Interface\AddOns\GloomsHub\Media\ui\minimap.png
-## X-Website: https://github.com/HandofDevastation/GloomsHub
+## X-Website: https://github.com/GloomSuite/GloomsHub
 
 # Embedded libraries — load FIRST. LibSharedMedia is where the Hub registers
 # the suite's custom fonts/textures; needs LibStub + CallbackHandler first.

@@ -27,10 +27,10 @@ This is a one-time setup per addon. WoWup handles updates automatically afterwar
 
    | Addon | Address to paste |
    |---|---|
-   | Gloom's Hub **(install this first)** | `https://github.com/HandofDevastation/GloomsHub` |
-   | Gloom's Bars | `https://github.com/HandofDevastation/GloomsBars` |
-   | Gloom's Auras | `https://github.com/HandofDevastation/GloomsAuras` |
-   | Gloom's Overlays | `https://github.com/HandofDevastation/GloomsOverlays` |
+   | Gloom's Hub **(install this first)** | `https://github.com/GloomSuite/GloomsHub` |
+   | Gloom's Bars | `https://github.com/GloomSuite/GloomsBars` |
+   | Gloom's Auras | `https://github.com/GloomSuite/GloomsAuras` |
+   | Gloom's Overlays | `https://github.com/GloomSuite/GloomsOverlays` |
 
 5. Repeat step 3–4 for each addon you want.
 6. **Fully quit and restart WoW** if it was running. New addons need a full restart,
