@@ -20,8 +20,8 @@ is the sole source of truth for what's built and QA'd; do not trust any other fi
 about phase status (including this one).
 
 ## GloomsHub is the HOME OF RECORD for the whole suite ★ (anti-drift)
-The suite spans separate repos (`~/GloomsAuras`, `~/GloomsBars`, and — later — `~/GloomsOverlays`),
-each symlinked into `…/Interface/AddOns/`. Disparate repos drift. The rule that prevents it:
+The suite spans separate repos (`~/GloomsAuras`, `~/GloomsBars`, `~/GloomsOverlays`), each
+symlinked into `…/Interface/AddOns/`. Disparate repos drift. The rule that prevents it:
 
 > **Every cross-cutting fact has exactly ONE home, here in `GloomsHub/docs/`. Other repos
 > POINT at it; they never keep their own copy.**
@@ -33,11 +33,12 @@ each symlinked into `…/Interface/AddOns/`. Disparate repos drift. The rule tha
 - **[docs/CONTRACTS.md](docs/CONTRACTS.md)** — the shared runtime contracts (design tokens,
   the `RegisterTab` API, `ResolveAssetPath`, `LibGloomSkin` surface). If you change a shared
   contract, change it HERE and update every consumer in the same session.
-- GB's and GA's `CLAUDE.md` carry a one-line "part of the Gloom Suite" pointer back here.
+- GB's, GA's and Overlays' `CLAUDE.md` carry a "part of the Gloom Suite" pointer back here.
 
 ## The family (and what's IN vs OUT of the suite)
 - **IN:** Gloom's Auras (`~/GloomsAuras`), Gloom's Bars (`~/GloomsBars`), Gloom's Overlays
-  (the renamed/reskinned VibeOverlay — `~/GloomsOverlays`, not yet moved). Each mounts a tab.
+  (`~/GloomsOverlays` — the renamed VibeOverlay; repo created + symlinked in Phase E gate A,
+  2026-07-24, reskin still owed). Each mounts a tab.
 - **RETIRED:** StoneTweaks (its useful half — media registration — is absorbed here). StoneCast
   (already deleted).
 - **OUT — do NOT fold in:** **Gloom's Build Barn.** It's a data-fed pipeline (a weekly cron on
