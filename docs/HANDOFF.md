@@ -1,6 +1,6 @@
 # Gloom's Hub — Session Handoff
 
-**Last updated: 2026-07-24.** Phases **A–F are DONE and QA'd**, and **Phase G is BUILT** — all four
+**Last updated: 2026-07-25.** Phases **A–F are DONE and QA'd**, and **Phase G is BUILT** — all four
 addons publish **`v1.0.0`** and every package is verified. **The 7-phase plan is code-complete.**
 
 > ## ▶ NEXT SESSION = ONE QA TASK, then the polish backlog.
@@ -8,9 +8,19 @@ addons publish **`v1.0.0`** and every package is verified. **The 7-phase plan is
 > be verified without the client already has been (see the Phase G record at the bottom). The QA
 > script is there; run it, then mark the phase DONE in SUITE-STATE.
 >
+> ⚠ **That QA is BLOCKED on a hazard, not on effort:** all four AddOns entries are **symlinks into
+> the dev repos** (`AddOns/GloomsHub → ~/GloomsHub`, etc. — confirmed 2026-07-25). A WoWup install on
+> this machine writes over live source. Move the symlinks aside first (and restore after), or use a
+> second machine. **Do not hand the owner an install instruction without saying this.**
+>
 > **After that, Phase G closes and the plan is finished.** Remaining work is the polish backlog in
 > SUITE-STATE: the **Auras tab layout rework** (its own session, by the owner's call) and
 > **Overlays' Width/Height/X/Y → sliders**.
+>
+> **★★ NEW RULE — ROUTE THE REQUEST BEFORE YOU DO THE WORK (the owner, 2026-07-25).** Full text +
+> ownership table in [../CLAUDE.md](../CLAUDE.md); a compact copy is in each tool's `CLAUDE.md`.
+> Short form: decide which repo OWNS a change before starting; if it isn't the session's repo,
+> **stop and say so before editing anything**, name the right repo, let the owner switch.
 >
 > **Phase F is ✅ DONE — 2026-07-24, all 6 steps QA'd by the owner.** StoneTweaks is disabled AND its
 > folder is out of AddOns (moved, not deleted, to `~/Desktop/StoneTweaks-retired-2026-07-24`); the Hub
@@ -44,6 +54,78 @@ addons publish **`v1.0.0`** and every package is verified. **The 7-phase plan is
 5. **US spelling** in user-visible text ("Favorites", "color").
 6. QA is ONE copy-paste step at a time; verify before claiming; **BugSack text first**. New
    files/assets → FULL CLIENT RESTART. Lua-only edits → `/reload`.
+7. **★ Route the request before doing the work (the owner, 2026-07-25).** Decide which repo owns a
+   change BEFORE starting; if it isn't this session's repo, stop and say so. Full rule + ownership
+   table in [../CLAUDE.md](../CLAUDE.md). The reason is context, not file access: a tool's
+   `CLAUDE.md`/handoff/settled-decisions load only in ITS session, so working on it from elsewhere
+   means working blind to its walls.
+8. **★ Check what a tag POINTS AT, not just that it exists.** GB's published `v0.2.0` looked like a
+   current release and was three phases stale (Phase G, below).
+9. **★ A cross-cutting fact restated in a second repo WILL go stale.** Release state was restated in
+   GB's CLAUDE.md + handoff and GA's handoff; all three were wrong within a day of the release.
+   Point at the Hub's SUITE-STATE instead of copying the fact.
+
+---
+
+# SESSION RECORD — 2026-07-25 (Phase G build + a doc-truth sweep)
+
+**Nothing is in flight. All four repos are clean, pushed, and in sync.** This session shipped Phase G
+(its own record is at the bottom of this file) and then fixed the fallout it exposed.
+
+### What happened, in order
+1. **Built and shipped Phase G** — packaging for all four repos, `v1.0.0` released everywhere,
+   every package downloaded and verified. Full detail in the Phase G section below.
+2. **Swept the sibling repos for release facts the release had just falsified.** GB's `CLAUDE.md`
+   still said "last shipped v0.2.0, a lot of unshipped work behind it"; its handoff carried the
+   release tag as an *open owner decision* in two places, listed the shipped tags, and still said
+   "next suite step is Phase A". GA's handoff described the LibCustomGlow URL as "flagged to confirm
+   before first release" (it was dead) and listed libs dropped back in Phase D. **All corrected, and
+   the spots now POINT at SUITE-STATE rather than restating.** Overlays was clean — its CLAUDE.md
+   describes the release *mechanism* and never names a version, which is exactly the right pattern.
+3. **Resolved two GB backlog items rather than carrying them:** embedding LibSharedMedia via
+   `.pkgmeta` is settled **not-to-do** (the Hub embeds it, GB hard-depends on the Hub — a second copy
+   is the drift the suite exists to prevent, same logic that dropped the LibGloomSkin embed); and the
+   WoWup install test is now flagged as the suite's one open QA item with the symlink hazard.
+4. **Added the routing rule** (working agreement 7) to all four `CLAUDE.md` files.
+5. **Answered the distribution question and wrote it into [../README.md](../README.md)** — see below.
+
+### ★ The owner's questions this session, and the answers (all recurring — reuse them)
+- **"How do I update, say, GB's shape catalog? It feels like ONE addon."** Both models are right:
+  **one product at runtime, four packages on disk.** The Hub owns the window frame + toolkit; each
+  tool paints the inside of its own tab. **A shape is pure GB work in `~/GloomsBars`** — six PNGs in
+  `Media/art/hand/` (`<key>-base/-inner/-outer/-rim/-line/-swipe.png`), one row in `HAND_DEF`
+  (`Core.lua`), the key added to `GB.HAND_GROUPS`, then a full client restart. **The Hub needs no
+  change and no new release** — that is the part that IS automatic. Only shared things come here:
+  the shell/tab API, `LibGloomSkin`, media plumbing, the one launcher, these docs.
+- **"Is one GitHub link enough for friends?"** No — **four links, one per repo**, Hub first (WoWup's
+  "Install from URL" is per-repo; there is no meta-package). A single-link bundle would mean
+  collapsing four repos into one and losing independent versioning — not worth it, but the door
+  exists.
+- **"Do I have to give friends my GitHub personal access token?"** **NO — never.** Three reasons, and
+  reason 2 is suite-specific: (1) a PAT is an account password; (2) **it is tied to the personal
+  account whose handle TASK 0 exists to keep hidden — sharing it undoes the scrub**; (3) it is
+  unnecessary. **Verified 2026-07-25 with zero credentials:** the release zip downloads anonymously
+  (HTTP 200, 4.5 MB). WoWup's PAT field only raises GitHub's API rate limit (**60 req/hour**
+  unauthenticated). It was only ever needed here while the repos were PRIVATE during the scrub.
+  This is now written into README.md so the owner never has to field it.
+- **"Is routing work to the right repo actually best practice?"** Yes — and the reason is **context,
+  not file access.** Any repo can be edited from any session; what can't follow is that repo's
+  `CLAUDE.md`, handoff, API-NOTES and frozen specs. See working agreement 7.
+
+### Flagged for the owner, not acted on
+- **The public repo PAGES expose `CLAUDE.md` + `docs/`** to anyone who clicks a shared link. They are
+  **excluded from the packaged zips**, so no installer ever sees them, and they are identity-clean —
+  so this is not a privacy problem, just working notes being visible. Raise it again if he decides
+  to share more widely; the fix (a `docs` branch, or trimming) is a decision, not a defect.
+- The owner considers the suite **still in active development and is NOT ready to share it yet**
+  (2026-07-25). Don't push distribution work until he says so.
+
+### Housekeeping done
+- **`~` in `.claude/settings.json` `additionalDirectories` works** — the TASK 0 open question. Proven
+  in practice this session: files in `~/GloomsBars`, `~/GloomsAuras` and `~/GloomsOverlays` were all
+  read and written without a permission failure. **Consider that item closed.**
+- File modes normalized to `644` on the new `.pkgmeta` / `release.yml` files (they were created `755`;
+  GB's committed copies are `644`). Cosmetic only — the packager does not care.
 
 ---
 

@@ -4,10 +4,41 @@
 > UPDATE it at the end of any session that moves the suite.** Home of record: this repo.
 > Full design in [SUITE-PLAN.md](SUITE-PLAN.md). Shared contracts in [CONTRACTS.md](CONTRACTS.md).
 
-**Last updated:** 2026-07-24 (**Phase G BUILT — all four addons now publish `v1.0.0` on GitHub
+**Last updated:** 2026-07-25 (**Phase G BUILT — all four addons now publish `v1.0.0` on GitHub
 Releases and the packages are verified. The 7-phase plan is code-complete; only the owner's
-fresh-WoWup-install QA remains.** Phases A–F were built + QA'd earlier the same day —
-StoneTweaks is RETIRED and the identity scrub, TASK 0, is DONE with all five repos PUBLIC.)
+fresh-WoWup-install QA remains.** Phases A–F were built + QA'd on 2026-07-24 —
+StoneTweaks is RETIRED and the identity scrub, TASK 0, is DONE with all five repos PUBLIC.
+2026-07-25 also swept GB's and GA's docs for release facts the release had falsified, and added
+the **route-the-request rule** to all four `CLAUDE.md` files — see HANDOFF's session record.)
+
+## ▶ THE TO-DO LIST (single answer to "what's left?")
+
+**The one open phase item**
+1. **Phase G QA — fresh WoWup install** of GloomsHub + one tool, full client restart, verify; then
+   an update cycle. Script in HANDOFF. ⚠ **Blocked on a hazard, not effort: all four AddOns entries
+   are symlinks into the dev repos**, so an install on this machine overwrites live source. Move the
+   symlinks aside (restore after) or use a second machine. **Then mark Phase G DONE.**
+
+**Polish backlog — each its own session, by the owner's call (detail at the bottom of this file)**
+2. **Auras tab LAYOUT REWORK** — kill the docked drawer for a GB-style always-visible rail, plus the
+   landing-page question. Treat the whole Auras tab as the unit of work.
+3. **Overlays: Width / Height / X / Y → SLIDERS**, not typed boxes. "It just needs to happen."
+
+**Gloom's Bars (GB repo — route it there)**
+4. **Modifier symbols (⌘⇧⌃⌥) take no outline/shadow** — deferred, but the owner wants it; the approved
+   path is in GB's handoff item (d). **No open GB bugs.**
+
+**Small / housekeeping**
+5. Remove the leftover **`test-remove`** graphic from the Media catalog (inherited from StoneTweaks;
+   removable in the Media tab).
+6. Open questions below: **shared-footer contents**; the stray **`BoordensStreet.otf`**.
+7. **Before sharing widely:** the public repo PAGES expose `CLAUDE.md` + `docs/` to anyone with the
+   link. Excluded from the packaged zips and identity-clean, so not a privacy defect — just working
+   notes being visible. The owner's call, flagged 2026-07-25.
+
+**Not a task — context:** the owner considers the suite **still in active development and is NOT
+ready to share it with friends/guildies yet** (2026-07-25). Don't push distribution work.
+When he is ready, it's **four links, Hub first**, and **no access token** — see HANDOFF.
 Phase E gate B also promoted the whole profile/preset
 mechanism into LibGloomSkin (**MINOR 3**) and switched GB + GA onto it; all three addons were
 QA'd in the same pass.
