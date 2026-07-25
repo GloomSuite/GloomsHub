@@ -58,10 +58,14 @@ the **route-the-request rule** to all four `CLAUDE.md` files — see HANDOFF's s
    because WoW darkens it. Artwork must use **`#060714`**, what actually lands on screen.
 
 **Small / housekeeping**
-10. Remove the leftover **`test-remove`** graphic from the Media catalog (inherited from StoneTweaks;
+10. **Media tab: show each category's asset count on the COLLAPSED accordion header** (the owner,
+   2026-07-25 during Phase G QA) — "would be nice to show how many assets are in each of those
+   fonts/textures/graphics categories without having to expand the section." Today the counts are
+   only visible once a section is open. Hub work (`Media.lua`). Small, self-contained.
+11. Remove the leftover **`test-remove`** graphic from the Media catalog (inherited from StoneTweaks;
    removable in the Media tab).
-11. Open questions below: **shared-footer contents**; the stray **`BoordensStreet.otf`**.
-12. **Before sharing widely:** the public repo PAGES expose `CLAUDE.md` + `docs/` to anyone with the
+12. Open questions below: **shared-footer contents**; the stray **`BoordensStreet.otf`**.
+13. **Before sharing widely:** the public repo PAGES expose `CLAUDE.md` + `docs/` to anyone with the
    link. Excluded from the packaged zips and identity-clean, so not a privacy defect — just working
    notes being visible. The owner's call, flagged 2026-07-25.
 
