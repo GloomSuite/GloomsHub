@@ -1,7 +1,8 @@
 # Gloom's Hub — Session Handoff
 
-**Last updated: 2026-07-25e** — the newest record below is the **Auras tab layout rework**
-(polish to-do item 1, done + QA'd). **ALL SEVEN PHASES (A–G) ARE DONE AND QA'd BY THE OWNER.** All four
+**Last updated: 2026-07-25f** — the newest record below is the **modal scrim + the housekeeping
+sweep** (done + QA'd). **The polish backlog is down to TWO items, and NEITHER is in this repo** —
+Overlays' sliders and GB's modifier symbols. **ALL SEVEN PHASES (A–G) ARE DONE AND QA'd BY THE OWNER.** All four
 addons publish **`v1.0.1`** from the **`GloomSuite`** org, and both the install and update paths are
 proven in the live client. **The plan is finished; only the polish backlog remains.**
 
@@ -79,6 +80,63 @@ proven in the live client. **The plan is finished; only the polish backlog remai
    Point at the Hub's SUITE-STATE instead of copying the fact.
 
 ---
+
+# ▶ NEXT SESSION — Overlays' sliders, in `~/GloomsOverlays`
+
+**The owner is going there next (2026-07-25).** To-do item 2: Width / Height / X / Y should be
+`UI.sliderRow`, not `flatEditBox` — slider + typed box so exact values stay enterable, nudge arrows
+kept. Rotation and Alpha already show the shape to copy.
+
+**Two things that session must not miss:**
+1. **Tick item 2 off in [SUITE-STATE.md](SUITE-STATE.md) when it lands**, even though it is GO-only
+   work — see the warning on the item itself. GO's `CLAUDE.md` says to update the ledger "after
+   *suite* work", which a slider swap does not obviously read as. If it's on the suite to-do list,
+   finishing it means editing that file, whatever repo the work happened in.
+2. **Expect NO `SKIN_NEEDS` bump.** `UI.sliderRow` is long-standing, so consuming it adds no new lib
+   requirement. Needing a *new* widget would mean a MINOR bump + a CONTRACTS §6 gate move in the same
+   commit — and it would stop being GO-only work.
+
+After that, only **GB's modifier symbols** (to-do 3) remain, and the backlog is empty.
+
+# SESSION RECORD — 2026-07-25f (the modal scrim + the housekeeping sweep)
+
+**A small, entirely in-repo session. Everything below is DONE and QA'd by the owner.** The polish
+backlog is now down to **two items, both in sibling repos** — Overlays' sliders and GB's modifier
+symbols. Nothing is in flight here.
+
+### The modal scrim (`Skin.lua`) — the item left open by the Auras session
+Both dialogs are plates in the **same near-black navy as the panel they open over**, so they read as
+part of the tab rather than on top of it. One shared scrim now serves both: full-screen black on
+`FULLSCREEN_DIALOG` at the dialog's own level **−5**, so it dims the shell (which sits on `DIALOG`)
+and never the dialog itself.
+
+- ★ **It eats clicks, and that is the point** — `EnableMouse(true)` is what makes these genuinely
+  modal rather than merely on top.
+- ★ **Clicking the scrim does NOT dismiss.** Deliberate: the family answer is always an explicit
+  OK / Cancel / ESC. A click-elsewhere that silently drops a typed name is the same class of trap as
+  the self-arming "Sure?" button the suite already retired.
+- ★ **Hidden via `HookScript("OnHide")` on both dialogs, NOT from the button handlers.** That is the
+  only path that catches the **`UISpecialFrames` ESC close**, which never runs our own code — wire a
+  scrim from the OK/Cancel handlers and ESC leaves it stuck on screen over a hidden dialog.
+- **Alpha: 0.72.** The first pass shipped 0.55 and the owner asked for more.
+- ★ **No MINOR bump** — internal behavior, no new API, so no consumer's `SKIN_NEEDS` moved. The lib
+  stays at **MINOR 4**. Worth noting as the shape of a change that correctly does *not* touch the gate.
+
+### Housekeeping — the backlog's whole small section, closed
+- **`test-remove` graphic** — removed by the owner in the Media tab. The last StoneTweaks inheritance
+  is out of the catalog.
+- **`BoordensStreet.otf` — DROPPED** (the owner: *"OTF fonts don't work in game"*). Safe because
+  **`BoordensStreet.ttf` sits beside it** in `Fonts/`, so no typeface was lost, and nothing in any
+  repo referenced the file. `Fonts/` is now 7 files.
+- **★ The repo-pages visibility question is CLOSED — ACCEPTED, and it is not to be raised again.**
+  The owner: *"I don't care enough to go with any of the alternatives, so it's fine. You can stop
+  mentioning it."* **Do not re-flag it and do not propose a fix.** Recorded so nobody re-derives it:
+  **GitHub visibility is per-REPO, never per-PATH** — there is no setting, `.gitattributes` or
+  equivalent that hides a tracked file from a public repo's web UI. The only real options were
+  untracking the docs (costing SUITE-STATE, the home of record, its history and its only off-machine
+  backup) or a separate private docs repo (a second clone to sync + every `CLAUDE.md` pointer
+  rewritten). Both cost more than the problem — the files are identity-clean after TASK 0 and are
+  already excluded from the packaged zips, so no installer or friend ever receives them.
 
 # SESSION RECORD — 2026-07-25e (the Auras tab layout rework — done in `~/GloomsAuras`)
 

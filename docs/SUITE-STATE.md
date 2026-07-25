@@ -4,8 +4,12 @@
 > UPDATE it at the end of any session that moves the suite.** Home of record: this repo.
 > Full design in [SUITE-PLAN.md](SUITE-PLAN.md). Shared contracts in [CONTRACTS.md](CONTRACTS.md).
 
-**Last updated:** 2026-07-25e — **the AURAS TAB LAYOUT REWORK (to-do item 1) is DONE and QA'd**;
-see the to-do list below. Before that: **★★ PHASE G IS DONE AND THE 7-PHASE PLAN IS COMPLETE.** The owner
+**Last updated:** 2026-07-25f — **the MODAL SCRIM is DONE and QA'd** (the dialogs now dim what's
+behind them), and **the whole housekeeping section of the to-do list is CLOSED**: the `test-remove`
+graphic is out of the catalog, `BoordensStreet.otf` is deleted, and the repo-pages visibility
+question was **accepted and closed — do not raise it again**. **Only two polish items remain, both
+in sibling repos:** Overlays' sliders and GB's modifier symbols. Before that: the **AURAS TAB LAYOUT
+REWORK (to-do item 1) is DONE and QA'd**; see the to-do list below. And before that: **★★ PHASE G IS DONE AND THE 7-PHASE PLAN IS COMPLETE.** The owner
 QA'd the WoWup install AND update paths on 2026-07-25; all four addons now publish **`v1.0.1`**.
 No phase work remains — everything left is the polish backlog below.
 **★ THE FOUR SUITE REPOS ALSO MOVED TO A NEW GITHUB ORG, `GloomSuite`.**
@@ -50,19 +54,37 @@ Everything below is polish. ✅ items are done and kept for the record.
    shell builds a tab before showing it, the whole tab came up blank rather than just the broken
    section. Diff the file's global reads against a known-good revision after any block deletion:
    `luac -l F.lua | grep -oE '_ENV "[A-Za-z_][A-Za-z0-9_]*"' | sort -u`.
-2. **Overlays: Width / Height / X / Y → SLIDERS** · `~/GloomsOverlays` — "It just needs to happen."
+2. **Overlays: Width / Height / X / Y → SLIDERS** · `~/GloomsOverlays` — **NEXT UP (the owner,
+   2026-07-25).** "It just needs to happen." They're `flatEditBox` today; the family answer is
    `UI.sliderRow` as Rotation/Alpha already use, probably slider + typed box so exact values stay
    enterable. Nudge arrows stay.
+   > ⚠ **When this lands, TICK IT OFF HERE — even though it is GO-only work.** GO's `CLAUDE.md`
+   > says to update this ledger "after suite work", and a session could reasonably read a
+   > slider swap as GO-only and skip it. It is not exempt: it is a numbered item on the suite's
+   > to-do list, so the list is wrong until it is struck out here. **Rule of thumb: if the work
+   > appears on THIS list, finishing it means editing THIS file, whatever repo it was done in.**
+   > Expect **no** `SKIN_NEEDS` bump — `UI.sliderRow` is long-standing, so consuming it adds no
+   > new lib requirement. If you find yourself needing a NEW widget, that is a MINOR bump plus a
+   > CONTRACTS §6 gate move in the same commit, and it stops being GO-only work.
 3. **Modifier symbols (⌘⇧⌃⌥) take no outline/shadow** · `~/GloomsBars` — deferred but wanted; the
    approved path is in GB's handoff item (d). **No open GB bugs.**
 
 **Small / housekeeping**
-4. Remove the leftover **`test-remove`** graphic from the Media catalog (inherited from StoneTweaks;
-   removable in the Media tab — an in-game action, no code).
-5. Open question: the stray **`BoordensStreet.otf`** — keep or drop?
-6. **Before sharing widely:** the public repo PAGES expose `CLAUDE.md` + `docs/` to anyone with the
-   link. Excluded from the packaged zips and identity-clean, so not a privacy defect — just working
-   notes being visible. The owner's call, flagged 2026-07-25.
+4. ~~Remove the leftover **`test-remove`** graphic from the Media catalog~~ — **✅ DONE by the owner
+   in the Media tab, 2026-07-25.** The StoneTweaks inheritance is out of the catalog.
+5. ~~Open question: the stray **`BoordensStreet.otf`** — keep or drop?~~ — **✅ CLOSED: DROPPED**
+   (the owner, 2026-07-25). *"OTF fonts don't work in game."* `Fonts/BoordensStreet.otf` deleted;
+   **`BoordensStreet.ttf` sits beside it**, so no typeface was lost, and nothing referenced the file.
+6. ~~The public repo PAGES expose `CLAUDE.md` + `docs/`~~ — **✅ CLOSED: ACCEPTED, and it is not to be
+   raised again (the owner, 2026-07-25).** *"I don't care enough to go with any of the alternatives,
+   so it's fine. You can stop mentioning it."* **Do not re-flag this, and do not propose a fix.**
+   For the record, so nobody re-derives it: GitHub visibility is **per-repo, never per-path** — there
+   is no setting, `.gitattributes` or equivalent that hides a tracked file from a public repo's web
+   UI. The only real options were untracking the docs (which would cost SUITE-STATE, the home of
+   record, its history and its only off-machine backup) or moving them to a separate private repo (a
+   second clone to keep in sync + every `CLAUDE.md` pointer rewritten). Both cost more than the
+   problem: the files are identity-clean after TASK 0 and are already excluded from the packaged
+   zips, so no installer or friend ever receives them.
 7. ~~**Unverified:** do TEXTURE files need a client restart the way new FONTS do?~~ — **ANSWERED
    2026-07-25, in the owner's client: `/reload` IS ENOUGH. The Media tab's Textures note is
    CORRECT — leave it.** Evidence: he re-exported `GloomsAuras/Media/hidden.png` +
@@ -74,6 +96,18 @@ Everything below is polish. ✅ items are done and kept for the record.
    still untested, but a cache-busting replacement working makes it a safe assumption.
 
 **✅ Done 2026-07-25 (kept for the record)**
+- ~~Dim the background behind `UI.nameDialog` / `UI.confirm`~~ — **DONE + QA'd by the owner
+  2026-07-25.** Raised at the end of the Auras rework (the modals are plates in the same near-black
+  navy as the panel they open over, so they read as part of the tab). One shared scrim in
+  `Skin.lua` serves both: full-screen black, `FULLSCREEN_DIALOG` at the dialog's level −5, so it
+  dims the shell (which sits on `DIALOG`) but never the dialog. **It also eats clicks — that is what
+  makes the dialogs genuinely modal.** ★ Two calls worth keeping: clicking the scrim does **not**
+  dismiss (the family answer is always an explicit OK / Cancel / ESC — a click-elsewhere that
+  silently drops a typed name is the same trap as the retired self-arming "Sure?" button); and it
+  hides via `HookScript("OnHide")` on both dialogs rather than from the button handlers, because
+  that is **the only path that catches the `UISpecialFrames` ESC**, which never runs our own code.
+  Alpha landed at **0.72** — 0.55 read as too subtle to the owner on the first pass.
+  ★ **No MINOR bump:** internal behavior, no new API, so no consumer's `SKIN_NEEDS` gate moved.
 - ~~Phase G QA — WoWup install + update cycle~~ — **DONE**, the plan is complete.
 - ~~Redo all four logos, drop the baked-in name text~~ — **DONE.** 512×512 square set; every
   hardcoded portrait draw size moved with it. **GS = the suite, Gh = the Hub as an addon.**
@@ -238,8 +272,9 @@ QA'd in the same pass.
 - GB & GA `CLAUDE.md` carry a "part of the Gloom Suite → GloomsHub" pointer.
 
 ## Open (non-blocking) questions — see SUITE-PLAN §6
-Shared-footer contents; stray `BoordensStreet.otf` fate; where the
-Overlays GO logo belongs inside the tab (NOT a splash — see the polish backlog).
+Where the Overlays GO logo belongs inside the tab (NOT a splash — see the polish backlog).
+(~~shared-footer contents~~ — CLOSED 2026-07-25: the footer lists every installed addon's version.
+~~stray `BoordensStreet.otf`~~ — CLOSED 2026-07-25: **dropped**, see to-do 5.)
 (~~compat-shim lifetime~~ — CLOSED Phase F step 6: **KEEP PERMANENTLY**, the owner 2026-07-24.
 Pinned in CONTRACTS §3 + commented in Core.lua. Do not "clean up" the shim.)
 (~~LibGloomSkin public surface~~ — CLOSED Phase C, pinned in CONTRACTS §4. ~~Hub logo~~ —

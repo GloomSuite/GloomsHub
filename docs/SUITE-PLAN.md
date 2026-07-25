@@ -316,8 +316,9 @@ for what shipped and what was verified. Install instructions live in [../README.
 4. ~~**`LibGloomSkin` versioned API surface**~~ — CLOSED (Phase C, 2026-07-24): pinned in
    CONTRACTS §4 (MINOR 1; `makeSection` deliberately excluded — accordion stays per-tab).
 5. ~~GloomsBuildBarn as a future tab consumer~~ — CLOSED: OUT of the suite (see decisions block).
-6. **Stray `BoordensStreet.otf`** — carry into `GloomsHub/Fonts` (harmless dead file) or drop
-   during the copy? (Minor.)
+6. ~~**Stray `BoordensStreet.otf`**~~ — CLOSED (the owner, 2026-07-25): **DROPPED.** `.otf` is a
+   format WoW cannot load, and `BoordensStreet.ttf` sits beside it in `Fonts/`, so deleting the
+   `.otf` lost no typeface. Nothing referenced it.
 
 ## Critical files for implementation
 - `GloomsBars/Config.lua` — standalone window (`BuildPanel()` ~3256, `C:Toggle()` ~3430) +

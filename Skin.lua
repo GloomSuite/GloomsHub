@@ -483,6 +483,41 @@ end
 -- ------------------------------------------------------------
 local nameDlg, confirmDlg
 
+-- The scrim behind them (the owner, 2026-07-25). Both dialogs are plates in the
+-- same near-black navy as the panel they open over, so without this they read as
+-- part of the tab rather than on top of it. One scrim serves both: it dims
+-- everything below and eats the clicks, which is what makes them actually modal.
+-- Clicking it does NOT dismiss — the family answer is always an explicit choice
+-- (OK / Cancel / ESC), never a click-somewhere-else that silently drops the edit.
+local scrim
+
+local function scrimShow(dlg)
+  if not scrim then
+    scrim = CreateFrame("Frame", nil, UIParent)
+    scrim:SetAllPoints(UIParent)
+    scrim:SetFrameStrata("FULLSCREEN_DIALOG")
+    scrim:EnableMouse(true)
+    local t = scrim:CreateTexture(nil, "BACKGROUND")
+    t:SetAllPoints(scrim)
+    t:SetColorTexture(0, 0, 0, 0.72)
+    scrim:Hide()
+  end
+  -- Sit just under whatever level the dialog's own Raise() settled on, so the
+  -- scrim covers the shell (DIALOG strata) without ever covering the dialog.
+  local lvl = dlg:GetFrameLevel()
+  if lvl < 10 then dlg:SetFrameLevel(10); lvl = 10 end
+  scrim:SetFrameLevel(lvl - 5)
+  scrim:Show()
+end
+
+-- Hooked to both dialogs' OnHide, so EVERY close path is covered — OK, Cancel,
+-- and the UISpecialFrames ESC that never runs our own handlers.
+local function scrimHide()
+  if not scrim then return end
+  if (nameDlg and nameDlg:IsShown()) or (confirmDlg and confirmDlg:IsShown()) then return end
+  scrim:Hide()
+end
+
 -- Text entry. onAccept(name) fires on OK / Enter; Cancel and ESC drop it.
 function UI.nameDialog(titleText, initial, onAccept)
   if not nameDlg then
@@ -507,13 +542,14 @@ function UI.nameDialog(titleText, initial, onAccept)
     f.box:SetScript("OnEnterPressed", accept)
     f.box:SetScript("OnEscapePressed", cancel)
     tinsert(UISpecialFrames, "GloomSkinNameDialog")   -- ESC closes it
+    f:HookScript("OnHide", scrimHide)
     f:Hide()
     nameDlg = f
   end
   nameDlg.onAccept = onAccept
   nameDlg.title:SetText(titleText or "Name")
   nameDlg.box:SetText(initial or ""); nameDlg.box:SetCursorPosition(0)
-  nameDlg:Show(); nameDlg:Raise()
+  nameDlg:Show(); nameDlg:Raise(); scrimShow(nameDlg)
   nameDlg.box:SetFocus(); nameDlg.box:HighlightText()
   return nameDlg
 end
@@ -538,6 +574,7 @@ function UI.confirm(bodyText, onYes, acceptLabel, titleText)
     end)
     noB:SetScript("OnClick", function() f.onYes = nil; f:Hide() end)
     tinsert(UISpecialFrames, "GloomSkinConfirm")   -- ESC cancels
+    f:HookScript("OnHide", scrimHide)
     f:Hide()
     confirmDlg = f
   end
@@ -545,7 +582,7 @@ function UI.confirm(bodyText, onYes, acceptLabel, titleText)
   confirmDlg.title:SetText(titleText or "Are you sure?")
   confirmDlg.body:SetText(bodyText or "")
   confirmDlg.yes.text:SetText(acceptLabel or "Delete")
-  confirmDlg:Show(); confirmDlg:Raise()
+  confirmDlg:Show(); confirmDlg:Raise(); scrimShow(confirmDlg)
   return confirmDlg
 end
 
