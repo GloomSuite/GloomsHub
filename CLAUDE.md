@@ -79,17 +79,20 @@ commit metadata.
 - Git identity is set globally to `Gloom <gloom@handofdevastation.invalid>` — matching the
   addons' `## Author: Gloom`, and a reserved-TLD address that is undeliverable by design and
   links to no account. Do not override it per-repo.
-- **All five repos are PRIVATE as of 2026-07-24** — GloomsBars, GloomsAuras, GloomsBuildBarn were
-  flipped from public, and GloomsHub + GloomsOverlays were created private. Do not make one public
-  without an explicit instruction.
+- **All five repos are PUBLIC as of 2026-07-24**, after the scrub finished — that is what makes
+  the WoWup install/update path work. They were private only during the scrub. Changing any repo's
+  visibility is still the owner's call, not a routine action.
 - **The scrub is ✅ DONE (2026-07-24).** All five repos had history rewritten with
   `git-filter-repo` — file content, commit messages AND author/committer metadata — and were
   verified clean on fresh clones pulled back from GitHub. Full record + the two traps it hit
   (published release ZIPs are a separate surface; a repo whose cron writes to GitHub can be AHEAD
   of your local clone) are in [docs/HANDOFF.md](docs/HANDOFF.md) under TASK 0.
-- **Still true after the scrub:** the mirror backups in `~/glooms-scrub-backups-2026-07-24/` still
-  contain the old identity — never push them anywhere. And pre-rewrite commits may linger on
-  GitHub addressable by SHA, so re-publishing is a deliberate decision, not a formality.
+- **★ A force-push does NOT purge old commits from GitHub — it only unlinks them.** GloomsBars,
+  GloomsAuras and GloomsBuildBarn had to be **deleted and recreated** to truly remove them; that is
+  the only reliable purge. Verify a purge **unauthenticated against the PUBLIC repo** (expect
+  **422**); a 404 from a private repo proves nothing. Full account in docs/HANDOFF.md.
+- **Still true:** the mirror backups in `~/glooms-scrub-backups-2026-07-24/` still contain the old
+  identity — never push them anywhere.
 
 > The owner works structured & catalog-first; NEVER "v1"/"later phase" framing; GUI over slash
 > for user controls; never rush toward closing a session. **QA as you go — do not build a large

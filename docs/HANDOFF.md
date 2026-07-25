@@ -5,9 +5,9 @@ one Suite window and consume LibGloomSkin.
 
 > ## ▶ NEXT SESSION = PHASE F (retire StoneTweaks).
 > **Task 0 (the identity scrub) is DONE — 2026-07-24.** All five repos were rewritten, verified
-> clean on fresh clones *from GitHub*, and force-pushed. **Every repo is still PRIVATE** — nothing
-> was flipped public. Read the Task 0 record below before considering any flip, and note the open
-> item about Build Barn's WoWup delivery.
+> clean, and re-published. **All five repos are PUBLIC again and WoWup delivery is restored.**
+> The scrub is finished; read the Task 0 record below for the two traps and the big lesson (a
+> force-push does NOT purge — the repos had to be deleted and recreated).
 
 ## Orientation (read in this order)
 1. This file.
@@ -80,34 +80,48 @@ touched; all 25 Lua files pass `luac -p`; no binary asset contained the identity
    pre-scrub published asset — nothing lost. **ALWAYS `git fetch --all --tags` before rewriting a
    repo that has automation writing to it.**
 
-### Still open (deliberately NOT done)
-- **Nothing was made public.** All five repos remain PRIVATE.
-- **★★ PROVEN: force-push does NOT purge. Old commits ARE still served, and go PUBLIC with the
-  repo.** Tested 2026-07-24: with the repos private, `GET /repos/…/commits/<old-sha>` returned
-  404, which looked like a purge — **it was not; a private repo 404s that endpoint regardless.**
-  The moment the repos were flipped public, the pre-rewrite SHAs returned **200 with
-  `the old identity` in the author, committer and message.** They were flipped
-  straight back to private (~2 min public). **A 404 while private proves NOTHING. Never treat a
-  force-push as a purge, and never validate the purge from a private repo.**
-- **Therefore GloomsBars, GloomsAuras and GloomsBuildBarn CANNOT go public as they stand.** The
-  only fix is delete-and-recreate, which needs a scope the `gh` token lacks — the owner must run
-  `gh auth refresh -h github.com -s delete_repo` once. Their releases regenerate automatically
-  from a tag push, and GBB's current data can be republished immediately via
-  `gh workflow run weekly-data.yml`, so recreating costs nothing but the run time.
-- **GloomsHub and GloomsOverlays are safe to publish now** — they were created on 2026-07-24 and
-  only ever received scrubbed history, so they have no pre-rewrite objects to leak.
+### ★★★ THE BIG LESSON — a force-push does NOT purge, and a private repo hides that from you
+Rewriting history unlinks the old commits; it does **not** delete them from GitHub. Proven on
+2026-07-24:
+- While the repos were PRIVATE, `GET /repos/…/commits/<old-sha>` returned **404**, which looked
+  like a purge. **It was not.** A private repo 404s that endpoint for *any* SHA, valid or not —
+  the test is meaningless while private.
+- The instant the repos were flipped PUBLIC, those same pre-rewrite SHAs returned **200, serving
+  the old identity in the author, committer and message fields.** Everything was flipped straight
+  back to private (~2 minutes exposed).
+
+**Rules that follow — do not relearn these the hard way:**
+1. Never treat a force-push as a purge. The only reliable purge is **delete the repo and recreate
+   it** (needs `gh auth refresh -h github.com -s delete_repo`).
+2. Never validate a purge from a private repo. Verify **unauthenticated**, against the **public**
+   repo, and expect **422** ("no commit found for SHA") — *not* 404, which means repo-not-found.
+3. A brand-new repo has no leftovers, which is why recreate-and-push is airtight.
+
+### How it was finished (2026-07-24)
+`GloomsBars`, `GloomsAuras` and `GloomsBuildBarn` were **deleted and recreated**, then the scrubbed
+history + tags pushed. `GloomsHub` and `GloomsOverlays` needed no recreation — they were created
+that same day and only ever received scrubbed history. Re-pushing the tags made the BigWigs
+packager rebuild every release asset from clean source. **All five repos are now PUBLIC**, so the
+WoWup install/update path works again. Verified unauthenticated: pre-rewrite SHAs → 422, current
+commits → 200, zero identity in commit metadata, messages, all-history blobs or release zips, and
+org membership still private.
+
+### Still open / watch out for
+- **Release ZIPs need re-checking after any rewrite** — see trap 1 above.
+- **Actions on a recreated repo:** the org disables write permissions for workflows by default, so
+  `default_workflow_permissions` is `read`. That is fine *because* both `release.yml` files declare
+  `permissions: contents: write` themselves. A workflow without that block will fail to publish.
+  Also, tags pushed in the same breath as the initial branch push may land before the workflow is
+  registered and silently trigger nothing — re-push the tags if no run appears.
+- **GBB's `weekly-data.yml` only releases when the data CHANGED**, so `workflow_dispatch` on
+  unchanged data is a no-op. To force a release, re-push the tag (fires `release.yml`).
 - These repos were PUBLIC with the identity until 2026-07-24, so third-party mirrors of public
   GitHub event data are outside anyone's control. This scrub is forward-looking.
 - `.claude/settings.json` `additionalDirectories` now reads `~/GloomsBars` etc. — confirm `~`
   expands there, or put absolute paths back.
-
-### ⚠ THE PUBLIC QUESTION — Build Barn is currently undeliverable
-GBB is installed by guild members **via WoWup through GitHub**, which reads Releases through the
-API; a PRIVATE repo returns 404 to them. **GBB has been undeliverable to the guild since it was
-flipped private on 2026-07-24** — the cron still runs and still publishes releases, but nobody can
-fetch them. GBB is now fully scrubbed *and* its release zips are verified clean, so it is safe to
-make public again — but the privacy block requires an explicit instruction from the owner, so it
-was left private. Same applies to GB/GA/Hub/Overlays for the Phase G WoWup path.
+- ⚠ **Never write the real name or the personal handle into these docs, even to describe the leak.**
+  That happened once while documenting this very task and had to be scrubbed again. Say "the old
+  identity".
 
 ### Known-good facts (verified 2026-07-24 — don't re-litigate)
 - Org membership IS private (`/orgs/HandofDevastation/public_members/<handle>` → 404).
