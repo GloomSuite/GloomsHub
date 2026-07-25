@@ -141,7 +141,7 @@ org membership still private.
 
 ---
 
-# PHASE F — retire StoneTweaks (after Task 0; SUITE-PLAN §5.F)
+# PHASE F — retire StoneTweaks ◀ THIS IS THE NEXT JOB (SUITE-PLAN §5.F)
 
 **Why it's unblocked:** Overlays was the suite's last StoneTweaks consumer, and Phase E gate A
 moved it to `GloomsHub:ResolveAssetPath`. Nothing in the suite reads ST data any more.

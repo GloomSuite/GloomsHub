@@ -4,7 +4,7 @@
 > UPDATE it at the end of any session that moves the suite.** Home of record: this repo.
 > Full design in [SUITE-PLAN.md](SUITE-PLAN.md). Shared contracts in [CONTRACTS.md](CONTRACTS.md).
 
-**Last updated:** 2026-07-24 (Phases C, D **and E** built + QA'd. **NEXT = the identity scrub, TASK 0 in HANDOFF.md — it outranks Phase F.** Then Phase F — retire
+**Last updated:** 2026-07-24 (Phases C, D **and E** built + QA'd. **The identity scrub — TASK 0 — is DONE, and all five repos are PUBLIC again with WoWup delivery restored; see the Phase G row and HANDOFF.md.** **NEXT = Phase F — retire StoneTweaks.**)
 StoneTweaks; briefing in HANDOFF.md). Phase E gate B also promoted the whole profile/preset
 mechanism into LibGloomSkin (**MINOR 3**) and switched GB + GA onto it; all three addons were
 QA'd in the same pass.
