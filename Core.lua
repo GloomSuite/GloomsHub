@@ -75,6 +75,7 @@ initFrame:SetScript("OnEvent", function(self, event)
         if not GloomsHubDB.graphics then GloomsHubDB.graphics = {} end
         MigrateFromStoneTweaks()
         InstallCompatShim()
+        GloomsHub:InitMinimapButton()   -- the ONE suite launcher (MinimapButton.lua)
 
     elseif event == "PLAYER_ENTERING_WORLD" then
         GloomsHub.Media:RegisterAll()

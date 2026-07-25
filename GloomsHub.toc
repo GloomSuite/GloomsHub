@@ -9,16 +9,21 @@
 
 # Embedded libraries — load FIRST. LibSharedMedia is where the Hub registers
 # the suite's custom fonts/textures; needs LibStub + CallbackHandler first.
+# LibDataBroker + LibDBIcon render the ONE suite minimap launcher.
 # Local copies for dev (gitignored); the packager refetches at release time.
 Libs\LibStub\LibStub.lua
 Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
 Libs\LibSharedMedia-3.0\LibSharedMedia-3.0.lua
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
 
 # Load order (SUITE-PLAN §2.2): Core (namespace + DB + ST migration + events)
-# → Skin (design tokens + widget toolkit — the future LibGloomSkin body)
+# → Skin (the LibGloomSkin-1.0 body: design tokens + widget toolkit)
 # → Shell (the one Suite window: RegisterTab/Open/FocusTab + /gloom)
-# → Media (LSM registration, resolver, catalog API + the Media tab).
+# → Media (LSM registration, resolver, catalog API + the Media tab)
+# → MinimapButton (the ONE suite launcher — GS icon, opens last-used tab).
 Core.lua
 Skin.lua
 Shell.lua
 Media.lua
+MinimapButton.lua

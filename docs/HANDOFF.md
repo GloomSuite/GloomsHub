@@ -27,6 +27,11 @@ from this file + the three docs it points to, alone.
 - `Shell.lua`: title bar now shows the **GS monogram** (`Media/ui/logo.png`) — the owner's new
   Gloom Suite logo (2026-07-24). `Media/ui/minimap.png` (64×64) fills the TOC IconTexture
   that used to dangle. **New art files ⇒ full client restart required.**
+- `MinimapButton.lua` (NEW, the owner's call during QA 2026-07-24): the **ONE suite minimap
+  launcher** — GS icon via LibDBIcon (LibDataBroker + LibDBIcon now embedded in `Libs/`,
+  copied from GB; gitignored dev copies), left-click = `/gloom` semantics (toggle, last-used
+  tab), placement/visibility in `GloomsHubDB.minimap`, self-contained fallback if libs absent.
+  Init at PLAYER_LOGIN (Core.lua). Per-tool buttons retire as tools mount tabs.
 
 **GloomsBars repo (`~/GloomsBars`):**
 - TOC: **`## Dependencies: GloomsHub`** (fixes load order — alphabetically GB loads first —
@@ -46,7 +51,9 @@ from this file + the three docs it points to, alone.
   would cold-start every user's bar keybinds/counts (files are byte-identical anyway).
   `PreloadFonts` warms GB paths at 11 + 14 (font-picker sizes). `/gb` (and `config`/`ui`)
   → `GloomsHub:ToggleWindow("bars")`. **Every diagnostic subcommand untouched.**
-- `MinimapButton.lua`: click → `GloomsHub:ToggleWindow("bars")`.
+- `MinimapButton.lua`: **DELETED** (the owner's call during QA, 2026-07-24) — the suite has ONE
+  launcher now, the Hub's GS button. GB's TOC drops the file + the LDB/LibDBIcon lib lines;
+  `.pkgmeta` drops those two externals. Stale `GB.db.minimap` data is harmless leftover.
 - Warm pairs GB registers (via `RegisterWarmPairs`, Config.lua top): title 17/18 ·
   head 12/13 · body 9.5/10/12.5 · label 10/10.5/11.
 
@@ -78,7 +85,9 @@ Files changed in TWO addons + NEW ART FILES in the Hub → **FULL CLIENT RESTART
    includes rail headers, slider values, group titles, the preview caption, dialog titles).
 6. `/gb debug` (and the other diagnostics) still work from chat. `/ga`, `/vibe`, `/st`
    untouched and their windows still work.
-7. Minimap button (if shown) toggles the Suite window on Bars.
+7. The **GS Suite minimap button** shows up (collectors treat it normally; drag repositions);
+   left-click toggles the Suite window on the last-used tab. **GB's old minimap button is
+   GONE** (retired — one launcher for the suite).
 
 **If it passes:** update [SUITE-STATE.md](SUITE-STATE.md) Phase C → **DONE — QA'd**, and
 rewrite this handoff as the **Phase D briefing** (GA migration — same pattern as C: hard dep,
