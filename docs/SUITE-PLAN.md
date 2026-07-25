@@ -287,11 +287,23 @@ globally for anything stale. *QA:* ST disabled + `/reload`: fonts registered, te
 pickers, overlays render, all tabs work. If anything's missing → re-enable ST (SV intact),
 recheck Phase A migration. (Why ST dies last + non-destructively.)
 
-**G — Packaging / release.** Author `GloomsHub/.pkgmeta` (BigWigs; embed LibStub/
-CallbackHandler/LSM/LibGloomSkin). Add `## Dependencies: GloomsHub` to GB/GA/Overlays.
-Embed `LibGloomSkin-1.0` in each via `externals`. Document the one-time "add GloomsHub repo to
+**G — Packaging / release.** Author `GloomsHub/.pkgmeta` (BigWigs; externals for the five libs
+its TOC loads — LibStub, CallbackHandler, LSM, LibDataBroker, LibDBIcon). Add
+`## Dependencies: GloomsHub` to GB/GA/Overlays. Document the one-time "add GloomsHub repo to
 WoWup" step. Cut a coordinated release set. *QA:* fresh WoWup install of GloomsHub + one tool
 works; updates work.
+
+> ~~**Embed `LibGloomSkin-1.0` in each via `externals`.**~~ — **DROPPED 2026-07-24 (Phase G).**
+> This line predates the hard-dependency lock. No tool ships or loads its own copy; all three
+> call `LibStub("LibGloomSkin-1.0")` and resolve to the Hub's `Skin.lua`, which IS the lib body.
+> The hard dependency guarantees the Hub is present, so there is nothing to insure against —
+> and N embedded copies for LibStub to arbitrate by MINOR is precisely the drift this suite
+> exists to prevent. There is also no standalone LibGloomSkin repo to fetch as an external, so
+> the item was never implementable as written. Consume from the Hub. If a future *non-suite*
+> consumer ever needs it, publish it properly then.
+
+**Built + released 2026-07-24.** All four addons publish **v1.0.0**; see the SUITE-STATE row
+for what shipped and what was verified. Install instructions live in [../README.md](../README.md).
 
 ---
 

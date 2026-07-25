@@ -1,13 +1,16 @@
 # Gloom's Hub — Session Handoff
 
-**Last updated: 2026-07-24.** Phases **A–F are DONE and QA'd** — all three tools render inside the
-one Suite window and consume LibGloomSkin, and **StoneTweaks is retired**.
+**Last updated: 2026-07-24.** Phases **A–F are DONE and QA'd**, and **Phase G is BUILT** — all four
+addons publish **`v1.0.0`** and every package is verified. **The 7-phase plan is code-complete.**
 
-> ## ▶ NEXT SESSION = PHASE G (packaging/release). Briefing at the bottom of this file.
-> **★ Phase G's blocker, found 2026-07-24: `GloomsHub` cannot publish a release at all** — it has no
-> `.pkgmeta` and no `.github/workflows/release.yml`. Every tool declares `## Dependencies: GloomsHub`,
-> and **`GloomsBars` v0.2.0 is already published, so it currently installs BROKEN via WoWup: it
-> demands a Hub that has no release to install.** Fixing the Hub's packaging is job one.
+> ## ▶ NEXT SESSION = ONE QA TASK, then the polish backlog.
+> **The only thing left in Phase G is the owner's fresh-WoWup-install check** — everything that can
+> be verified without the client already has been (see the Phase G record at the bottom). The QA
+> script is there; run it, then mark the phase DONE in SUITE-STATE.
+>
+> **After that, Phase G closes and the plan is finished.** Remaining work is the polish backlog in
+> SUITE-STATE: the **Auras tab layout rework** (its own session, by the owner's call) and
+> **Overlays' Width/Height/X/Y → sliders**.
 >
 > **Phase F is ✅ DONE — 2026-07-24, all 6 steps QA'd by the owner.** StoneTweaks is disabled AND its
 > folder is out of AddOns (moved, not deleted, to `~/Desktop/StoneTweaks-retired-2026-07-24`); the Hub
@@ -268,55 +271,101 @@ sliders, not typed boxes**.
 
 ---
 
-# PHASE G — packaging / release ◀ THIS IS THE NEXT JOB (SUITE-PLAN §5.G)
+# PHASE G — packaging / release ✅ BUILT 2026-07-24 · ONE QA TASK LEFT
 
-**Ground surveyed 2026-07-24. Read this before touching anything — two plan items are wrong.**
+**All four addons publish `v1.0.0`.** Everything verifiable outside the game client has been
+verified. What remains is the owner's install check, below.
 
-## ★ The blocker: the Hub cannot publish, and that breaks an already-published tool
-| Repo | `.pkgmeta` | `release.yml` | Releases on GitHub |
+## ▶ THE ONLY REMAINING TASK — fresh WoWup install QA
+Run this, then mark Phase G **DONE** in SUITE-STATE. One step at a time; BugSack text first.
+
+1. In **WoWup → Get Addons → Install from URL**, install
+   `https://github.com/HandofDevastation/GloomsHub`.
+2. Install one tool the same way, e.g. `https://github.com/HandofDevastation/GloomsBars`.
+3. **Full client restart** (new addon files — not a `/reload`).
+4. Check: BugSack clean · the addon list shows both, with **no missing-dependency flag** ·
+   `/gloom` opens the Suite window · the Media tab shows **1 font / 6 textures / 36 graphics** ·
+   the installed tool's tab renders.
+5. ★ **The version-string check:** the TOC now reads `## Version: v1.0.0`, not `@project-version@`.
+   A literal `@project-version@` in the addon list means the folder is the dev symlink, not the
+   WoWup-installed copy — expected locally, wrong for an installed one.
+6. *Then an update cycle:* push a trivial commit + tag `v1.0.1` on one addon and confirm WoWup
+   offers and applies the update.
+
+⚠ **The dev symlinks and a WoWup install target the SAME folder names.** `…/AddOns/GloomsHub` is
+currently a symlink to `~/GloomsHub`. Decide before installing whether to test on this client (move
+the symlinks aside first, and put them back after) or on a clean/second WoW install. Do not let
+WoWup write over the symlink target.
+
+## What shipped
+| Repo | `.pkgmeta` | `release.yml` | Releases |
 |---|---|---|---|
-| **GloomsHub** | ❌ **absent** | ❌ **absent** | ❌ **none** |
-| GloomsBars | ✅ | ✅ | ✅ `v0.2.0` (latest), `v0.1.0`, `v0.0.1` |
-| GloomsAuras | ✅ | ❌ absent | ❌ none |
-| GloomsOverlays | ❌ absent | ❌ absent | ❌ none |
-| GloomsBuildBarn *(not suite)* | ✅ | ✅ | ✅ 5 dated tags, latest `v2026.07.21` |
+| **GloomsHub** | ✅ **new** | ✅ **new** | ✅ `v1.0.0` |
+| GloomsBars | ✅ | ✅ | ✅ `v1.0.0` (latest), v0.2.0, v0.1.0, v0.0.1 |
+| GloomsAuras | ✅ *(external fixed)* | ✅ **new** | ✅ `v1.0.0` |
+| GloomsOverlays | ✅ **new** | ✅ **new** | ✅ `v1.0.0` |
 
-All three tools declare `## Dependencies: GloomsHub`. **`GloomsBars` v0.2.0 is public, so it installs
-BROKEN via WoWup today** — it demands a Hub with no release to install. **Ship the Hub first.**
-(Release "latest" pointers were re-verified via `gh` and are correct on both repos that have releases,
-so the TASK 0 `make_latest` fix held.)
+**Version scheme (the owner, 2026-07-24): all four synchronized at `v1.0.0`** — the suite is
+feature-complete, and a friends/guild audience should have one answer to "what version are you on?"
+GB jumped `v0.2.0` → `v1.0.0`.
 
-## ★★ DROP the plan's "embed LibGloomSkin as an external per tool"
-SUITE-PLAN §5.G says to embed `LibGloomSkin-1.0` in each tool via `.pkgmeta` externals. **That item
-predates the hard-dependency lock and should not be done:**
-- **No tool ships or loads its own copy today** — verified: nothing in GB/GA/Overlays' TOCs
-  references it. All three simply call `LibStub("LibGloomSkin-1.0")` and resolve to the Hub's
-  `Skin.lua`, which IS the lib body.
-- The **hard dependency guarantees the Hub is present**, so there is nothing to insure against.
-- Embedding would create N copies for LibStub to arbitrate by MINOR — **exactly the drift the suite
-  exists to prevent**, and it would silently split the "ONE copy" rule in CLAUDE.md.
-- There is **no standalone LibGloomSkin repo** to fetch as an external anyway; the plan's line is not
-  implementable as written.
+**Verified on the published assets** (all four workflow runs succeeded first try):
+- Hub zip: Fonts 8 / Textures 13 / Graphics 45 / Media 8, **all five libs fetched**, no
+  docs/CLAUDE.md/.github/.pkgmeta.
+- GA's zip fetched `LibCustomGlow-1.0`; **Overlays ships no `Libs/` at all** — correct, it loads none.
+- Every TOC has `## Version: v1.0.0` substituted; all three tools declare `## Dependencies: GloomsHub`.
+- **`/releases/latest` → `v1.0.0` on all four, checked ANONYMOUSLY.** The TASK 0 latest-pointer trap
+  did not recur.
+- Zero identity in any of the four packages. (The Hub's generated `CHANGELOG.md` matches the string
+  `users.noreply.github.com` twice — that is commit-message *prose about the policy*, not an address.
+  Don't re-flag it.)
 
-→ Consume from the Hub. If a *future* non-suite consumer ever needs it, publish it properly then.
+## ★ Two real defects this phase caught — both fixed, both worth remembering
+1. **The published `GloomsBars` v0.2.0 was STALE, not dependency-broken.** This file previously
+   claimed it "installs BROKEN via WoWup: it demands a Hub that has no release." **Wrong.** That tag
+   sat on a **2026-07-18, pre-Phase-C** commit shipping only `Core.lua` + `Skin.lua` — no config UI,
+   and **no `## Dependencies: GloomsHub` line at all.** It installed a stale standalone GB three
+   phases out of date. The `v1.0.0` re-cut is the actual fix. **Lesson: check what a tag POINTS AT,
+   not just that it exists** — the scrub's tag force-push rebuilt those zips from old code.
+2. **GA's `LibCustomGlow-1.0` external was dead.** `.pkgmeta` carried an unconfirmed NOTE on it, and
+   the wowace SVN path `wow/libcustomglow-1-0/trunk` **404s** — the lib is not hosted there. GA's
+   first packaged build would have failed outright. Repointed at `Stanzilla/LibCustomGlow`, whose
+   repo root holds exactly what `Libs/LibCustomGlow-1.0` holds locally; the fetch is confirmed in
+   the shipped zip. **Lesson: probe every external URL before a repo's first release.** The wowace
+   front-end returns **301** (redirect to its SVN server) for a project that exists and **404** for
+   one that doesn't — that difference is the test. Port 20003 is unreachable from here, so the
+   redirect target itself can't be probed locally; the 301/404 split is what you have.
 
-## The actual work
-1. **`GloomsHub/.pkgmeta`** — copy `GloomsBars/.pkgmeta` as the shape (GitHub Releases only, no
-   CurseForge/Wago). `package-as: GloomsHub`; `enable-nolib-creation: no`; externals for the Hub's
-   five libs (LibStub, CallbackHandler-1.0, **LibSharedMedia-3.0**, **LibDataBroker-1.1**,
-   **LibDBIcon-1.0** — the Hub needs all five per its TOC, more than GB does); `ignore:` README,
-   CLAUDE.md, .github, .gitignore, .pkgmeta, docs, tools.
-   ⚠ **Do NOT ignore `Fonts/`, `Textures/`, `Graphics/` or `Media/`** — unlike the other repos, the
-   Hub's committed assets ARE the product (43 catalog files + the GS/GO marks + 5 UI fonts).
-2. **`GloomsHub/.github/workflows/release.yml`** — copy GB's. ★ **It MUST declare
-   `permissions: contents: write`**: the org sets `default_workflow_permissions: read`, so a workflow
-   without that block fails to publish (recorded under TASK 0).
-3. **`GloomsOverlays/.pkgmeta` + `release.yml`**, and **`GloomsAuras/release.yml`** (GA already has
-   `.pkgmeta`).
-4. **Cut the Hub's first release, then re-cut the tools.** Version strings render literally as
-   `@project-version@` until a packaged build exists — that is expected, not a bug.
-5. **Document the one-time WoWup step** (add each GitHub repo URL) for the friends/guild audience.
-6. *QA:* fresh WoWup install of GloomsHub + one tool on a clean profile; then an update cycle.
+## ★★ DROPPED: the plan's "embed LibGloomSkin as an external per tool"
+SUITE-PLAN §5.G said to embed `LibGloomSkin-1.0` in each tool via `.pkgmeta` externals. **It is now
+struck out in the plan itself.** No tool ships or loads its own copy — all three call
+`LibStub("LibGloomSkin-1.0")` and resolve to the Hub's `Skin.lua`, which IS the lib body. The hard
+dependency guarantees the Hub is present, so there is nothing to insure against; embedding would
+create N copies for LibStub to arbitrate by MINOR, **exactly the drift the suite exists to prevent**;
+and there is no standalone LibGloomSkin repo to fetch anyway. Consume from the Hub. If a future
+*non-suite* consumer ever needs it, publish it properly then.
+
+## Also landed
+- **[../README.md](../README.md)** — the public-facing install guide (Phase G item 5): what the four
+  addons are, the one-time WoWup "Install from URL" steps with the Hub first, the missing-dependency
+  explanation, and the slash commands. This is what a friend lands on at the repo URL.
+- GA's `ignore:` tightened — `CLAUDE.md` and `docs/` were being packaged into its zip.
+- `GloomsBars`' local `main` had **no upstream configured** (fallout from the delete-and-recreate);
+  set to track `origin/main`.
+
+## Packaging traps already learned the hard way (full detail under TASK 0)
+- **Tags pushed in the same breath as the initial branch push can land before the workflow is
+  registered and silently trigger nothing.** Avoided this time by pushing each branch first and
+  confirming the workflow was `active` via
+  `gh api repos/<owner>/<repo>/actions/workflows` before pushing the tag. Keep doing that.
+- **Recreating/pushing releases out of order breaks `latest` — which is what WoWup installs.** Always
+  finish by checking `/releases/latest` **anonymously**; that endpoint caches, so re-read a stale
+  answer before chasing it. Fix with `gh api -X PATCH repos/<owner>/<repo>/releases/<id> -f make_latest=true`.
+  (Checked this time: correct on all four, no fix needed.)
+- **Published release ZIPs are a separate surface** from git history — after any rewrite, download and
+  grep the assets.
+- ⚠ **`.claude/settings.json` `additionalDirectories` uses `~`** — confirm it expands, or restore
+  absolute paths.
 
 ## Packaging traps already learned the hard way (full detail under TASK 0)
 - **Tags pushed in the same breath as the initial branch push can land before the workflow is
