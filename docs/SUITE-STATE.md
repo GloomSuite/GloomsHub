@@ -4,7 +4,7 @@
 > UPDATE it at the end of any session that moves the suite.** Home of record: this repo.
 > Full design in [SUITE-PLAN.md](SUITE-PLAN.md). Shared contracts in [CONTRACTS.md](CONTRACTS.md).
 
-**Last updated:** 2026-07-24 (same session: Phase C QA'd + marked DONE; **Phase D code BUILT — awaiting the owner's QA gate**).
+**Last updated:** 2026-07-24 (one session built + QA'd Phases C **and** D; **next: Phase E — Gloom's Overlays**, briefing in HANDOFF.md).
 
 ## Phase status
 
@@ -14,8 +14,8 @@
 | **A** | Stand up GloomsHub, media-only (registration + resolver + ST→Hub copy-migration + compat shim + asset folders). Touch nothing else. | **DONE — QA'd by the owner 2026-07-24** (clean BugSack; DrukMedium serves from the Hub; catalog 1 font / 6 textures / 36 graphics, `migratedFromST = true`; Overlays unaffected). Known transition artifact: ST prints "skipped — already registered" lines at login because the Hub (loads first) now wins the LSM names — harmless, ST's own code, gone at Phase F. |
 | **B** | Empty tabbed shell + Media tab. Add `/gloom`. Old windows still work. | **DONE — QA'd by the owner 2026-07-24** (window/toggle/Escape/drag; catalog 1/6/36 with previews; accordion + orange scrollbar; add/remove incl. `.otf` rejection; old windows untouched; cold-start re-verified). Two findings baked in: (1) **cold-start blank-text quirk** — WoW draws a cold (font file, size) pair blank the first time each session (a /reload heals, next cold start re-breaks); fixed by Skin.lua's `UI.WarmFonts` login pre-warmer — EXTEND its pair list whenever new UI font sizes appear (Phase C!). (2) overlapping family windows interleave (same strata, pre-existing GB/GA quirk) — accepted by the owner; self-resolves as tools mount tabs (C–E). |
 | **C** | Migrate Gloom's Bars as the proof (Bars tab, `/gb` reroute, toolkit → LibGloomSkin). | **DONE — QA'd by the owner 2026-07-24** (gate passed; the one first-pass gap — no suite launcher — was filled same day and verified: the Hub owns the ONE GS minimap button, GB's is deleted). Shipped: `LibGloomSkin-1.0` (surface pinned CONTRACTS §4, incl. `RegisterWarmPairs`); GB hard-deps the Hub; local toolkit + standalone window DELETED; editor mounts as the Bars tab with its own in-tab footer row; `/gb` → `ToggleWindow("bars")` (diagnostics untouched). GB's bar-ENGINE fonts deliberately stay on GB paths (CONTRACTS §1 note). **The container-mount pattern is PROVEN.** |
-| **D** | Migrate Gloom's Auras (Auras tab; flip `CatStoneTweaks` → `GloomsHub:ListMedia`). | **IN PROGRESS — code built 2026-07-24, NOT QA'd** ← the owner runs the QA gate (in HANDOFF.md). Built: GA hard-deps the Hub; local toolkit copy + standalone window DELETED; options UI mounts as the **Auras** tab (a centered 620-wide column; docked drawers now parent to the container); `/ga` → `ToggleWindow("auras")`; `/ga minimap` drives the Hub's button; GA's own minimap button DELETED (TOC + `.pkgmeta` externals dropped); `CatStoneTweaks` → `GloomsHub:ListMedia` ("Suite Graphics"); warm pairs registered. Shell grew to 860×740 (content 860×626 now PINNED in CONTRACTS §2); lib bumped to MINOR 2 (`addEdges` returns the edge handle). GA.FONT stays on GA paths (stored user configs — CONTRACTS §1 note). FULL CLIENT RESTART to QA. |
-| **E** | Rename VibeOverlay → Gloom's Overlays; mount Overlays tab; **reskin in one go**. | not started |
+| **D** | Migrate Gloom's Auras (Auras tab; flip `CatStoneTweaks` → `GloomsHub:ListMedia`). | **DONE — QA'd by the owner 2026-07-24** ("works as it did before"). Shipped: GA hard-deps the Hub; local toolkit copy + standalone window DELETED; options UI mounts as the **Auras** tab (centered 620-wide column; docked drawers parent to the container); `/ga` → `ToggleWindow("auras")`; `/ga minimap` drives the Hub's button; GA's minimap button DELETED; `CatStoneTweaks` → `GloomsHub:ListMedia` ("Suite Graphics" — GA reads NO StoneTweaks data anymore). Shell grew to 860×740 (content 860×626 PINNED, CONTRACTS §2); lib at MINOR 2. Noted for polish (below): the Auras landing page. |
+| **E** | Rename VibeOverlay → Gloom's Overlays; mount Overlays tab; **reskin in one go**. | **NOT STARTED** ← next (cold-start briefing in HANDOFF.md, incl. VibeOverlay recon + the SavedVariables-rename trap) |
 | **F** | Retire StoneTweaks (delete last, non-destructively). | not started |
 | **G** | Packaging/release: `.pkgmeta`, `## Dependencies: GloomsHub`, embed LibGloomSkin, WoWup. | not started |
 
@@ -58,7 +58,7 @@
   `/gb` diagnostics untouched; bar engine untouched. GB's `MinimapButton.lua` DELETED
   (+ TOC lib lines + `.pkgmeta` LDB/LibDBIcon externals) — the Hub's GS button is the
   suite's one launcher.
-- **`~/GloomsAuras` (Phase D, built not QA'd):** `## Dependencies: GloomsHub`; local toolkit
+- **`~/GloomsAuras` (Phase D, QA'd):** `## Dependencies: GloomsHub`; local toolkit
   copy + the `GloomsAurasConfig` window (chrome, panelPos, `C:Toggle`, `C:SavePanelPos`)
   DELETED; Config.lua consumes LibGloomSkin (incl. the MINOR-2 `addEdges`) and registers the
   **Auras** tab — a centered 620-wide column; docked drawers (`DockRight`) parent to the
@@ -77,6 +77,13 @@
 Overlays slash name; shared-footer contents; compat-shim lifetime; stray `BoordensStreet.otf`
 fate. (~~LibGloomSkin public surface~~ — CLOSED Phase C, pinned in CONTRACTS §4. ~~Hub logo~~
 — CLOSED, the owner delivered the GS monogram 2026-07-24.)
+
+## Suite polish backlog (post-migration UI work, gathered during QA)
+- **Auras tab landing page (the owner, Phase D QA 2026-07-24):** the old standalone window's
+  splash/landing (big GA logo + "Add … Aura" buttons on every open) "doesn't really make
+  sense in the context of the suite." Works as before for now — rethink after the
+  migrations (e.g. open straight to the editor with a compact create row, logo retired or
+  moved). GA-side change; coordinate the design with the family language here.
 
 ## How to keep this honest
 Any session that edits GB/GA/Overlays/Hub **for suite reasons** updates the relevant phase row

@@ -1,119 +1,122 @@
 # Gloom's Hub — Session Handoff
 
-**Last updated: 2026-07-24.** Phases A, B and **C are DONE and QA'd** — the container-mount
-pattern is proven: Gloom's Bars lives entirely in the Suite window's Bars tab, the suite has
-ONE minimap launcher (the Hub's GS button), and `LibGloomSkin-1.0` is the one toolkit.
-**Phase D — Gloom's Auras migrated into the Auras tab — is CODE-COMPLETE but NOT QA'd.**
-The next action is the owner running the QA gate below. This file is a COLD-START briefing — a
-session that never saw the earlier conversations should be able to run (or debug) the Phase D
-gate from this file + the three docs it points to, alone.
+**Last updated: 2026-07-24.** Phases A–D are **DONE and QA'd**. Gloom's Bars AND Gloom's
+Auras now live entirely inside the Suite window (tabs: AURAS · BARS · MEDIA); the one
+toolkit is `LibGloomSkin-1.0` (MINOR 2); the one launcher is the Hub's GS minimap button;
+GA no longer reads any StoneTweaks data. **Next: Phase E — VibeOverlay becomes Gloom's
+Overlays: rename + repo move + mount the Overlays tab + FULL reskin, in one phase.** This
+file is a COLD-START briefing — a session that never saw the earlier conversations should
+be able to execute Phase E from this file + the three docs it points to, alone.
 
 ## Orientation (read in this order)
 1. This file.
-2. [SUITE-STATE.md](SUITE-STATE.md) — phase ledger. The Phase D row = exactly what was built.
-   **Update it when the gate passes (D → DONE) or when anything changes.**
-3. [CONTRACTS.md](CONTRACTS.md) — §2 now PINS the container content area (860×626 minimum)
-   and lists the live tabs; §4 is the LibGloomSkin surface (MINOR 2); §1/§5 record both
-   tools' engine-font exceptions.
-4. [SUITE-PLAN.md](SUITE-PLAN.md) — architecture + phases (for E read §5.E + §4.4's Overlays
-   half; Overlays = rename VibeOverlay + mount + FULL reskin in one go).
+2. [SUITE-STATE.md](SUITE-STATE.md) — phase ledger + locked decisions + the polish backlog.
+   **Update it at the end of any session that moves the suite.**
+3. [SUITE-PLAN.md](SUITE-PLAN.md) — architecture + phases. For E read §5.E, §4.4 (the
+   Overlays half), §0 (ground truth on VibeOverlay).
+4. [CONTRACTS.md](CONTRACTS.md) — §2 tab API + the PINNED container size (860×626 min),
+   §3 resolver/media API, §4 the LibGloomSkin surface (MINOR 2).
 
-## What Phase D changed (built 2026-07-24, parse-checked, NOT in-game-verified)
+## Session setup for Phase E
+Start in `~/GloomsHub`; you'll need the AddOns + WTF dirs (both pre-authorized in
+`.claude/settings.json`) and — once created — `~/GloomsOverlays`. Commit each repo
+separately. **Two things to settle WITH THE OWNER at session start (open Qs, SUITE-PLAN §6):**
+1. **Slash:** recommend `/go` for the tab + keep `/vibe` as a legacy alias (both routing to
+   `GloomsHub:ToggleWindow("overlays")`; `list`/`debug` subcommands stay).
+2. **Repo creation:** VibeOverlay is NOT a git repo — it lives raw in
+   `…/Interface/AddOns/VibeOverlay/`. The family convention is a `~/GloomsOverlays` git repo
+   symlinked into AddOns. Plan: create the repo, copy the three Lua files in (renamed), add
+   TOC/CLAUDE.md/.gitignore, symlink as `GloomsOverlays`, and REMOVE the old VibeOverlay
+   folder in the same step (two addons defining the same overlays would double-render).
+   Don't copy `.DS_Store` or the stray `backups, pretinkering/` folder.
 
-**GloomsHub repo:**
-- `Shell.lua`: window grew 860×680 → **860×740** to host GA's column (GA's old window was
-  740 tall). The content area — **860×626 — is now PINNED in CONTRACTS §2**; tabs may treat
-  it as a guaranteed minimum. GB's panes stretch (top/bottom anchored) — no GB change needed.
-- `Skin.lua`: LibGloomSkin **MINOR 2** — `addEdges` now returns GA's richer edge handle
-  (`.top/.bottom/.left/.right` + `:SetColor`); callers ignoring the return are unaffected.
+## VibeOverlay recon (verified on disk 2026-07-24)
+- Files: `VibeOverlay.lua` (371 lines — overlay engine + `/vibe` router at ~line 328),
+  `VibeOverlay_Editor.lua` (1036 — the overlay manager/editor, native `BackdropTemplate`),
+  `VibeOverlay_Preview.lua` (563 — the asset browser). TOC: `## Interface: 120000` (needs
+  120007), `SavedVariables: VibeOverlayDB`, `SavedVariablesPerCharacter: VibeOverlayDBChar`.
+- The resolver consumer (SUITE-PLAN §4.4): `VibeOverlay.lua` ~line 155 —
+  `local stPath = StoneTweaks_ResolveAssetPath and StoneTweaks_ResolveAssetPath(t)` →
+  change to `GloomsHub:ResolveAssetPath(t)` (the Hub's global compat shim keeps old saved
+  strings working regardless; CONTRACTS §3).
+- The editor label: `VibeOverlay_Editor.lua` ~line 464 — `"Texture (StoneTweaks name, atlas
+  name, file ID, or Interface\\ path):"` → say "Media name" / "Suite media name".
+- `/vibe` help also advertises `overlays`/`o` and `preview`/`p` subcommands — the branches
+  aren't in the ~328 router block, so the Editor/Preview files extend or wrap the handler:
+  READ all three files fully before rerouting (they're small).
 
-**GloomsAuras repo (`~/GloomsAuras`):**
-- TOC: **`## Dependencies: GloomsHub`**; LDB/LibDBIcon lib lines + `MinimapButton.lua` gone.
-- `Config.lua`: the local toolkit copy is deleted — consumes LibGloomSkin (aliases keep every
-  call site unchanged; GA's `flatButton` never used SetActive, so visuals are identical).
-  The standalone window (`GloomsAurasConfig`, chrome, drag, panelPos, `C:Toggle`,
-  `C:SavePanelPos`) is DELETED; `BuildTab(container)` mounts the same master/detail UI as a
-  **620-wide column centered** in the container. Layout deltas for the 626px content area:
-  `PANE_H` 614→528, `LIST_ROWS` 15→13, "View All Auras" bottom-anchored — the editor pane
-  already scrolls and the list is windowed, so nothing is lost. Docked drawers (`DockRight`)
-  parent to the CONTAINER → they hide on tab switch and window close; free-floating pickers
-  still close via the container's OnHide (which also un-forces the editor preview, exactly
-  like the old window's OnHide). Registered via `RegisterTab{ id="auras", title="AURAS",
-  order=10 }` — no refresh handler; the container's OnShow re-syncs + opens the landing,
-  matching old behavior. **`CatStoneTweaks` → `CatSuiteMedia`**: the texture picker's
-  "StoneTweaks Graphics" category is now **"Suite Graphics"**, fed by
-  `GloomsHub:ListMedia("graphics"/"textures")` — GA no longer reads `StoneTweaksDB` or
-  hardcodes ST paths ANYWHERE (one of the two ST dependencies from SUITE-PLAN §0 is gone;
-  Overlays' resolver call is the last one, Phase E).
-- `Core.lua`: `GA.COLOR` aliases the lib (dup deleted); **`GA.FONT` stays on GA's own files**
-  (users' saved configs store those font paths via the font picker; files are byte-identical
-  to the Hub's). `/ga` (and `config`/`options`) → `GloomsHub:ToggleWindow("auras")`;
-  `/ga minimap` now toggles the HUB's GS button. **Every other `/ga` subcommand untouched.**
-- Warm pairs GA registers (via `RegisterWarmPairs`, Config.lua top): title 13/16/17/18/20 ·
-  head 12/13 · label 11/12.
-- `.pkgmeta`: LDB + LibDBIcon externals dropped.
+## ⚠ THE SavedVariables-RENAME TRAP (plan around this FIRST)
+WoW stores SavedVariables per ADDON FOLDER NAME: `WTF/Account/<acct>/SavedVariables/
+VibeOverlay.lua` (+ per-character copies under each character's SavedVariables dir for
+`VibeOverlayDBChar`). Renaming the addon to `GloomsOverlays` means the client will load
+NOTHING from those files — the owner's overlays would silently vanish. Migration (pick at
+session start; (a) is recommended):
+- **(a) Offline file copy (recommended, client CLOSED):** copy each `VibeOverlay.lua` SV
+  file to `GloomsOverlays.lua` alongside it (account-level AND every character dir that has
+  one — search the WTF tree, don't assume one). Keep the GLOBAL names (`VibeOverlayDB` /
+  `VibeOverlayDBChar`) in the new TOC unchanged — then the copied files load as-is, zero
+  Lua migration. Rename the globals later (or never); the old VibeOverlay SV files stay
+  behind as a rollback, same non-destructive pattern as the ST migration.
+- (b) Transitional Lua copy (both addons installed once) — more moving parts, needs a
+  throwaway load order; only if (a) is somehow blocked.
+QA the migration FIRST (restart → `/vibe list` shows the same overlays) before touching
+anything else, so a reskin bug can never be confused with a data-loss bug.
 
-Both repos are committed separately. VibeOverlay + StoneTweaks: completely untouched.
+## The Phase E work (after the migration QA passes)
+1. **TOC:** `## Interface: 120007`, `## Title: Gloom's Overlays`, `## Dependencies:
+   GloomsHub`, keep both SV lines. New file names (`GloomsOverlays*.lua`) to match.
+2. **Resolver + label:** the two edits above. That is the LAST StoneTweaks dependency —
+   after E, Phase F can retire ST.
+3. **Mount:** `GloomsHub:RegisterTab{ id="overlays", title="OVERLAYS", order=30, build=… }`
+   (reserved id, CONTRACTS §2; container ≥ 860×626, OnShow/OnHide fire on tab visibility —
+   GB/GA show the pattern: GB Config.lua = simple mount + in-tab footer; GA Config.lua =
+   centered-column mount + docked drawers + OnShow/OnHide side effects).
+4. **RESKIN in one go (the largest net-new UI chunk, locked decision — no interim
+   native-looking state):** rebuild the manager/editor (and decide with the owner where the
+   asset browser goes — a docked drawer like GA's pickers is the family pattern) from
+   `BackdropTemplate` into LibGloomSkin (CONTRACTS §4: flatButton, sliderRow, colorSwatch,
+   makeToggle, flatEditBox, makeScrollbar, attachTip…). No `Vibe` name anywhere
+   user-visible.
+5. **Slash:** `/go` (+ `/vibe` alias) → `ToggleWindow("overlays")`; `list`/`debug` stay.
+6. **Warm pairs:** enumerate the reskinned UI's (lib-FONT, size) pairs and register the
+   ones the Hub's base list misses via `UI.RegisterWarmPairs` (CONTRACTS §4 lists what GB/GA
+   already warm; pairs dedupe for free).
+7. **Docs, same session:** SUITE-STATE Phase E row + physical-state; CONTRACTS §5 Overlays
+   row; new-repo CLAUDE.md with the suite pointer block (copy GB/GA's).
 
-## Locked decisions (do NOT reopen — full list in SUITE-STATE.md)
-Base = GloomsHub (permanent path). **Hard dependency, no fallback** — config renders ONLY in
-the Hub shell; the tools' own windows are deleted (never resurrect one while debugging).
-StoneTweaks retires at Phase F (keep installed until then). VibeOverlay → Gloom's Overlays
-(Phase E, reskin in one go). **Build Barn is OUT.** One suite minimap launcher (the Hub's).
-Never "v1"/"later phase" framing. GUI over slash.
+### ★ QA GATE for Phase E (the owner runs; ONE step at a time; verify before claiming)
+New addon folder + renamed files → **FULL CLIENT RESTART** (and step 0 happens with the
+client CLOSED).
+0. (Client closed) SV files copied; old VibeOverlay folder removed; `GloomsOverlays`
+   symlink in place.
+1. Restart. BugSack clean. Addon list shows "Gloom's Overlays" (no "VibeOverlay" entry).
+2. All previously-configured overlays render on screen exactly as before (the SV migration
+   + resolver proof — including StoneTweaks-name textures, which now resolve through the
+   Hub).
+3. `/go` (and `/vibe`) → Suite window on **OVERLAYS**; tabs = AURAS · BARS · OVERLAYS ·
+   MEDIA; `/gloom`, `/ga`, `/gb` unchanged.
+4. The Overlays tab is FULLY Gloom-styled (no native Blizzard chrome anywhere): manager
+   lists overlays; editing (name, texture, size, position, condition…) applies live;
+   the asset browser opens where agreed and picks work.
+5. `/vibe list` + `/vibe debug` (or `/go …`) still work from chat.
+6. No blank text in the Overlays tab after the COLD start (warm-list check).
+7. `/st` untouched; ST still installed (it retires in Phase F, not now).
 
----
-
-## ▶▶ NEXT: run the ★ QA GATE for Phase D (the owner runs; ONE step at a time; verify before claiming)
-
-Files changed in TWO addons (GA file deleted, Hub shell resized) → **FULL CLIENT RESTART**.
-
-1. Restart the client. BugSack clean at login. (Known artifact, not a bug: ST's
-   "skipped — already registered" lines.)
-2. `/ga` → the Suite window (now a bit taller) opens focused on **AURAS**; tabs read
-   **AURAS · BARS · MEDIA**; `/gloom` toggles; `/gb` still opens BARS.
-3. The Auras tab opens on the landing (logo + Add Icon/Texture/Bar Aura + View All Auras —
-   View All now sits just above the footer divider). Creating/selecting auras works; the
-   left list scrolls (13 rows now); the editor accordion opens/edits live; the aura NAME
-   field renders (cold-start font check — Khand 20).
-4. Docked drawers + pickers: texture picker, sound picker, font picker, trigger editor,
-   visibility/group/profile drawers all open docked to the WINDOW's right edge, and all
-   disappear when you switch to another tab or close the window.
-5. **Texture picker → category dropdown → "Suite Graphics"** lists the catalog (36 graphics
-   + 6 textures, same art as before — now served from `Interface\AddOns\GloomsHub\…`);
-   picking one applies it. Existing auras that used StoneTweaks-path textures still render
-   (their saved paths still resolve — ST is still installed).
-6. Editor preview behavior: displays force-show while the Auras tab is visible, stop when
-   you switch tabs or close the window; profile switching (footer "Profile:" button) still
-   rebuilds the list.
-7. No blank text anywhere in the Auras tab after the COLD start (name field, section
-   headers, pill labels, slider values, drawer titles).
-8. `/ga help/list/debug/trace/probe…` all still work; `/ga minimap` toggles the GS suite
-   button. `/vibe` + `/st` untouched and their windows still work.
-
-**If it passes:** update [SUITE-STATE.md](SUITE-STATE.md) Phase D → **DONE — QA'd**, and
-rewrite this handoff as the **Phase E briefing** (Overlays: rename VibeOverlay →
-`GloomsOverlays`, mount the Overlays tab, route `/go` (+ keep `/vibe` as alias — open Q),
-update `VibeOverlay.lua:155` to `GloomsHub:ResolveAssetPath` + the editor label at
-`VibeOverlay_Editor.lua:464`, and RESKIN the whole editor/manager into LibGloomSkin in the
-same phase; see SUITE-PLAN §5.E + §4.4 and CONTRACTS §2/§3/§4).
-
-**If something fails:** BugSack error text FIRST. Debug within the shell-mount design.
-Likely seams: the pinned 860×626 assumption (check CONTRACTS §2 vs Shell.lua constants), a
-cold font pair missing from a warm list (CONTRACTS §4 lists who warms what), drawer strata/
-parenting inside the container, the landing's bottom-anchored View All button.
+**If it passes:** update SUITE-STATE (E → DONE) and rewrite this handoff as the **Phase F
+briefing** (retire StoneTweaks non-destructively: disable/remove the folder, verify fonts/
+textures/graphics/overlays all still work off the Hub, compat shim goes live — SUITE-PLAN
+§5.F; then G = packaging/release).
 
 ---
 
 ## Reminders
 - The owner QA's ONE copy-paste step at a time; verify before claiming; **BugSack text first**.
-- New files/assets → FULL CLIENT RESTART. Lua-only edits → /reload is enough (but cold-start
-  font checks NEED a real restart).
-- StoneTweaks stays installed until Phase F (GA no longer reads it, but users' saved texture
-  paths may still point into it until they re-pick, and Overlays still resolves through it
-  until E — retiring it early would silently blank those).
-- Update [SUITE-STATE.md](SUITE-STATE.md) at the end of ANY session that moves the suite.
-- Phase E is a ONE-REPO-plus-Hub phase but the folder MOVES: VibeOverlay lives directly in
-  AddOns (not symlinked); renaming it to `GloomsOverlays` likely means creating the repo at
-  `~/GloomsOverlays` + symlinking, matching the family convention. Plan that step with the owner
-  at the start of the session.
+- New files/assets → FULL CLIENT RESTART. Lua-only edits → /reload (cold-start font checks
+  need a real restart).
+- StoneTweaks stays installed until Phase F. Its login "skipped — already registered" lines
+  are the known artifact — not a bug.
+- **Polish backlog lives in SUITE-STATE** (first entry: the Auras landing page doesn't fit
+  the suite — the owner, Phase D QA). Don't start polish mid-phase; collect and batch it.
+- The suite has ONE minimap launcher (the Hub's GS button) — do not add one to Overlays.
+- Locked decisions (full list in SUITE-STATE): hard dependency, no fallback windows; Build
+  Barn is OUT; never "v1"/"later phase" framing; GUI over slash.
