@@ -3,11 +3,11 @@
 **Last updated: 2026-07-24.** Phases **A–E are DONE and QA'd** — all three tools render inside the
 one Suite window and consume LibGloomSkin.
 
-> ## ⛔ NEXT SESSION = TASK 0 (THE IDENTITY SCRUB), NOT PHASE F.
-> Phase F (retire StoneTweaks) is ready to go and is described below, but **Task 0 outranks it**.
-> Every repo is PRIVATE right now, which is the only reason nothing is exposed. Distribution
-> (BigWigs packager → GitHub Releases → WoWup) needs them PUBLIC, and they cannot go public until
-> the scrub is finished. Do Task 0 first, on a fresh head, with backups.
+> ## ▶ NEXT SESSION = PHASE F (retire StoneTweaks).
+> **Task 0 (the identity scrub) is DONE — 2026-07-24.** All five repos were rewritten, verified
+> clean on fresh clones *from GitHub*, and force-pushed. **Every repo is still PRIVATE** — nothing
+> was flipped public. Read the Task 0 record below before considering any flip, and note the open
+> item about Build Barn's WoWup delivery.
 
 ## Orientation (read in this order)
 1. This file.
@@ -34,51 +34,71 @@ one Suite window and consume LibGloomSkin.
 
 ---
 
-# TASK 0 — THE IDENTITY SCRUB (blocking; do this first)
+# TASK 0 — THE IDENTITY SCRUB ✅ DONE (2026-07-24)
 
-**Why:** the owner's real name and personal email were exposed on three then-public repos. They
-were flipped PRIVATE on 2026-07-24, which contained it. The global git identity is now
-`Gloom <gloom@handofdevastation.invalid>`, so *new* commits are clean — but history is not.
-Nothing may be published until this is done.
+**What it was:** the owner's real name + personal email, *and* his personal GitHub handle, were
+present across all five repos — in file content, in commit messages, and in author/committer
+metadata. Flipping the repos PRIVATE on 2026-07-24 contained it; this rewrite removed it.
 
-### The three surfaces (measured 2026-07-24, all five repos)
+### How it was done
+- **Backups first:** `git clone --mirror` of all five → `~/glooms-scrub-backups-2026-07-24/`
+  (38 MB), plus `GloomsBuildBarn-SERVER-TRUE.git` (see trap 2). ⚠ **These backups still contain
+  the old identity — they are the undo, and must never be pushed anywhere.**
+- **Tool:** `git-filter-repo` 2.47.0 (`brew install git-filter-repo`).
+- **Rules:** one replacements file used for BOTH `--replace-text` (blobs) and `--replace-message`
+  (commit messages), plus a `--mailmap` mapping the old name/email **and** the handle's
+  `…@users.noreply.github.com` address → `Gloom <gloom@handofdevastation.invalid>`.
+- Attribution by first name → "the owner" / "the owner's"; `/Users/<handle>/` → `~/`; the personal
+  handle → "the org admin account". Sentence-start forms were re-capitalized.
 
-| Repo | author/committer fields w/ old email | "the owner" in HEAD files | commit messages w/ name |
-|---|---|---|---|
-| GloomsBars | 248 | 212 | 37 |
-| GloomsAuras | 88 | 90 | 7 |
-| GloomsHub | 30 | 48 | 11 |
-| GloomsOverlays | 6 | 5 | 3 |
-| glooms-build-barn | 8 | 0 | 0 |
-| **total** | **380** | **355** | **58** |
+### Verified — every gate ZERO, on fresh mirror clones *from GitHub*
 
-Paths: `~/GloomsHub`, `~/GloomsOverlays`, `~/GloomsBars`, `~/GloomsAuras`,
-`~/Desktop/glooms-build-barn`.
+| Repo | commits | author/committer | messages | all-history blobs | HEAD files |
+|---|---|---|---|---|---|
+| GloomsHub | 17 | 0 | 0 | 0 | 0 |
+| GloomsOverlays | 3 | 0 | 0 | 0 | 0 |
+| GloomsBars | 124 | 0 | 0 | 0 | 0 |
+| GloomsAuras | 44 | 0 | 0 | 0 | 0 |
+| GloomsBuildBarn | 7 | 0 | 0 | 0 | 0 |
 
-### Steps
+Every author *and* committer across all history is now `Gloom <gloom@handofdevastation.invalid>`
+(plus `github-actions[bot]` on Build Barn's cron commits — correct, leave it). `StoneTweaks` /
+`StoneCast` names and the `VibeOverlayDB` / `VibeOverlayDBChar` SavedVariables globals were NOT
+touched; all 25 Lua files pass `luac -p`; no binary asset contained the identity.
 
-1. **Back up first — non-negotiable.** `git clone --mirror` each of the five somewhere outside the
-   working dirs (~38 MB total). A history rewrite is not undoable without this.
-2. **Install the tool:** `git-filter-repo` is NOT installed (`brew install git-filter-repo`).
-3. **Content + commit messages.** Write a replacements file (the owner's first name, last name,
-   full name, and `gloom@handofdevastation.invalid` → neutral text such as "the owner"), then per repo:
-   `git filter-repo --replace-text <file>` for blob content, plus `--message-callback` for the 58
-   commit messages. Mind case variants and possessives ("the owner's").
-4. **Author/committer metadata.** A `--mailmap` file mapping the old name/email →
-   `Gloom <gloom@handofdevastation.invalid>` covers all 380 fields.
-5. **Verify before pushing.** In every repo, both must return zero:
-   - `git log --format='%an%n%ae%n%cn%n%ce' | grep -ci 'owner\|redacted'`
-   - `git grep -i owner $(git rev-list --all) -- | wc -l` (or `--replace-text` dry-run equivalent)
-   Also re-check nothing reintroduced the personal GitHub handle anywhere.
-6. **Re-add remotes and force-push** Bars, Auras, Build Barn (filter-repo drops `origin` on
-   purpose — re-add it). This rewrites published history; the repos are private and single-author,
-   so there is no one to coordinate with.
-7. **Create the two missing repos** — `HandofDevastation/GloomsHub` and
-   `HandofDevastation/GloomsOverlays` do not exist yet, and neither has a remote. Create them
-   PRIVATE first, push, verify clean, then flip.
-8. **Only then** flip whichever repos need to be public for WoWup. Confirm afterwards that
-   releases still show `github-actions[bot]` as author (they did before) and that org membership
-   is still private.
+### ★★ Two traps this hit — DO NOT REPEAT
+1. **Release ZIPs are a SEPARATE surface a force-push cannot reach.** GloomsBars' three published
+   release zips contained the name — in `Core.lua` and in a packager-generated `CHANGELOG.md`
+   built from commit messages. Force-pushing the rewritten **tags** re-triggered the BigWigs
+   packager, which rebuilt all three assets from scrubbed source (new asset IDs, re-verified 0
+   hits). **After ANY history rewrite, download and grep the release assets.**
+2. **★ Build Barn's REMOTE was AHEAD of the local clone.** Its cron commits `BuildData.lua` and
+   tags a dated release *directly on GitHub*, so `~/Desktop/glooms-build-barn` was missing three
+   "Weekly data refresh" commits and three tags. Scrubbing the stale local copy and force-pushing
+   it rolled `main` back from 2026-07-21 to 2026-07-06. Recovered from the surviving tags, rebuilt
+   from the true server history, re-pushed; `BuildData.lua` verified byte-identical to the
+   pre-scrub published asset — nothing lost. **ALWAYS `git fetch --all --tags` before rewriting a
+   repo that has automation writing to it.**
+
+### Still open (deliberately NOT done)
+- **Nothing was made public.** All five repos remain PRIVATE.
+- **Old commits may linger on GitHub addressable by SHA.** A force-push leaves the pre-rewrite
+  objects unreachable but not necessarily purged. The airtight version is delete-and-recreate,
+  which needs a `delete_repo` scope the `gh` token lacks
+  (`gh auth refresh -h github.com -s delete_repo`). Bars/Auras would be cheap to recreate — their
+  releases regenerate automatically from a tag push. **Build Barn must NOT be deleted.**
+- These repos were PUBLIC with the identity until 2026-07-24, so third-party mirrors of public
+  GitHub event data are outside anyone's control. This scrub is forward-looking.
+- `.claude/settings.json` `additionalDirectories` now reads `~/GloomsBars` etc. — confirm `~`
+  expands there, or put absolute paths back.
+
+### ⚠ THE PUBLIC QUESTION — Build Barn is currently undeliverable
+GBB is installed by guild members **via WoWup through GitHub**, which reads Releases through the
+API; a PRIVATE repo returns 404 to them. **GBB has been undeliverable to the guild since it was
+flipped private on 2026-07-24** — the cron still runs and still publishes releases, but nobody can
+fetch them. GBB is now fully scrubbed *and* its release zips are verified clean, so it is safe to
+make public again — but the privacy block requires an explicit instruction from the owner, so it
+was left private. Same applies to GB/GA/Hub/Overlays for the Phase G WoWup path.
 
 ### Known-good facts (verified 2026-07-24 — don't re-litigate)
 - Org membership IS private (`/orgs/HandofDevastation/public_members/<handle>` → 404).

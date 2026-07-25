@@ -79,12 +79,17 @@ commit metadata.
 - Git identity is set globally to `Gloom <gloom@handofdevastation.invalid>` — matching the
   addons' `## Author: Gloom`, and a reserved-TLD address that is undeliverable by design and
   links to no account. Do not override it per-repo.
-- **All repos are PRIVATE as of 2026-07-24** (GloomsBars, GloomsAuras, GloomsBuildBarn were
-  flipped from public). Do not make one public without an explicit instruction — and not before
-  the scrub below is done.
-- **Owed cleanup:** strip the name from file content in all five repos, then rewrite history
-  (~168 commits carry the old author email). Until that's finished, publishing anything re-exposes
-  it. Tracked in [docs/SUITE-STATE.md](docs/SUITE-STATE.md) as a Phase G prerequisite.
+- **All five repos are PRIVATE as of 2026-07-24** — GloomsBars, GloomsAuras, GloomsBuildBarn were
+  flipped from public, and GloomsHub + GloomsOverlays were created private. Do not make one public
+  without an explicit instruction.
+- **The scrub is ✅ DONE (2026-07-24).** All five repos had history rewritten with
+  `git-filter-repo` — file content, commit messages AND author/committer metadata — and were
+  verified clean on fresh clones pulled back from GitHub. Full record + the two traps it hit
+  (published release ZIPs are a separate surface; a repo whose cron writes to GitHub can be AHEAD
+  of your local clone) are in [docs/HANDOFF.md](docs/HANDOFF.md) under TASK 0.
+- **Still true after the scrub:** the mirror backups in `~/glooms-scrub-backups-2026-07-24/` still
+  contain the old identity — never push them anywhere. And pre-rewrite commits may linger on
+  GitHub addressable by SHA, so re-publishing is a deliberate decision, not a formality.
 
 > The owner works structured & catalog-first; NEVER "v1"/"later phase" framing; GUI over slash
 > for user controls; never rush toward closing a session. **QA as you go — do not build a large
