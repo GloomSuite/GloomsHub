@@ -4,8 +4,15 @@
 > UPDATE it at the end of any session that moves the suite.** Home of record: this repo.
 > Full design in [SUITE-PLAN.md](SUITE-PLAN.md). Shared contracts in [CONTRACTS.md](CONTRACTS.md).
 
-**Last updated:** 2026-07-25g — **Overlays' SLIDERS are DONE and QA'd** (to-do item 2), so **ONE
-polish item is left in the whole suite: GB's modifier symbols.** That session also did two things
+**Last updated:** 2026-07-25h — **★★ THE TO-DO LIST IS EMPTY. The 7-phase plan is complete AND the
+polish backlog is closed.** The last item (3, GB's modifier symbols) was **DROPPED by the owner on
+2026-07-25** — reviewed, priced, and judged not worth the cost; no code changed, and it is not to be
+re-proposed. **★ THE SAME SESSION SHIPPED A NEW GB FEATURE AND THE SUITE'S FIRST DRIFTED RELEASE:
+`GloomsBars v1.1.0`** (base icon tint — Wash/Tint + strength, in Decoration layers). The other three
+addons stay at **`v1.0.1`**, which is the *intended* behaviour of the versions-may-drift decision
+below, not an oversight. **Nothing in the Hub changed: no new widget, no MINOR bump (LibGloomSkin
+stays at 4), no consumer gate moved.** Full record in HANDOFF's 2026-07-25h session record; the GB
+detail lives in GB's own handoff (SESSION 17). Before that: **Overlays' SLIDERS were DONE and QA'd** (to-do item 2). That session also did two things
 that were NOT on this list, both GO-only: the overlay engine now **recycles its live frames**
 instead of building new ones on every apply, and the Layer section gained a numeric **Level**
 (z-order within a strata) plus WoW's two missing stratas. Before that: **the MODAL SCRIM is DONE and QA'd** (the dialogs now dim what's
@@ -85,8 +92,18 @@ Everything below is polish. ✅ items are done and kept for the record.
    **Level** row (0–1000) ordering overlays *within* a strata. Every overlay used to draw at the
    same level, so strata was the only separation there was. An overlay that has never set `level`
    still draws at WoW's natural default (read from a real frame, not assumed), so nothing moved.
-3. **Modifier symbols (⌘⇧⌃⌥) take no outline/shadow** · `~/GloomsBars` — deferred but wanted; the
-   approved path is in GB's handoff item (d). **No open GB bugs.**
+3. ~~**Modifier symbols (⌘⇧⌃⌥) take no outline/shadow** · `~/GloomsBars`~~ — **✅ CLOSED 2026-07-25:
+   DROPPED, WON'T DO** (the owner). *"Leave the glyphs untouched… juice isn't worth the squeeze. I can
+   deal with no stroke/dropshadow on the glyphs."* **Do not re-propose it.** No code changed — the
+   glyphs stay as unstyled inline PNGs. The full reasoning lives on **GB's handoff item (d)**, which is
+   the home of record for it; in short: WoW can never style an inline `|T…|t` texture, and the approved
+   fix (a second FontString in a glyph font) hid a **hard prerequisite nobody had written down** — a
+   bundled font actually containing U+2318/21E7/2303/2325, which GB does not have, making it a new
+   `.ttf` (the suite's one genuine restart case) plus a licensing question, on top of duplicating the
+   entire keybind styling + re-assert surface. **No open GB bugs.**
+   ★ **The lesson worth carrying:** the cost of a deferred item can be much higher than its handoff entry
+   says. This one had read as "fiddly but approved" across three sessions; pricing it properly before
+   coding is what closed it in one exchange instead of one session.
 
 **Small / housekeeping**
 4. ~~Remove the leftover **`test-remove`** graphic from the Media catalog~~ — **✅ DONE by the owner

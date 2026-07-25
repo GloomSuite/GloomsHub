@@ -1,15 +1,16 @@
 # Gloom's Hub — Session Handoff
 
-**Last updated: 2026-07-25g** — the newest record below is **Overlays' sliders** (done + QA'd, in
-`~/GloomsOverlays`). **The polish backlog is down to ONE item, and it is not in this repo** — GB's
-modifier symbols. **ALL SEVEN PHASES (A–G) ARE DONE AND QA'd BY THE OWNER.** All four
-addons publish **`v1.0.1`** from the **`GloomSuite`** org, and both the install and update paths are
-proven in the live client. **The plan is finished; only the polish backlog remains.**
+**Last updated: 2026-07-25h** — the newest record below is the **modifier symbols being DROPPED**,
+which closes the last polish item. **ALL SEVEN PHASES (A–G) ARE DONE AND QA'd BY THE OWNER, AND THE
+POLISH BACKLOG IS NOW EMPTY.** All four addons publish **`v1.0.1`** from the **`GloomSuite`** org, and
+both the install and update paths are proven in the live client. **Nothing is queued and no repo has
+an open bug.**
 
-> ## ★★ THE 7-PHASE PLAN IS COMPLETE. Phase G was QA'd by the owner on 2026-07-25.
-> **Nothing is in flight and no phase work remains.** The install AND update paths are both proven
-> end-to-end; all four addons publish **`v1.0.1`**. Everything left is the **polish backlog in
-> SUITE-STATE** — pick an item, route it to the repo that owns it, and go.
+> ## ★★ THE 7-PHASE PLAN IS COMPLETE AND THE BACKLOG IS EMPTY.
+> **Nothing is in flight, no phase work remains, and no polish item is open.** The install AND update
+> paths are both proven end-to-end; all four addons publish **`v1.0.1`**. The to-do list in
+> SUITE-STATE is kept for the record only — every item is ✅ done or explicitly dropped. Next session
+> starts from whatever the owner raises; route it to the owning repo first.
 >
 > **★ The suite also moved to a new GitHub org, `GloomSuite`** (2026-07-25). Install URLs are
 > `https://github.com/GloomSuite/<Repo>`. `GloomsBuildBarn` + the guild website stayed with
@@ -81,11 +82,78 @@ proven in the live client. **The plan is finished; only the polish backlog remai
 
 ---
 
-# ▶ NEXT SESSION — GB's modifier symbols, in `~/GloomsBars`
+# ▶ NEXT SESSION — nothing is queued. The backlog is EMPTY.
 
-**It is the LAST item on the suite to-do list** (item 3): the modifier symbols (⌘⇧⌃⌥) take no
-outline/shadow. Deferred but wanted; the approved path is in GB's own handoff item (d). Finish it
-and the backlog is empty.
+**The 7-phase plan is complete and the polish backlog is closed.** The last item (3, GB's modifier
+symbols) was **DROPPED by the owner on 2026-07-25** — see the session record directly below. There is
+no pending work anywhere in the suite and no open bugs in any of the four repos. Next session starts
+from whatever the owner raises; route it to the repo that owns it before touching anything.
+
+**★ Versions now DRIFT, as intended: `GloomsBars` is at `v1.1.0`, the other three at `v1.0.1`.** Don't
+"fix" that by tagging the others — release only what changed. The version gate (CONTRACTS §6) is what
+makes it safe.
+
+# SESSION RECORD — 2026-07-25h (modifier symbols DROPPED · GB's icon tint · `GloomsBars v1.1.0`)
+
+**Two outcomes: the backlog was emptied, and a new GB feature shipped from a cold question.** All GB
+work was done in `~/GloomsBars`, correctly routed; what lands HERE is the ledger tick, the release
+fact and this record.
+
+### The release — the suite's FIRST intentionally drifted version
+**`GloomsBars v1.1.0`; the other three stay at `v1.0.1`.** That is the versions-may-drift decision
+working as designed, not an oversight — only GB changed. **Nothing in the Hub changed: no new widget,
+no MINOR bump (LibGloomSkin stays at 4), no consumer gate moved.** A feature-only MINOR off `v1.0.1`.
+
+### The new feature (GB's repo owns the detail — see its SESSION 17)
+**Config → Decoration layers → ICON TINT**: Off / Wash / Tint + colour + a 0–100% Strength slider.
+Two things worth stealing for the other tools:
+- ★ **Group controls by what they DO to the thing, not by which engine function they call.** The block
+  first shipped under *Cooldown & availability*, beside the availability tints it shares an engine
+  funnel with. The owner rejected it on sight — *"this belongs in Decoration Layers. What a weird
+  choice."* He is right, and it generalizes: grouping by shared plumbing is the engine's logic leaking
+  into the UI. **Worth a check in any tab that grew around its engine.**
+- ★ **Two verified 12.0.7 client facts**, both read off Blizzard's source on disk rather than guessed:
+  textures carry a **float** `SetDesaturation(0.5)` (not just the boolean `SetDesaturated`) — used by
+  Blizzard in `Blizzard_RuneforgeModifierSlot.lua:150`, and **do not confuse it with the legacy global
+  `SetDesaturation(tex, bool)` shim at `UIParent.lua:546`**; and WoW has exactly **five blend modes**
+  (`DISABLE` · `BLEND` · `ALPHAKEY` · `ADD` · `MOD`, per `Blizzard_SharedXML/UI.xsd:43-51`), of which
+  the client really only uses ADD, BLEND and a handful of MOD.
+
+### ⚠ A REAL CAVEAT IN THIS FILE'S OWN `luac -l … _ENV` CHECK — found and diagnosed
+The check promoted by GA's and GO's sessions reported a global as **REMOVED** from a file that had only
+gained lines. **It was a false removal.** Past ~255 constants the compiler stops using the compact
+`GETTABUP … ; _ENV "name"` form and emits `GETUPVAL _ENV` + `LOADK "name"` + `GETTABLE` — the same
+global read, spelled differently, and the grep pattern no longer matches. **On large files, treat
+REMOVED entries as suspect; only ADDED entries are the real signal.** The check is still worth running
+— it is what proved the moved UI block's helpers were in scope — but read it with this in mind.
+
+---
+
+## The modifier symbols: reviewed, priced, DROPPED
+
+**Suite to-do item 3 is CLOSED as WON'T DO, and with it the whole backlog.** No code changed for this
+part; it was a decision, and the docs now record it. The owner asked for a read on the approach
+*before* any coding — which is what surfaced the cost.
+
+- **The owner's call:** *"Leave the glyphs untouched. It's a 'juice isn't worth the squeeze'
+  situation. I can deal with no stroke/dropshadow on the glyphs."* **Do not re-propose this**, and do
+  not quietly "fix" it while working on keybind text. Full reasoning is on **GB's handoff item (d)**,
+  the home of record.
+- ★ **The item had an unstated hard prerequisite that three sessions of handoff notes never priced.**
+  It read as "fiddly but approved" — a second FontString in a glyph font. But that needs a bundled
+  font *containing* U+2318/21E7/2303/2325; GB bundles Khand + GeneralSans, both Latin display faces
+  that lack all four. So the "approved path" actually meant shipping a **new `.ttf`** — the suite's one
+  genuine full-restart case — plus a licensing question, on top of duplicating the entire keybind
+  styling and re-assert surface on a parallel FontString.
+- ★★ **The transferable lesson: price a deferred item before you schedule it, not after you start it.**
+  A backlog entry describes what someone once intended, not what it costs today. Reading the actual
+  code first turned a planned session into a one-exchange close. **Worth doing for any item that has
+  been carried across more than a couple of handoffs** — carrying is itself a signal.
+- **If it is ever reopened** (it shouldn't be, absent a new reason): the cheap route is the texture
+  layer, not a FontString — bake outline variants + a black silhouette in GB's
+  `tools/generate-modglyphs.py` and emit two inline textures per modifier via the escape's x/y offset
+  args. No new font, no restart. Costs: an explicit height (losing `:0` auto-line-height) and a
+  **shadow colour baked black**, since inline textures take no tint.
 
 ~~Overlays' sliders~~ — **✅ DONE + QA'd 2026-07-25**, and ticked off in
 [SUITE-STATE.md](SUITE-STATE.md) (to-do item 2, where the full record lives). It landed with no
@@ -673,10 +741,11 @@ moved it to `GloomsHub:ResolveAssetPath`. Nothing in the suite reads ST data any
   off the addon FOLDER name; 23 files were copied in place at gate A and **12 characters ride
   non-Default profiles**. Renaming those globals silently resets it.
 
-## Polish backlog — in SUITE-STATE; don't start it mid-phase
-~~The Auras tab layout rework~~ — **✅ DONE + QA'd 2026-07-25** (to-do item 1; see the session
-record at the top of this file). What remains: **Overlays' Width / Height / X / Y should be
-sliders, not typed boxes**, and GB's modifier symbols.
+## Polish backlog — CLOSED. Nothing remains.
+~~The Auras tab layout rework~~ (item 1) · ~~Overlays' Width/Height/X/Y sliders~~ (item 2) — both
+**✅ DONE + QA'd 2026-07-25**. ~~GB's modifier symbols~~ (item 3) — **DROPPED by the owner
+2026-07-25**, not to be re-proposed. See the session records at the top of this file; the ledger is
+in SUITE-STATE.
 
 ## Other reminders
 - ONE minimap launcher for the suite (the Hub's GS button) — never one per tool.
