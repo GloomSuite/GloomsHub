@@ -39,6 +39,19 @@ This is a one-time setup per addon. WoWup handles updates automatically afterwar
 Updates from then on are the normal WoWup flow — they show up in **My Addons** and
 you click **Update**.
 
+### You do NOT need a GitHub account or an access token
+
+These repos are public, so WoWup installs and updates them with no sign-in and no
+credentials of any kind.
+
+If you see a **"personal access token"** field in WoWup's GitHub settings, leave it empty.
+It only raises GitHub's API rate limit (60 requests/hour without one), which matters when
+you track a lot of addons — it is not permission to install. If you ever do hit a rate
+limit, generate your **own** free token in your **own** GitHub account.
+
+⚠ **Never use someone else's token, and never share yours.** A token is a password for a
+GitHub account, not a setting.
+
 ### If a tool says it's missing a dependency
 
 The in-game addon list and WoWup will both flag `GloomsHub` as missing. That is the
