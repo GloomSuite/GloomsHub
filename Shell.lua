@@ -83,11 +83,14 @@ local function BuildPanel()
     CreateColor(COLOR.orange.r, COLOR.orange.g, COLOR.orange.b, 0))
   UI.addEdges(panel, COLOR.rim, 1)
 
-  -- Title bar: the GS monogram (Media/ui/logo.png — the owner's Gloom Suite logo,
-  -- 2026-07-24; 197×295 art shown at native aspect) left of the wordmark.
+  -- Title bar: the GS monogram (Media/ui/logo.png) left of the wordmark.
+  -- ★ The mark is the SUITE's (GS), not the Hub-as-an-addon's (Gh, Media/ui/hub.png,
+  -- which is the TOC IconTexture). This window is the suite, so it wears GS.
+  -- Art is the 2026-07-25 set: 512×512 SQUARE with transparent ground and internal
+  -- padding — the old logos were portrait with the name baked in underneath.
   local logo = panel:CreateTexture(nil, "ARTWORK")
   logo:SetTexture(Hub.MEDIA .. "ui\\logo.png")
-  logo:SetSize(19, 28)
+  logo:SetSize(28, 28)   -- square; matches the old 28 height so the title bar is unchanged
   logo:SetPoint("TOPLEFT", 14, -10)
   local mark = UI.newText(panel, FONT.title, 21, { r = 1, g = 1, b = 1 }, "LEFT")
   mark:SetPoint("LEFT", logo, "RIGHT", 9, 0); mark:SetText("GLOOM SUITE")

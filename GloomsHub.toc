@@ -4,7 +4,7 @@
 ## Author: Gloom
 ## Version: @project-version@
 ## SavedVariables: GloomsHubDB
-## IconTexture: Interface\AddOns\GloomsHub\Media\ui\minimap.png
+## IconTexture: Interface\AddOns\GloomsHub\Media\ui\hub.png
 ## X-Website: https://github.com/GloomSuite/GloomsHub
 
 # Embedded libraries — load FIRST. LibSharedMedia is where the Hub registers
