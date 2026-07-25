@@ -8,7 +8,9 @@
 polish backlog is closed.** The last item (3, GB's modifier symbols) was **DROPPED by the owner on
 2026-07-25** — reviewed, priced, and judged not worth the cost; no code changed, and it is not to be
 re-proposed. **★ THE SAME SESSION SHIPPED A NEW GB FEATURE AND THE SUITE'S FIRST DRIFTED RELEASE:
-`GloomsBars v1.1.0`** (base icon tint — Wash/Tint + strength, in Decoration layers). The other three
+`GloomsBars v1.1.1`** (base icon tint — Wash/Tint + strength, in Decoration layers; `v1.1.0` shipped it
+with a per-preset bug the owner caught within minutes, fixed in `v1.1.1` — the record is in GB's
+SESSION 17 PART C and the trap generalizes to every future preset field). The other three
 addons stay at **`v1.0.1`**, which is the *intended* behaviour of the versions-may-drift decision
 below, not an oversight. **Nothing in the Hub changed: no new widget, no MINOR bump (LibGloomSkin
 stays at 4), no consumer gate moved.** Full record in HANDOFF's 2026-07-25h session record; the GB

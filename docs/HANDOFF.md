@@ -89,20 +89,27 @@ symbols) was **DROPPED by the owner on 2026-07-25** — see the session record d
 no pending work anywhere in the suite and no open bugs in any of the four repos. Next session starts
 from whatever the owner raises; route it to the repo that owns it before touching anything.
 
-**★ Versions now DRIFT, as intended: `GloomsBars` is at `v1.1.0`, the other three at `v1.0.1`.** Don't
+**★ Versions now DRIFT, as intended: `GloomsBars` is at `v1.1.1`, the other three at `v1.0.1`.** Don't
 "fix" that by tagging the others — release only what changed. The version gate (CONTRACTS §6) is what
 makes it safe.
 
-# SESSION RECORD — 2026-07-25h (modifier symbols DROPPED · GB's icon tint · `GloomsBars v1.1.0`)
+# SESSION RECORD — 2026-07-25h (modifier symbols DROPPED · GB's icon tint · `GloomsBars v1.1.0` → `v1.1.1`)
 
 **Two outcomes: the backlog was emptied, and a new GB feature shipped from a cold question.** All GB
 work was done in `~/GloomsBars`, correctly routed; what lands HERE is the ledger tick, the release
 fact and this record.
 
 ### The release — the suite's FIRST intentionally drifted version
-**`GloomsBars v1.1.0`; the other three stay at `v1.0.1`.** That is the versions-may-drift decision
+**`GloomsBars v1.1.1`; the other three stay at `v1.0.1`.** That is the versions-may-drift decision
 working as designed, not an oversight — only GB changed. **Nothing in the Hub changed: no new widget,
-no MINOR bump (LibGloomSkin stays at 4), no consumer gate moved.** A feature-only MINOR off `v1.0.1`.
+no MINOR bump (LibGloomSkin stays at 4), no consumer gate moved.**
+⚠ **`v1.1.0` shipped the feature with a real bug** — a new preset field appeared to apply GLOBALLY
+because presets saved before it existed are silent on it, and the renderer falls back to the working
+copy. The owner caught it within minutes; `v1.1.1` backfills the field into every saved preset.
+**The trap generalizes to every future preset field in any tool with snapshot-style presets — GB's
+SESSION 17 PART C is the record.** ★ Lesson: *a claim about how a NEW field behaves for EXISTING saved
+data is a claim about migration.* The read path was correct; the data migration it implied was missing,
+and "it works for free" went into a handoff, a commit message and a release without being tested.
 
 ### The new feature (GB's repo owns the detail — see its SESSION 17)
 **Config → Decoration layers → ICON TINT**: Off / Wash / Tint + colour + a 0–100% Strength slider.
