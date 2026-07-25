@@ -1,21 +1,23 @@
 # Gloom's Hub — Session Handoff
 
-**Last updated: 2026-07-25.** Phases **A–F are DONE and QA'd**, and **Phase G is BUILT** — all four
-addons publish **`v1.0.0`** and every package is verified. **The 7-phase plan is code-complete.**
+**Last updated: 2026-07-25.** **ALL SEVEN PHASES (A–G) ARE DONE AND QA'd BY THE OWNER.** All four
+addons publish **`v1.0.1`** from the **`GloomSuite`** org, and both the install and update paths are
+proven in the live client. **The plan is finished; only the polish backlog remains.**
 
-> ## ▶ NEXT SESSION = ONE QA TASK, then the polish backlog.
-> **The only thing left in Phase G is the owner's fresh-WoWup-install check** — everything that can
-> be verified without the client already has been (see the Phase G record at the bottom). The QA
-> script is there; run it, then mark the phase DONE in SUITE-STATE.
+> ## ★★ THE 7-PHASE PLAN IS COMPLETE. Phase G was QA'd by the owner on 2026-07-25.
+> **Nothing is in flight and no phase work remains.** The install AND update paths are both proven
+> end-to-end; all four addons publish **`v1.0.1`**. Everything left is the **polish backlog in
+> SUITE-STATE** — pick an item, route it to the repo that owns it, and go.
 >
-> ⚠ **That QA is BLOCKED on a hazard, not on effort:** all four AddOns entries are **symlinks into
-> the dev repos** (`AddOns/GloomsHub → ~/GloomsHub`, etc. — confirmed 2026-07-25). A WoWup install on
-> this machine writes over live source. Move the symlinks aside first (and restore after), or use a
-> second machine. **Do not hand the owner an install instruction without saying this.**
+> **★ The suite also moved to a new GitHub org, `GloomSuite`** (2026-07-25). Install URLs are
+> `https://github.com/GloomSuite/<Repo>`. `GloomsBuildBarn` + the guild website stayed with
+> `HandofDevastation`. Session record below.
 >
-> **After that, Phase G closes and the plan is finished.** Remaining work is the polish backlog in
-> SUITE-STATE: the **Auras tab layout rework** (its own session, by the owner's call) and
-> **Overlays' Width/Height/X/Y → sliders**.
+> ⚠ **If you ever re-run an install QA on THIS machine, the symlink hazard is permanent:** all four
+> AddOns entries are symlinks into the dev repos, so a WoWup install writes over live source. Move
+> them aside first and restore after — **and uninstall in WoWup BEFORE restoring the symlinks**,
+> because WoWup's Remove deletes the folder it manages and could follow a symlink into the source.
+> **Do not hand the owner an install instruction without saying this.**
 >
 > **★★ NEW RULE — ROUTE THE REQUEST BEFORE YOU DO THE WORK (the owner, 2026-07-25).** Full text +
 > ownership table in [../CLAUDE.md](../CLAUDE.md); a compact copy is in each tool's `CLAUDE.md`.
@@ -52,8 +54,13 @@ addons publish **`v1.0.0`** and every package is verified. **The 7-phase plan is
 3. **GB is the UI reference for the suite, not GA.** Copy Gloom's Bars when a pattern exists in both.
 4. **No self-arming "click twice" confirms.** Destructive actions use `UI.confirm`.
 5. **US spelling** in user-visible text ("Favorites", "color").
-6. QA is ONE copy-paste step at a time; verify before claiming; **BugSack text first**. New
-   files/assets → FULL CLIENT RESTART. Lua-only edits → `/reload`.
+6. QA is ONE copy-paste step at a time; verify before claiming; **BugSack text first**.
+   **★ `/reload` is enough, including for NEW files (the owner, 2026-07-25).** *"New files don't
+   matter. I install new addons all the time via WoWup and just do a /reload in the game to get them
+   to work."* **The old "new files/assets → FULL CLIENT RESTART" rule is RETIRED** — it was in
+   CLAUDE.md, this file and every QA script, and it cost him restarts he never needed. Stop writing
+   it into instructions. A restart is a fine thing to *try* if an asset genuinely doesn't appear;
+   it is not a prerequisite.
 7. **★ Route the request before doing the work (the owner, 2026-07-25).** Decide which repo owns a
    change BEFORE starting; if it isn't this session's repo, stop and say so. Full rule + ownership
    table in [../CLAUDE.md](../CLAUDE.md). The reason is context, not file access: a tool's
@@ -66,6 +73,48 @@ addons publish **`v1.0.0`** and every package is verified. **The 7-phase plan is
    Point at the Hub's SUITE-STATE instead of copying the fact.
 
 ---
+
+# SESSION RECORD — 2026-07-25c (PHASE G QA — the plan is complete)
+
+**Phase G is DONE and the 7-phase plan is finished.** The owner QA'd the full install and update
+paths against a real client with the dev symlinks moved aside. Results are in SUITE-STATE's Phase G
+row. All four addons publish **`v1.0.1`**.
+
+### ★ The one lesson worth carrying: a SILENT library failure reads as a pass
+GA loads LibCustomGlow with `LibStub("LibCustomGlow-1.0", true)` — the `true` means *silent*, so a
+missing library yields `nil` — and **every glow call is `pcall`-guarded** (`Displays.lua` ~line 46).
+So if the packaged zip had shipped without the library, there would be **no glow and NO BugSack
+error**. A clean sack would have looked like success. This mattered because GA's external had been
+dead (the wowace path 404'd) and was repointed at `Stanzilla/LibCustomGlow` — verified in the zip's
+file listing, but never *loaded* by anything until now.
+
+**The test, and it is short enough for WoW's 255-char chat limit:**
+```
+/dump LibStub("LibCustomGlow-1.0", true) ~= nil
+```
+→ **`[1]=true`**. Runtime-proven. **This is the same shape as the `LSM:Fetch` trap** (a missing font
+silently returns WoW's default): *when a subsystem is designed to degrade quietly, its silence is
+not evidence — go read the registry directly.*
+
+### Other findings
+- ★ **A WoWup update needs no full client restart — `/reload` is enough** (the owner). `v1.0.0` → `v1.0.1`
+  changed no files — only TOC metadata — and applied without one. He then confirmed it holds generally:
+  he installs new addons via WoWup and just `/reload`s. **The blanket restart rule is RETIRED.**
+- **The dev symlinks make the version string the load-source test.** A packaged install reads
+  `v1.0.x`; a dev symlink reads the literal `@project-version@`. That single field tells you which
+  copy the client actually loaded — worth checking first, since every later result depends on it.
+- **`GloomsOverlays` shows a red `?` in the addon list** — the missing `## IconTexture`, seen in the
+  wild. Backlog item 7; GO's repo owns it.
+- **The shell footer shows only the HUB's version** (the owner: "the individual addon version isn't
+  shown anywhere in GH"). Four addons version independently, and this session *demonstrated* the
+  drift — Bars sat at `v1.0.1` while the others were `v1.0.0` with nothing in the UI saying so.
+  **This answers the long-open "shared-footer contents" question.** Backlog item 12.
+
+### ⚠ Teardown order — the one destructive-mistake risk
+**Uninstall in WoWup BEFORE restoring the symlinks.** WoWup's Remove deletes the folder it manages;
+with a symlink in that slot it could follow the link into `~/GloomsHub` and delete live source.
+Uninstall first and it can only ever delete folders it created. Also expect WoWup to keep tracking
+those addon names afterwards and offer updates on the dev symlinks — a nuisance, not damage.
 
 # SESSION RECORD — 2026-07-25b (the org move: HandofDevastation → GloomSuite)
 
@@ -143,7 +192,7 @@ WoWup installs. Creating a second org leaves the old one alive, so its redirects
   **one product at runtime, four packages on disk.** The Hub owns the window frame + toolkit; each
   tool paints the inside of its own tab. **A shape is pure GB work in `~/GloomsBars`** — six PNGs in
   `Media/art/hand/` (`<key>-base/-inner/-outer/-rim/-line/-swipe.png`), one row in `HAND_DEF`
-  (`Core.lua`), the key added to `GB.HAND_GROUPS`, then a full client restart. **The Hub needs no
+  (`Core.lua`), the key added to `GB.HAND_GROUPS`, then a `/reload`. **The Hub needs no
   change and no new release** — that is the part that IS automatic. Only shared things come here:
   the shell/tab API, `LibGloomSkin`, media plumbing, the one launcher, these docs.
 - **"Is one GitHub link enough for friends?"** No — **four links, one per repo**, Hub first (WoWup's
@@ -410,13 +459,14 @@ sliders, not typed boxes**.
 **All four addons publish `v1.0.0`.** Everything verifiable outside the game client has been
 verified. What remains is the owner's install check, below.
 
-## ▶ THE ONLY REMAINING TASK — fresh WoWup install QA
-Run this, then mark Phase G **DONE** in SUITE-STATE. One step at a time; BugSack text first.
+## ✅ QA DONE — 2026-07-25. The script below is kept as the RE-RUN recipe, not an open task.
+Everything here passed. Results are in SUITE-STATE's Phase G row; the QA lessons are in the
+2026-07-25c session record. Re-run this only if packaging changes.
 
 1. In **WoWup → Get Addons → Install from URL**, install
    `https://github.com/GloomSuite/GloomsHub`.
 2. Install one tool the same way, e.g. `https://github.com/GloomSuite/GloomsBars`.
-3. **Full client restart** (new addon files — not a `/reload`).
+3. **`/reload`** (a full client restart is NOT required — see working agreement 6).
 4. Check: BugSack clean · the addon list shows both, with **no missing-dependency flag** ·
    `/gloom` opens the Suite window · the Media tab shows **1 font / 6 textures / 36 graphics** ·
    the installed tool's tab renders.

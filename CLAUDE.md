@@ -99,8 +99,13 @@ shared toolkit), say so and give a recommendation — don't guess silently and d
 
 ## Testing / release
 Symlinked into the client at `…/Interface/AddOns/GloomsHub`. QA by the owner (non-dev): ONE
-copy-paste step at a time, verify before claiming, BugSack error text first. New files/assets
-need a full client RESTART (not /reload). Ships via BigWigs packager → GitHub Releases (repo
+copy-paste step at a time, verify before claiming, BugSack error text first.
+**★ `/reload` is enough — including for NEW files (the owner, 2026-07-25, correcting this file.)**
+His words: *"new files don't matter. I install new addons all the time via WoWup and just do a
+/reload in the game to get them to work."* The old blanket "new files/assets need a FULL CLIENT
+RESTART" rule is **RETIRED** — it was costing him restarts he never needed. If a newly added asset
+genuinely fails to appear, a restart is a reasonable *debugging* step, but it is not the default
+ritual and QA instructions should stop demanding it. Ships via BigWigs packager → GitHub Releases (repo
 `GloomSuite/GloomsHub`), WoWup installs/updates. GB/GA/Overlays all hard-depend on it
 (`## Dependencies: GloomsHub`) as of Phase E.
 
