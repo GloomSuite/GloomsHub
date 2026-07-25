@@ -83,7 +83,7 @@ shipper — its `Skin.lua` IS the lib body (embedding a copy in each tool via `.
 externals is Phase G work). `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are Hub-side aliases of the
 same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Phase E**.
 
-**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 3) — the whole API; nothing else is public:**
+**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 4) — the whole API; nothing else is public:**
 - `Skin.COLOR` — `purple · heroic · green · red · orange` (each `{r,g,b,hex}`), `dark`, `rim`
   (both `{r,g,b,a}`), `text`, `mute` (`{r,g,b}`). The §1 literals.
 - `Skin.FONT` — `title · head · body · bodyM · label` → font files under
@@ -133,6 +133,17 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     `api` = `noun · names() · active() · switch(v) · create(name) · copy(name)? ·
     rename(name) · delete()` (each mutator → `ok, err`; `err` shows in the note line)
     `· onChange()? · title? · tips{dropdown,new,copy,rename,delete}?`
+  - `UI.tabHeader(parent, opts)` → **the suite's ONE tab header** (MINOR 4): the owning
+    tool's square mark beside its wordmark, with a divider under it. The owner, 2026-07-25:
+    he saw it on the Overlays tab and wants it on every tab. **Overlays built it inline
+    first and now CONSUMES this** — do not re-inline it anywhere.
+    `opts = { texture, label, x = 14, y = -12, size = 26, gap = 9, fontSize = 17,
+    divY = -48, rightInset = x }`. Returns `{ logo, text, divider, bottom }`; `bottom` is
+    the y offset callers anchor their first row below.
+    ★ **The mark is SQUARE — the art is 1:1 (512×512, transparent). Never stretch it.**
+    ★ **Which mark:** a *tool's* tab wears that tool's mark; the **Media tab wears Gh**
+    (the Hub-as-an-addon), NOT GS — GS is the *suite's* mark and already sits on the
+    window title bar directly above.
   - `UI.WarmFonts(extraPairs?)` — **the Hub calls this, once, at PLAYER_ENTERING_WORLD**
     (Media.lua's RegisterAll); draws the base list + everything registered + the arg
   - `UI.RegisterWarmPairs({ {fontPath, size}, … })` — **how a TOOL warms its pairs**: call at
@@ -234,12 +245,16 @@ end
 ### Current requirement
 | Consumer | needs |
 |---|---|
-| `GloomsBars/Config.lua` | MINOR **3** |
-| `GloomsAuras/Config.lua` | MINOR **3** |
-| `GloomsOverlays/GloomsOverlays_Editor.lua` | MINOR **3** |
-| `GloomsOverlays/GloomsOverlays_Preview.lua` | MINOR **3** |
+| `GloomsBars/Config.lua` | MINOR **4** — calls `UI.tabHeader` |
+| `GloomsAuras/Config.lua` | MINOR **3** — no tabHeader yet (its layout rework owns that) |
+| `GloomsOverlays/GloomsOverlays_Editor.lua` | MINOR **4** — calls `UI.tabHeader` |
+| `GloomsOverlays/GloomsOverlays_Preview.lua` | MINOR **3** — the drawer needs nothing newer |
 
-Hub currently ships **MINOR 3** (`Skin.lua`).
+★ Note the table is **not uniform, and that is correct** — each file declares what IT
+actually uses. MINOR 4 landed as the first live exercise of this gate: `UI.tabHeader` was
+added and the two files that call it were bumped **in the same commit**.
+
+Hub currently ships **MINOR 4** (`Skin.lua`).
 
 **Why this exists at all (the owner, 2026-07-25):** he asked whether letting the four addons'
 versions drift was a problem he wasn't aware of. It was — this was the problem, and it was live:

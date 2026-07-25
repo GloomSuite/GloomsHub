@@ -9,7 +9,7 @@
 -- change it THERE and every consumer in the same session.
 -- ============================================================
 
-local MAJOR, MINOR = "LibGloomSkin-1.0", 3   -- MINOR 3 (Phase E): dropdown + nameDialog + confirm + profileBlock
+local MAJOR, MINOR = "LibGloomSkin-1.0", 4   -- MINOR 4 (2026-07-25): + tabHeader (the shared per-tab mark + wordmark)
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if lib then
@@ -774,6 +774,51 @@ end
 function UI.attachTip(f, title, body)
   f:HookScript("OnEnter", function() showTip(f, title, body) end)
   f:HookScript("OnLeave", function() if tipFrame then tipFrame:Hide() end end)
+end
+
+-- ------------------------------------------------------------
+-- UI.tabHeader (MINOR 4) — the suite's standard TAB HEADER: the owning
+-- tool's square mark beside its wordmark, with a divider underneath.
+--
+-- The owner, 2026-07-25: he saw this on the Overlays tab ("a small copy of
+-- the header next to the name") and wants it on every tab. Overlays built
+-- it inline first; this promotes that exact geometry into the lib so the
+-- four tabs cannot drift apart. Overlays now CONSUMES this instead.
+--
+-- Sized for the 2026-07-25 square art (512×512, transparent, no baked-in
+-- name text). The default 26px matches the shell title bar's 28px mark at
+-- tab scale; the divider sits at -48, the family constant the shell's own
+-- title divider uses.
+--
+--   opts = { texture (required), label (required),
+--            x = 14, y = -12, size = 26, gap = 9, fontSize = 17,
+--            divY = -48, rightInset = x }
+--
+-- Returns { logo, text, divider, bottom }, where BOTTOM is the y offset the
+-- caller should anchor its first row below (divY, so content clears it).
+-- ------------------------------------------------------------
+function UI.tabHeader(parent, opts)
+  opts = opts or {}
+  local x    = opts.x or 14
+  local size = opts.size or 26
+  local divY = opts.divY or -48
+  local h = {}
+
+  h.logo = parent:CreateTexture(nil, "ARTWORK")
+  h.logo:SetTexture(opts.texture)
+  h.logo:SetSize(size, size)          -- square: the art is 1:1, never stretch it
+  h.logo:SetPoint("TOPLEFT", x, opts.y or -12)
+
+  h.text = UI.newText(parent, FONT.title, opts.fontSize or 17, { r = 1, g = 1, b = 1 }, "LEFT")
+  h.text:SetPoint("LEFT", h.logo, "RIGHT", opts.gap or 9, 0)
+  h.text:SetText(opts.label or "")
+
+  h.divider = UI.hLine(parent)
+  h.divider:SetPoint("TOPLEFT", x, divY)
+  h.divider:SetPoint("TOPRIGHT", -(opts.rightInset or x), divY)
+
+  h.bottom = divY
+  return h
 end
 
 end   -- if lib

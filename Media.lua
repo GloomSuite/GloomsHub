@@ -497,8 +497,22 @@ local function BuildMediaTab(container)
     statusText = UI.newText(container, FONTS.body, 11, COLOR.mute, "LEFT")
     statusText:SetPoint("BOTTOMLEFT", 16, 10); statusText:SetPoint("BOTTOMRIGHT", -16, 10)
 
+    -- The Gh mark + wordmark (LibGloomSkin MINOR 4). ★ This tab wears Gh, the
+    -- HUB-as-an-addon mark, not GS: GS belongs to the suite and is already on
+    -- the window's title bar right above this. The Media tab is the Hub's own
+    -- tab, so it names its owner the same way the other three name theirs.
+    UI.tabHeader(container, {
+        texture = GloomsHub.MEDIA .. "ui\\hub.png",
+        label   = "GLOOM'S HUB",
+        -- ★ x = 14 to match the Bars and Overlays rails EXACTLY, not 16 to match
+        -- this tab's own status line. The owner, 2026-07-25: these headers are
+        -- compared by TABBING BETWEEN THEM, so cross-tab alignment beats
+        -- internal alignment. 14 is the family inset — keep all four identical.
+        x       = 14,
+    })
+
     scrollFrame = CreateFrame("ScrollFrame", nil, container)
-    scrollFrame:SetPoint("TOPLEFT", 0, -6)
+    scrollFrame:SetPoint("TOPLEFT", 0, -54)   -- clears the header divider at -48
     scrollFrame:SetPoint("BOTTOMRIGHT", -12, 30)
     scrollFrame:EnableMouseWheel(true)
     scrollFrame:SetScript("OnMouseWheel", function(self, delta)
@@ -509,7 +523,7 @@ local function BuildMediaTab(container)
     scrollChild:SetSize(math.max(1, container:GetWidth() - 16), 10)
     scrollFrame:SetScrollChild(scrollChild)
     scrollbar = UI.makeScrollbar(container, scrollFrame, function(b)
-        b:SetPoint("TOPRIGHT", -4, -8); b:SetPoint("BOTTOMRIGHT", -4, 32)
+        b:SetPoint("TOPRIGHT", -4, -56); b:SetPoint("BOTTOMRIGHT", -4, 32)   -- below the header
     end)
 
     for _, spec in ipairs(SPECS) do
