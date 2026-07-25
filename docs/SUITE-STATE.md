@@ -4,7 +4,8 @@
 > UPDATE it at the end of any session that moves the suite.** Home of record: this repo.
 > Full design in [SUITE-PLAN.md](SUITE-PLAN.md). Shared contracts in [CONTRACTS.md](CONTRACTS.md).
 
-**Last updated:** 2026-07-25d — **★★ PHASE G IS DONE AND THE 7-PHASE PLAN IS COMPLETE.** The owner
+**Last updated:** 2026-07-25e — **the AURAS TAB LAYOUT REWORK (to-do item 1) is DONE and QA'd**;
+see the to-do list below. Before that: **★★ PHASE G IS DONE AND THE 7-PHASE PLAN IS COMPLETE.** The owner
 QA'd the WoWup install AND update paths on 2026-07-25; all four addons now publish **`v1.0.1`**.
 No phase work remains — everything left is the polish backlog below.
 **★ THE FOUR SUITE REPOS ALSO MOVED TO A NEW GITHUB ORG, `GloomSuite`.**
@@ -15,8 +16,8 @@ a rename" reasoning in HANDOFF's session record.
 
 **Also 2026-07-25 (records 25c/25d):** the **new 512×512 square logo set** landed across all four
 addons (GS = the suite, **Gh = the Hub as an addon**); **`UI.tabHeader` promoted into LibGloomSkin
-as MINOR 4** and adopted by Bars, Overlays and Media (**GA deliberately excluded** until its layout
-rework); the **shell footer now lists every installed addon's version**; the **Media tab shows
+as MINOR 4** and adopted by Bars, Overlays and Media (**and by GA on 2026-07-25**, in the layout
+rework it was held back for — all four tabs now carry a header); the **shell footer now lists every installed addon's version**; the **Media tab shows
 per-category counts** on collapsed headers; and the **version GATE** was added to every LibGloomSkin
 consumer, which is what makes independent versioning safe.
 
@@ -31,11 +32,24 @@ falsified, and added the **route-the-request rule** to all four `CLAUDE.md` file
 Everything below is polish. ✅ items are done and kept for the record.
 
 **Each its own session, in the repo that owns it — route it there**
-1. **Auras tab LAYOUT REWORK** · `~/GloomsAuras` — kill the docked drawer for a GB-style
-   always-visible rail, **retire the landing splash** (the owner, 2026-07-25: "that's going to have
-   to go away"), and add the shared `UI.tabHeader` as part of the new layout. **GA is the ONE tab
-   with no header, deliberately** — the splash occupies exactly where it goes, so doing it now means
-   designing that space twice. Its gate stays at MINOR 3 until then. Treat the whole tab as the unit.
+(item 1 is done; 2 and 3 remain)
+1. ~~**Auras tab LAYOUT REWORK** · `~/GloomsAuras`~~ — **✅ DONE, QA'd by the owner 2026-07-25.**
+   Shipped in six owner-verified steps: splash retired · the editor's aura-name banner replaced by a
+   rail Rename (+ double-click) through `UI.nameDialog` · buttons restyled to the suite's language ·
+   a flush-left 240 rail carrying `UI.tabHeader` + the shared `UI.profileBlock` + the aura tree ·
+   **groups made a first-class selection** (clicking a group's name fills the editor pane with its
+   settings, retiring the ⚙ gear, the Manage Group drawer and the confusing green "Group:" button) ·
+   the editor sections re-laid for the full-width pane · and the Trigger section rebuilt to the
+   owner's mock as a bracketed tree. **GA's gate is now MINOR 4** (CONTRACTS §6) — no tab is without
+   a header any more. **Four drawers were deleted** (Manage Group, Visibility, Text, Glow), leaving
+   only the transient pickers. Two defects were caught by the owner along the way and fixed:
+   **Delete Aura had no confirmation** (CONTRACTS §4 — it now uses the shared modal, as does every
+   other delete in the tab), and the eye icons didn't reflect that a SELECTED aura is already drawn.
+   ★ **A trap worth carrying suite-wide:** deleting a block orphaned a module-local that another
+   function still called, which became a nil global — `luac -p` does NOT catch that, and because the
+   shell builds a tab before showing it, the whole tab came up blank rather than just the broken
+   section. Diff the file's global reads against a known-good revision after any block deletion:
+   `luac -l F.lua | grep -oE '_ENV "[A-Za-z_][A-Za-z0-9_]*"' | sort -u`.
 2. **Overlays: Width / Height / X / Y → SLIDERS** · `~/GloomsOverlays` — "It just needs to happen."
    `UI.sliderRow` as Rotation/Alpha already use, probably slider + typed box so exact values stay
    enterable. Nudge arrows stay.
@@ -63,8 +77,9 @@ Everything below is polish. ✅ items are done and kept for the record.
 - ~~Phase G QA — WoWup install + update cycle~~ — **DONE**, the plan is complete.
 - ~~Redo all four logos, drop the baked-in name text~~ — **DONE.** 512×512 square set; every
   hardcoded portrait draw size moved with it. **GS = the suite, Gh = the Hub as an addon.**
-- ~~Small mark beside every tab name~~ — **DONE as `UI.tabHeader` (LibGloomSkin MINOR 4)**, on Bars,
-  Overlays and Media. **GA excluded on purpose — see item 1.**
+- ~~Small mark beside every tab name~~ — **DONE as `UI.tabHeader` (LibGloomSkin MINOR 4)**, on ALL
+  FOUR tabs. Bars, Overlays and Media took it 2026-07-25; **GA followed the same day** once its
+  layout rework retired the splash that occupied the space (item 1).
 - ~~Overlays has no `## IconTexture`~~ — **DONE.** No more `?` in the addon list.
 - ~~Hub's `minimap.png` is only 64×64~~ — **DONE**, now 512.
 - ~~Org avatar for `GloomSuite`~~ — **DONE**, the owner uploaded the GS mark.
@@ -234,12 +249,14 @@ gate A: **`/go`, and `/vibe` is retired outright**, the owner 2026-07-24. ~~Over
 splash. ~~Overlays profile picker~~ — CLOSED: the shared `UI.profileBlock`.)
 
 ## Suite polish backlog (post-migration UI work, gathered during QA)
-- **Auras tab landing page (the owner, Phase D QA 2026-07-24):** the old standalone window's
+> **The first two Auras entries below are CLOSED by the 2026-07-25 layout rework** (to-do item 1).
+> Kept for the reasoning that drove them.
+- **Auras tab landing page (the owner, Phase D QA 2026-07-24):** ✅ **DONE — the splash is retired.** the old standalone window's
   splash/landing (big GA logo + "Add … Aura" buttons on every open) "doesn't really make
   sense in the context of the suite." Works as before for now — rethink after the
   migrations (e.g. open straight to the editor with a compact create row, logo retired or
   moved). GA-side change; coordinate the design with the family language here.
-- **★ The Auras tab needs a LAYOUT REWORK, not a tweak (the owner, Phase E gate B QA 2026-07-24):
+- ✅ **DONE 2026-07-25.** **The Auras tab needed a LAYOUT REWORK, not a tweak (the owner, Phase E gate B QA 2026-07-24):
   "we've got to get rid of the drawer, but the whole layout of this module is now very wrong."**
   Deferred to its own session by his call. Scope so far: kill the docked profile drawer in favour
   of a GB-style always-visible rail (gate B put the shared `UI.profileBlock` inside the existing

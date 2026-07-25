@@ -141,6 +141,8 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     divY = -48, rightInset = x }`. Returns `{ logo, text, divider, bottom }`; `bottom` is
     the y offset callers anchor their first row below.
     ★ **The mark is SQUARE — the art is 1:1 (512×512, transparent). Never stretch it.**
+    **All four tabs carry one as of 2026-07-25** — Auras was the last holdout (its
+    retired splash sat exactly where the header goes) and adopted it in its layout rework.
     ★ **Which mark:** a *tool's* tab wears that tool's mark; the **Media tab wears Gh**
     (the Hub-as-an-addon), NOT GS — GS is the *suite's* mark and already sits on the
     window title bar directly above.
@@ -246,13 +248,15 @@ end
 | Consumer | needs |
 |---|---|
 | `GloomsBars/Config.lua` | MINOR **4** — calls `UI.tabHeader` |
-| `GloomsAuras/Config.lua` | MINOR **3** — no tabHeader yet (its layout rework owns that) |
+| `GloomsAuras/Config.lua` | MINOR **4** — calls `UI.tabHeader` (adopted in its 2026-07-25 layout rework) |
 | `GloomsOverlays/GloomsOverlays_Editor.lua` | MINOR **4** — calls `UI.tabHeader` |
 | `GloomsOverlays/GloomsOverlays_Preview.lua` | MINOR **3** — the drawer needs nothing newer |
 
 ★ Note the table is **not uniform, and that is correct** — each file declares what IT
 actually uses. MINOR 4 landed as the first live exercise of this gate: `UI.tabHeader` was
-added and the two files that call it were bumped **in the same commit**.
+added and the two files that call it were bumped **in the same commit**. GA followed the
+same discipline on 2026-07-25 when its layout rework adopted `UI.tabHeader` — gate bumped
+in the commit that first called it, which is the only maintenance this gate ever needs.
 
 Hub currently ships **MINOR 4** (`Skin.lua`).
 
