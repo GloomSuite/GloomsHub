@@ -68,9 +68,13 @@ GloomsHub:ListMedia(kind)          -- kind "graphics"|"textures" → { {name=, t
 GloomsHub.Media:AddFont(name,file) / :RemoveFont(i) / :AddTexture(…) / :AddGraphic(…) / …
 ```
 - Fonts register into LSM as `font`; textures as `statusbar`; graphics are NOT in LSM (name→path only).
-- **Back-compat shim (transition):** GloomsHub defines global `StoneTweaks_ResolveAssetPath =
-  function(n) return GloomsHub:ResolveAssetPath(n) end` **only if** ST's real one isn't loaded,
-  so VibeOverlay/Overlays keeps resolving graphics the moment the Hub is installed.
+- **Back-compat shim — PERMANENT (decided Phase F step 6, the owner 2026-07-24):** GloomsHub defines
+  global `StoneTweaks_ResolveAssetPath = function(n) return GloomsHub:ResolveAssetPath(n) end`
+  **only if** ST's real one isn't loaded. **Nothing in the suite calls it** (Overlays moved to
+  `GloomsHub:ResolveAssetPath` in Phase E gate A) — it is kept as zero-cost insurance for anything
+  stale outside the suite. **Live and proven since Phase F**, when ST was retired. Do not remove it.
+  The `only if` guard is what makes re-enabling ST safe: ST defines the real function at file load,
+  before `PLAYER_LOGIN`, so ST wins and the shim stays dormant.
 - SavedVariable `GloomsHubDB.fonts/.textures/.graphics` — same `{name,file}` shape as `StoneTweaksDB`.
 
 ## 4. LibGloomSkin-1.0 (the shared toolkit) — **PINNED (Phase C, 2026-07-24)**

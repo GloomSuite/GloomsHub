@@ -298,8 +298,9 @@ works; updates work.
 ## 6. Open questions still to decide (non-blocking)
 1. **Overlays slash** — `/go`? keep `/vibe` as a legacy alias (recommended)?
 2. **Shared footer** — generic (close only), or a global profile/enable indicator across tools?
-3. **Compat shim lifetime** — keep `StoneTweaks_ResolveAssetPath` global forever (free
-   insurance, recommended) or remove once Overlays is updated?
+3. ~~**Compat shim lifetime**~~ — **CLOSED (Phase F step 6, the owner 2026-07-24): KEEP IT
+   PERMANENTLY.** `StoneTweaks_ResolveAssetPath` stays as free insurance — one line, zero cost, and
+   proven working when ST was retired. Nothing in the suite calls it. Pinned in CONTRACTS §3.
 4. ~~**`LibGloomSkin` versioned API surface**~~ — CLOSED (Phase C, 2026-07-24): pinned in
    CONTRACTS §4 (MINOR 1; `makeSection` deliberately excluded — accordion stays per-tab).
 5. ~~GloomsBuildBarn as a future tab consumer~~ — CLOSED: OUT of the suite (see decisions block).

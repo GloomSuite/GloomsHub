@@ -1,9 +1,19 @@
 # Gloom's Hub — Session Handoff
 
-**Last updated: 2026-07-24.** Phases **A–E are DONE and QA'd** — all three tools render inside the
-one Suite window and consume LibGloomSkin.
+**Last updated: 2026-07-24.** Phases **A–F are DONE and QA'd** — all three tools render inside the
+one Suite window and consume LibGloomSkin, and **StoneTweaks is retired**.
 
-> ## ▶ NEXT SESSION = PHASE F (retire StoneTweaks).
+> ## ▶ NEXT SESSION = PHASE G (packaging/release). Briefing at the bottom of this file.
+> **★ Phase G's blocker, found 2026-07-24: `GloomsHub` cannot publish a release at all** — it has no
+> `.pkgmeta` and no `.github/workflows/release.yml`. Every tool declares `## Dependencies: GloomsHub`,
+> and **`GloomsBars` v0.2.0 is already published, so it currently installs BROKEN via WoWup: it
+> demands a Hub that has no release to install.** Fixing the Hub's packaging is job one.
+>
+> **Phase F is ✅ DONE — 2026-07-24, all 6 steps QA'd by the owner.** StoneTweaks is disabled AND its
+> folder is out of AddOns (moved, not deleted, to `~/Desktop/StoneTweaks-retired-2026-07-24`); the Hub
+> serves all media alone; the compat shim is live and proven and is **KEPT PERMANENTLY** (step 6,
+> closed). `StoneTweaksDB` was left in WTF, so rollback is still just moving the folder back.
+>
 > **Task 0 (the identity scrub) is DONE — 2026-07-24.** All five repos were rewritten, verified
 > clean, and re-published. **All five repos are PUBLIC again and WoWup delivery is restored.**
 > The scrub is finished; read the Task 0 record below for the two traps and the big lesson (a
@@ -141,26 +151,94 @@ org membership still private.
 
 ---
 
-# PHASE F — retire StoneTweaks ◀ THIS IS THE NEXT JOB (SUITE-PLAN §5.F)
+# PHASE F — retire StoneTweaks ✅ STEPS 1–5 DONE (2026-07-24), one confirmation restart left
 
-**Why it's unblocked:** Overlays was the suite's last StoneTweaks consumer, and Phase E gate A
+**Status:** steps 1–4 QA'd by the owner and step 5 executed. **StoneTweaks is disabled AND its folder
+is out of AddOns** — moved to `~/Desktop/StoneTweaks-retired-2026-07-24` (73 files, count-verified).
+**`StoneTweaksDB` in WTF was deliberately left in place**, so rollback is still just moving the folder
+back and re-enabling. Outstanding: one full client restart with the folder physically gone (it was
+removed mid-session, while ST was merely disabled), then step 6.
+
+**Why it was unblocked:** Overlays was the suite's last StoneTweaks consumer, and Phase E gate A
 moved it to `GloomsHub:ResolveAssetPath`. Nothing in the suite reads ST data any more.
 
-1. Confirm nothing references ST: grep all four suite repos for `StoneTweaks`, `CatStoneTweaks`,
-   `StoneTweaksDB`, `StoneTweaks_ResolveAssetPath`. The only expected hit is the Hub's deliberate
-   compat shim (CONTRACTS §3).
-2. **Disable** StoneTweaks in the addon list (do not delete the folder) → full client restart.
-3. Verify off the Hub alone: fonts still serve (DrukMedium), textures + graphics still resolve, the
-   Media tab catalog still reads 1 font / 6 textures / 36 graphics, and **overlays still render** —
-   including on a `Goldset` character (Gloomthorn).
-4. The compat shim goes LIVE here (ST's real resolver is gone). Confirm the "skipped — already
-   registered" login lines are gone too; those were ST's own code.
-5. Only after sign-off: move the ST folder out of AddOns (**move to Desktop, don't delete** —
-   mirrors gate A). `~/Desktop/VibeOverlay-retired-2026-07-24` can be deleted at that point too.
-6. Decide the compat shim's lifetime (SUITE-PLAN §6 open question).
+1. ✅ **DONE + verified 2026-07-24.** Nothing references ST. The sweep covered all four suite repos
+   **and the entire live AddOns folder** (105 addons): zero hits for `StoneTweaks_ResolveAssetPath`,
+   `StoneTweaksDB`, `StoneTweaks_FrameDefs`, `CatStoneTweaks` outside ST's own three files. In the
+   suite, the only *live-code* hits are the Hub's deliberate compat shim + copy-migration in
+   `Core.lua` (CONTRACTS §3); every other hit is a comment or a doc line. Also verified offline:
+   - `GloomsHubDB` and `StoneTweaksDB` hold **identical** catalogs (1 font / 6 textures / 36
+     graphics, same name→file pairs) — ST registered nothing new since Phase A, so there is no
+     second migration to run.
+   - **All 43 catalog files exist under the Hub**, and `Fonts/` / `Textures/` / `Graphics/` are the
+     **same file sets** in both addons — retiring ST loses no asset.
+   - ST's ElvUI half is provably unused on this account (`frameTextures` empty, `suppressGlow`
+     false), so disabling it kills nothing that was in service.
+   - ⚠ Note for the Media tab: the catalog carries a leftover `test-remove` / `test-remove.png`
+     graphic. It came from **ST** (it's in `StoneTweaksDB` too), not from Phase B QA. Harmless (the
+     file exists), but it's clutter the owner may want to remove in the Media tab.
+2. ✅ **DONE — QA'd by the owner 2026-07-24.** ST disabled + full client restart. Clean: BugSack empty,
+   `Gloom's Hub: Registered 1 font and 6 textures into LibSharedMedia.` present and unchanged, **zero
+   `StoneTweaks:` lines**, **zero Hub-prefixed "skipped" lines**.
+   ★ **`/st` no longer does anything — and that is the positive proof, not mere silence.** `/st` was
+   registered by ST's own code; with ST off that code never runs, so the command cannot exist. Same
+   for ST's `StoneTweaks loaded. Type /st to open the panel.` login line, which is absent.
+   ⚠ Don't misread other addons' output: **ArcUI prints its own `SKIPPED …` lines** (`ArcUI:` prefix,
+   about CDMGroups) that have nothing to do with media registration. Check the prefix.
+3. ✅ **DONE — QA'd by the owner 2026-07-24.** Off the Hub alone: `/gh` → 1 font / 6 textures / 36
+   graphics, `migratedFromST = true`; **Goldset overlays render on Gloomthorn**; all four tabs
+   (Bars/Auras/Overlays/Media) open; Media tab previews draw for fonts, textures and graphics.
+4. ✅ **DONE — the compat shim is LIVE and proven, 2026-07-24.**
+   `StoneTweaks_ResolveAssetPath("goldset-player-frame")` → `Interface\AddOns\GloomsHub\Graphics\goldset-player-frame.png`
+   (a global only ST ever defined, now answered by Core.lua's shim). Both resolver branches verified
+   (`goldset-texture` → `…\Textures\…`), and `LSM:HashTable("font").DrukMedium` → `…\GloomsHub\Fonts\DrukMedium.ttf`.
+   ★ **Read the registered LSM table, never `LSM:Fetch`** — `Fetch` silently returns WoW's default
+   font for a missing name, which reads as a false pass.
+   ★★ **WoW's chat edit box truncates at 255 characters, and `!BugGrabber` swallows the resulting
+   syntax error so the command appears to do NOTHING.** A 360-char `/run` one-liner was lost exactly
+   this way during QA. Keep QA commands short — prefer several `/dump` one-liners (~50–90 chars) over
+   one long `/run`.
+   ★ **But check the PREFIX, not the wording** — the Hub's `Media.lua` prints a
+   *word-for-word identical* "Font/Texture skipped — … is already registered" line (`GloomsHub:Print`,
+   so it reads **`Gloom's Hub:`** instead of **`StoneTweaks:`**). Today the Hub loads first, wins the
+   LSM names, and ST prints 7 skip lines. So the exact expectation after disabling ST is:
+   - **`Gloom's Hub: Registered 1 font and 6 textures into LibSharedMedia.`** — unchanged, still there.
+   - **Zero `StoneTweaks:` lines** (that's the retirement working).
+   - **Zero `Gloom's Hub: … skipped` lines.** A Hub-prefixed skip line is NOT a leftover — it means a
+     *third-party* addon claimed that LSM name first (`EnhanceQoLSharedMedia` and `EllesmereUI` are
+     both installed). That would be a real collision to chase, not the transition artifact.
+5. ✅ **DONE 2026-07-24 — moved, not deleted.** `…/AddOns/StoneTweaks` →
+   `~/Desktop/StoneTweaks-retired-2026-07-24`, 73 files before and after. `StoneTweaksDB` left in WTF.
+   **Still to do: one full client restart** to confirm the client is happy with the folder physically
+   absent (it was moved while the client was running and ST merely disabled).
+   ⚠ **`~/Desktop/VibeOverlay-retired-2026-07-24` is NOT a safe delete, and the owner chose to KEEP
+   it (2026-07-24)** — despite what this file used to say. **Git never held the pre-rename
+   originals:** GloomsOverlays' *first* commit (`5be4b1b`) already contains the renamed
+   `GloomsOverlays*.lua` files, and no `Vibe`-named file appears anywhere in that repo's history.
+   That Desktop folder is therefore the **only copy of the original VibeOverlay source** (96 KB).
+   Leave it alone; it is not cleanup debt.
+   (Both unscrubbed folders were identity-scanned and are clean: `## Author: You` and
+   `## Author: StoneTweaks`, zero hits for the old identity. The "no copy of the old identity remains
+   on disk" claim in TASK 0 still holds.)
+6. ✅ **DONE — CLOSED by the owner 2026-07-24: KEEP THE SHIM PERMANENTLY.** One line, zero cost,
+   proven working, and nothing in the suite calls it — pure insurance for anything stale outside the
+   suite. Pinned in CONTRACTS §3 and commented in `Core.lua`. **Do not "clean it up" in Phase G.**
 
-**Then G** = packaging/release: `.pkgmeta`, embed LibGloomSkin as an external per tool, Releases,
-WoWup. Version strings show literally as `@project-version@` until then.
+**Phase F is closed.** Nothing carries over from it. Phase G's briefing is at the bottom of this file.
+
+### Two QA lessons from Phase F worth keeping
+1. **★ WoW's chat edit box truncates at 255 characters, and `!BugGrabber` swallows the resulting Lua
+   syntax error — so an over-long command appears to do NOTHING AT ALL.** A 360-char `/run` one-liner
+   was lost exactly this way and read as "doesn't do anything." Keep QA commands short: prefer several
+   `/dump` one-liners (~50–90 chars) over one long `/run`. Measure before sending.
+2. **★ Never verify an LSM registration with `LSM:Fetch`** — it silently returns WoW's *default* font
+   for a missing name, so a failure reads as a pass. Read the registered table instead:
+   `LibStub("LibSharedMedia-3.0"):HashTable("font").<Name>`.
+3. **Absence of a slash command is real proof.** `/st` going dead proved ST's code never loaded —
+   stronger evidence than the absence of its login print, and much stronger than mere silence.
+4. **Check the PREFIX on every login line.** ArcUI prints its own `SKIPPED …` lines about CDMGroups
+   that look alarming and are unrelated. The Hub's own skip-line wording is word-for-word identical
+   to StoneTweaks'.
 
 ---
 
@@ -187,3 +265,66 @@ sliders, not typed boxes**.
   OUT; never "v1"/"later phase" framing; GUI over slash.
 - **macOS `sed` has no `\b`.** Verify identifier renames with a token count, and `luac -p` every
   touched Lua file.
+
+---
+
+# PHASE G — packaging / release ◀ THIS IS THE NEXT JOB (SUITE-PLAN §5.G)
+
+**Ground surveyed 2026-07-24. Read this before touching anything — two plan items are wrong.**
+
+## ★ The blocker: the Hub cannot publish, and that breaks an already-published tool
+| Repo | `.pkgmeta` | `release.yml` | Releases on GitHub |
+|---|---|---|---|
+| **GloomsHub** | ❌ **absent** | ❌ **absent** | ❌ **none** |
+| GloomsBars | ✅ | ✅ | ✅ `v0.2.0` (latest), `v0.1.0`, `v0.0.1` |
+| GloomsAuras | ✅ | ❌ absent | ❌ none |
+| GloomsOverlays | ❌ absent | ❌ absent | ❌ none |
+| GloomsBuildBarn *(not suite)* | ✅ | ✅ | ✅ 5 dated tags, latest `v2026.07.21` |
+
+All three tools declare `## Dependencies: GloomsHub`. **`GloomsBars` v0.2.0 is public, so it installs
+BROKEN via WoWup today** — it demands a Hub with no release to install. **Ship the Hub first.**
+(Release "latest" pointers were re-verified via `gh` and are correct on both repos that have releases,
+so the TASK 0 `make_latest` fix held.)
+
+## ★★ DROP the plan's "embed LibGloomSkin as an external per tool"
+SUITE-PLAN §5.G says to embed `LibGloomSkin-1.0` in each tool via `.pkgmeta` externals. **That item
+predates the hard-dependency lock and should not be done:**
+- **No tool ships or loads its own copy today** — verified: nothing in GB/GA/Overlays' TOCs
+  references it. All three simply call `LibStub("LibGloomSkin-1.0")` and resolve to the Hub's
+  `Skin.lua`, which IS the lib body.
+- The **hard dependency guarantees the Hub is present**, so there is nothing to insure against.
+- Embedding would create N copies for LibStub to arbitrate by MINOR — **exactly the drift the suite
+  exists to prevent**, and it would silently split the "ONE copy" rule in CLAUDE.md.
+- There is **no standalone LibGloomSkin repo** to fetch as an external anyway; the plan's line is not
+  implementable as written.
+
+→ Consume from the Hub. If a *future* non-suite consumer ever needs it, publish it properly then.
+
+## The actual work
+1. **`GloomsHub/.pkgmeta`** — copy `GloomsBars/.pkgmeta` as the shape (GitHub Releases only, no
+   CurseForge/Wago). `package-as: GloomsHub`; `enable-nolib-creation: no`; externals for the Hub's
+   five libs (LibStub, CallbackHandler-1.0, **LibSharedMedia-3.0**, **LibDataBroker-1.1**,
+   **LibDBIcon-1.0** — the Hub needs all five per its TOC, more than GB does); `ignore:` README,
+   CLAUDE.md, .github, .gitignore, .pkgmeta, docs, tools.
+   ⚠ **Do NOT ignore `Fonts/`, `Textures/`, `Graphics/` or `Media/`** — unlike the other repos, the
+   Hub's committed assets ARE the product (43 catalog files + the GS/GO marks + 5 UI fonts).
+2. **`GloomsHub/.github/workflows/release.yml`** — copy GB's. ★ **It MUST declare
+   `permissions: contents: write`**: the org sets `default_workflow_permissions: read`, so a workflow
+   without that block fails to publish (recorded under TASK 0).
+3. **`GloomsOverlays/.pkgmeta` + `release.yml`**, and **`GloomsAuras/release.yml`** (GA already has
+   `.pkgmeta`).
+4. **Cut the Hub's first release, then re-cut the tools.** Version strings render literally as
+   `@project-version@` until a packaged build exists — that is expected, not a bug.
+5. **Document the one-time WoWup step** (add each GitHub repo URL) for the friends/guild audience.
+6. *QA:* fresh WoWup install of GloomsHub + one tool on a clean profile; then an update cycle.
+
+## Packaging traps already learned the hard way (full detail under TASK 0)
+- **Tags pushed in the same breath as the initial branch push can land before the workflow is
+  registered and silently trigger nothing.** If no run appears, re-push the tag.
+- **Recreating/pushing releases out of order breaks `latest` — which is what WoWup installs.** Always
+  finish by checking `/releases/latest` **anonymously**; that endpoint caches, so re-read a stale
+  answer before chasing it. Fix with `gh api -X PATCH repos/<owner>/<repo>/releases/<id> -f make_latest=true`.
+- **Published release ZIPs are a separate surface** from git history — after any rewrite, download and
+  grep the assets.
+- ⚠ **`.claude/settings.json` `additionalDirectories` uses `~`** — confirm it expands, or restore
+  absolute paths.

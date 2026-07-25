@@ -43,11 +43,17 @@ local function MigrateFromStoneTweaks()
 end
 
 -- ============================================================
--- Back-compat shim (transition — see CONTRACTS §3)
--- Lets VibeOverlay keep resolving graphics once StoneTweaks is
--- gone. While ST is still installed its real function is already
--- defined by the time PLAYER_LOGIN fires, so the shim stays
--- dormant — exactly what Phase A wants.
+-- Back-compat shim — PERMANENT (see CONTRACTS §3)
+-- Forwards the old StoneTweaks global to the Hub's resolver.
+-- Nothing in the suite calls this any more (Overlays moved to
+-- GloomsHub:ResolveAssetPath in Phase E gate A), so it exists
+-- purely as insurance for anything stale outside the suite.
+-- ★ KEPT PERMANENTLY by the owner's decision, 2026-07-24 (Phase F
+-- step 6): one line, zero cost, proven working. Do not "clean it
+-- up" — that decision is closed.
+-- The guard matters: if StoneTweaks is ever re-enabled it defines
+-- the real function at file load, which is before PLAYER_LOGIN,
+-- so ST wins and this stays dormant.
 -- ============================================================
 
 local function InstallCompatShim()

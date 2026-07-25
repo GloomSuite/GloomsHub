@@ -39,8 +39,11 @@ symlinked into `…/Interface/AddOns/`. Disparate repos drift. The rule that pre
 - **IN:** Gloom's Auras (`~/GloomsAuras`), Gloom's Bars (`~/GloomsBars`), Gloom's Overlays
   (`~/GloomsOverlays` — the renamed VibeOverlay; migrated + reskinned in Phase E, 2026-07-24).
   Each mounts a tab; all three are live.
-- **RETIRED:** StoneTweaks (its useful half — media registration — is absorbed here). StoneCast
-  (already deleted).
+- **RETIRED:** StoneTweaks — **fully retired in Phase F, 2026-07-24**: disabled and its folder moved
+  out of AddOns to `~/Desktop/StoneTweaks-retired-2026-07-24` (not deleted; `StoneTweaksDB` left in
+  WTF, so rollback is moving it back). Its useful half — media registration — lives here now, and the
+  Hub is the suite's only media registrar. `StoneTweaks_ResolveAssetPath` survives as a **permanent**
+  one-line compat shim in `Core.lua` (CONTRACTS §3) — do not "clean it up". StoneCast (already deleted).
 - **OUT — do NOT fold in:** **Gloom's Build Barn.** It's a data-fed pipeline (a weekly cron on
   hodguild.com pulls WarcraftLogs talent builds via API into the addon), NOT a config-UI tool
   that would mount a tab. The owner explicitly excluded it (2026-07-24). Do not treat it as a suite
