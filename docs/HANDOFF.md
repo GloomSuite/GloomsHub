@@ -110,6 +110,26 @@ not evidence — go read the registry directly.*
   drift — Bars sat at `v1.0.1` while the others were `v1.0.0` with nothing in the UI saying so.
   **This answers the long-open "shared-footer contents" question.** Backlog item 12.
 
+### ★★ Built after the QA: the SHARED-TOOLKIT VERSION GATE (CONTRACTS §6)
+The owner asked whether letting the four addons' versions drift was "a problem I'm not aware of."
+**It was, and it was live.** All three tools did a bare `LibStub("LibGloomSkin-1.0")` with **no
+version check whatsoever**, and `## Dependencies: GloomsHub` only checks the Hub is PRESENT — WoW's
+TOC dependency system has **no version constraint**. So a tool released ahead of the Hub would have
+called a `nil` widget and buried a non-developer in Lua errors. Synchronized versioning had been
+masking this by accident: the Hub and its tools always shipped together.
+
+Every consumer now declares `SKIN_NEEDS` and returns early with one actionable line. **Gate the UI
+file, never the engine** — `Config.lua` is last in GB's and GA's TOC, and `_Editor`/`_Preview` load
+after `GloomsOverlays.lua`, so the chunk-level `return` costs the tab and nothing else.
+
+**QA'd by forcing failure, not by assuming success** — GB's gate was temporarily set to require v99:
+the message printed verbatim, the BARS tab disappeared, **`Gloom's Bars: skin ON — 116 buttons
+styled.` still printed in the same session** (the engine ran while its config was refused — the
+whole point), and BugSack stayed clean. Reverted to 3 after.
+
+★ **The maintenance burden is one line:** bump `SKIN_NEEDS` in the SAME commit that first calls a
+newer widget. That is the only way to defeat the gate.
+
 ### ⚠ Teardown order — the one destructive-mistake risk
 **Uninstall in WoWup BEFORE restoring the symlinks.** WoWup's Remove deletes the folder it manages;
 with a symlink in that slot it could follow the link into `~/GloomsHub` and delete live source.

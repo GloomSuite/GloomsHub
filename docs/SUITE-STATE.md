@@ -122,6 +122,27 @@ QA'd in the same pass.
 - **No self-arming "click twice" confirms (the owner, 2026-07-24).** GB's Delete used to flip to
   "Sure?" with no way to cancel short of closing the addon. Destructive actions use the shared
   `UI.confirm` modal, which has a Cancel and an ESC.
+- **★ VERSIONS MAY DRIFT — release only the addon that changed (the owner, 2026-07-25).** This
+  RELAXES the 2026-07-24 "all four synchronized" scheme. His words: *"it doesn't bother me if the
+  versions of the individual units drift."* Synchronized versioning existed so a friends/guild
+  audience had one answer to "what version are you on?"; that reason is being retired by the footer
+  work (to-do 12), and tagging four repos every time one changes is real friction.
+  **★ This was only made SAFE by the version gate — see the next entry. Do not relax the scheme in
+  a repo whose gate is missing.**
+- **★ EVERY LibGloomSkin CONSUMER CARRIES A VERSION GATE (built + QA'd 2026-07-25).** Pinned in
+  **[CONTRACTS.md](CONTRACTS.md) §6**. The owner asked whether version drift was "a problem I'm not
+  aware of" — it was, and it was **live**: all three tools did a bare
+  `LibStub("LibGloomSkin-1.0")` with **no version check at all**, while
+  `## Dependencies: GloomsHub` checks only that the Hub is PRESENT, never that it is NEW ENOUGH
+  (WoW's TOC system has no version constraint). A tool released ahead of the Hub would have called a
+  `nil` widget and sprayed Lua errors. Each consumer now declares `SKIN_NEEDS` and returns early
+  with ONE actionable chat line if the Hub is too old.
+  **★ BUMP `SKIN_NEEDS` IN THE SAME COMMIT that first calls a newer widget** — forgetting that is
+  the only way to defeat the gate.
+  **QA'd by forcing GB's gate to require v99 (2026-07-25):** the message printed verbatim, the BARS
+  tab vanished from the shell, **`Gloom's Bars: skin ON — 116 buttons styled.` still printed in the
+  same session** (the engine is deliberately NOT gated — the user loses configuration, never
+  function), and BugSack stayed completely clean.
 
 ## What's physically in place right now
 - `~/GloomsHub` git repo, symlinked into AddOns as `GloomsHub` (matches GB/GA convention).

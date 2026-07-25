@@ -184,3 +184,65 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
   `BackdropTemplate`, `UIDropDownMenu`, `StaticPopup`, `UIPanel*Template`, `MakeButton`/
   `MakeSlider`/`MakeCheck`); asset browser is a docked drawer; warm pairs registered.
   Keeps SavedVariables globals `VibeOverlayDB`/`VibeOverlayDBChar` on purpose.
+
+---
+
+## 6. The shared-toolkit VERSION GATE — **every tool must carry one**
+
+**The problem it solves.** `LibGloomSkin-1.0` lives in the Hub and **grows** — MINOR 2 added
+`addEdges`, MINOR 3 added `dropdown`/`flyout`/`nameDialog`/`confirm`/`profileBlock`. Every tool
+calls into it. But **`## Dependencies: GloomsHub` only checks that the Hub is PRESENT, never that
+it is NEW ENOUGH** — WoW's TOC dependency system has no version constraint at all.
+
+So once the four addons version independently (which they now do — the "all four synchronized"
+scheme was relaxed once drift became legible), this becomes reachable:
+
+> A user updates **Gloom's Bars** but not **Gloom's Hub**. GB calls a MINOR-4 widget. Their Hub is
+> MINOR 3. `UI.newWidget` is `nil` → `attempt to call a nil value` → the tab never builds and
+> BugSack fills with errors that mean nothing to them.
+
+**The direction matters:** a Hub AHEAD of its tools is always safe (MINOR only adds). The hazard is
+only a **tool ahead of the Hub**.
+
+### The contract
+Every file that consumes LibGloomSkin declares the MINOR it needs and checks it *before* touching
+the toolkit:
+
+```lua
+local SKIN_MAJOR, SKIN_NEEDS = "LibGloomSkin-1.0", 3
+
+local Skin, skinMinor = LibStub(SKIN_MAJOR, true)
+if not Skin or (skinMinor or 0) < SKIN_NEEDS then
+  -- ... print ONE actionable line at PLAYER_LOGIN ...
+  return   -- chunk-level return: the tab is never registered
+end
+```
+
+- **★ Bump `SKIN_NEEDS` in the SAME commit that first calls a newer widget.** This is the only
+  maintenance the gate needs, and forgetting it is the one way to defeat it.
+- **Gate the UI file, never the engine.** `Config.lua` is last in GB's and GA's TOC and
+  `_Editor.lua`/`_Preview.lua` load after `GloomsOverlays.lua`, so a chunk-level `return` skips
+  only the tab. **Bars keep working, auras keep working, overlays keep rendering** — the user
+  loses configuration, not function, and the message says so.
+- **One message per addon.** GO gates both `_Editor.lua` and `_Preview.lua` but only the editor
+  prints; the preview returns silently.
+- **The message names the fix, not the fault** — "please update Gloom's Hub", plus needed vs.
+  found. Never make a non-developer read a stack trace to learn they should click Update.
+- **The shell already degrades safely** — `FocusTab` no-ops on an unknown id and `Open` falls back
+  to a valid tab, so a missing tab cannot cause a *second* error. Verified 2026-07-25.
+
+### Current requirement
+| Consumer | needs |
+|---|---|
+| `GloomsBars/Config.lua` | MINOR **3** |
+| `GloomsAuras/Config.lua` | MINOR **3** |
+| `GloomsOverlays/GloomsOverlays_Editor.lua` | MINOR **3** |
+| `GloomsOverlays/GloomsOverlays_Preview.lua` | MINOR **3** |
+
+Hub currently ships **MINOR 3** (`Skin.lua`).
+
+**Why this exists at all (the owner, 2026-07-25):** he asked whether letting the four addons'
+versions drift was a problem he wasn't aware of. It was — this was the problem, and it was live:
+all three tools did a bare `LibStub("LibGloomSkin-1.0")` with no version check whatsoever. The gate
+is also what makes the locked **hard-dependency** decision deliver what it promised: that a missing
+or inadequate Hub fails **loudly and legibly**, rather than as a pile of nil-call errors.
