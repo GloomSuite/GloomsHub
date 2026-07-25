@@ -15,7 +15,9 @@ The **shared base addon** for the Gloom suite. It owns three things nothing else
 3. **The media plumbing** — custom font/graphic/texture registration into LibSharedMedia +
    `GloomsHub:ResolveAssetPath(name)` (salvaged from the retired StoneTweaks).
 
-**Nothing is built yet.** This repo is scaffolding; construction follows the phased plan.
+**Construction is underway** — the phase ledger in [docs/SUITE-STATE.md](docs/SUITE-STATE.md)
+is the sole source of truth for what's built and QA'd; do not trust any other file's claim
+about phase status (including this one).
 
 ## GloomsHub is the HOME OF RECORD for the whole suite ★ (anti-drift)
 The suite spans separate repos (`~/GloomsAuras`, `~/GloomsBars`, and — later — `~/GloomsOverlays`),

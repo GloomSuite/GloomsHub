@@ -14,8 +14,18 @@ consumed via `LibGloomSkin`. Values are the established family language:
 - `COLOR.orange` (active/selected buttons, caret) — the warm `#ff7729`-family accent
 - Near-black navy plate `#12131F` family + rim; warm orange bottom-glow gradient on windows.
 - Fonts: Khand SemiBold/Medium (titles/headers), GeneralSans Regular/Medium/Semibold (body/labels).
-> The authoritative values are whatever GB `Core.lua`'s `GB.COLOR`/`GB.FONT` hold at migration
-> time; Phase C lifts them here verbatim. Record the final literals in this section when lifted.
+**Lifted into `GloomsHub.COLOR/.FONT` (Skin.lua) in Phase B, 2026-07-24 — verbatim from GB
+`Core.lua` (byte-identical to GA's). These are now the authoritative literals:**
+- `purple #936bff` · `heroic #8031ff` · `green #20ba56` · `red #c41e3a` · `orange #ff7729`
+- `dark = rgb(18,19,31)/255` (pre-compensated so `#060714` lands on screen) · `rim = white @ 10%`
+- `text = (0.90, 0.92, 0.96)` · `mute = (0.55, 0.57, 0.63)` — promoted from GB `Config.lua`
+  locals (TEXT/MUTE) to proper tokens.
+- `FONT`: `title` Khand-SemiBold · `head` Khand-Medium · `body` GeneralSans-Regular ·
+  `bodyM` GeneralSans-Medium · `label` GeneralSans-Semibold — files under
+  `Interface\AddOns\GloomsHub\Media\fonts\`.
+- The widget toolkit lives in `GloomsHub.UI` (Skin.lua) — becomes `LibGloomSkin-1.0` in Phase C.
+> GB and GA still carry their own token/toolkit copies until Phases C/D swap them to consume
+> these. Until then, a change here must be mirrored there (or better: not made until C/D).
 
 ## 2. The tabbed-shell API (GloomsHub owns)
 ```lua
@@ -30,6 +40,8 @@ GloomsHub:RegisterTab{
 
 GloomsHub:Open(id)      -- show the Suite window + focus tab `id`
 GloomsHub:FocusTab(id)  -- switch tabs within an open window
+GloomsHub:ToggleWindow(id?)  -- slash semantics (added Phase B): open→close if on `id`
+                             -- (or no id), switch if on another tab, else Open(id)
 ```
 - `build` runs lazily on first show (never at login). A tool whose addon isn't loaded simply
   doesn't register; the shell shows present tools' tabs + the always-present Media tab.
@@ -53,6 +65,11 @@ The stateless widget factory + tokens, exposed as a LibStub lib so any tool can 
 even before the Hub's frames exist. Public surface (finalize during Phase C; list here as lifted):
 `setFont`, `newText`, `addEdges`/`skinPlate`, `hLine`, `flatButton` (purple off / orange on),
 `makeToggle` (sliding switch), `makeScrollbar`, `makeSection` (accordion), tooltip helper.
+- **`UI.WarmFonts` is part of the toolkit contract (added Phase B, QA-proven):** WoW draws a
+  cold (font file, size) pair BLANK the first time it's drawn each client session (a /reload
+  heals it; the next cold start re-breaks it). The Hub pre-warms every pair its UI uses at
+  `PLAYER_ENTERING_WORLD`. **Every (font, size) pair ANY suite tab uses must be in the warm
+  list** — when a tool migrates (C/D/E), enumerate its sizes and warm them.
 > When Phase C extracts the toolkit, pin the exact exported names + signatures HERE so GB/GA/
 > Overlays all call the identical API.
 

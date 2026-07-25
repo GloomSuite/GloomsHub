@@ -14,8 +14,11 @@ Libs\LibStub\LibStub.lua
 Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
 Libs\LibSharedMedia-3.0\LibSharedMedia-3.0.lua
 
-# Load order: Core (namespace + DB + ST migration + events) → Media (LSM
-# registration, resolver, catalog API). Skin.lua / Shell.lua arrive with the
-# tabbed shell per docs/SUITE-PLAN.md.
+# Load order (SUITE-PLAN §2.2): Core (namespace + DB + ST migration + events)
+# → Skin (design tokens + widget toolkit — the future LibGloomSkin body)
+# → Shell (the one Suite window: RegisterTab/Open/FocusTab + /gloom)
+# → Media (LSM registration, resolver, catalog API + the Media tab).
 Core.lua
+Skin.lua
+Shell.lua
 Media.lua
