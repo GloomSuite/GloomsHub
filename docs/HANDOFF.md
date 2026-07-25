@@ -79,6 +79,46 @@ proven in the live client. **The plan is finished; only the polish backlog remai
 
 ---
 
+# SESSION RECORD — 2026-07-25e (the Auras tab layout rework — done in `~/GloomsAuras`)
+
+**Suite to-do item 1 is CLOSED.** The work itself was GA's and was done in GA's repo, correctly
+routed; what lands HERE is the ledger, the contract table and this record.
+
+**What changed for the SUITE, not just for GA:**
+- **`GloomsAuras/Config.lua` now requires LibGloomSkin MINOR 4** (CONTRACTS §6 table updated). It
+  adopted `UI.tabHeader`, bumping its gate in the same commit — the **second live exercise** of the
+  gate, and it behaved exactly as designed. **No tab is without a header any more.**
+- **GA's profile DRAWER is gone**; the shared `UI.profileBlock` sits permanently in a GB-style left
+  rail. All three tools now put the same control in the same place, which is what promoting it to
+  the lib was for. CONTRACTS §5's GA entry says so now.
+- **Four of GA's docked drawers were deleted** (Manage Group, Visibility, Text, Glow). Only
+  transient pickers remain. Nothing in the shell or the lib changed to allow this.
+
+**Two findings worth carrying to the other tools:**
+1. **★ A tab that throws during `build()` takes the WHOLE tab down, silently.** The shell calls
+   `build(container)` before showing and focusing, so an error anywhere in a tab's build leaves the
+   window open, the content blank and NO tab highlighted — it does not look like "one broken
+   section", it looks like the addon is dead. GA hit this when a block deletion orphaned a
+   module-local into a nil global. **`luac -p` cannot catch that** (an undefined global is valid
+   Lua). The check that can, after any block deletion:
+   ```
+   luac -l F.lua | grep -oE '_ENV "[A-Za-z_][A-Za-z0-9_]*"' | sort -u
+   ```
+   Diff it against a known-good revision; anything orphaned shows up as a NEW global.
+2. **★ The owner's mock files render at ~2.5× the game's pixels.** Two rounds of "make this read
+   better" missed purely on units. When he gives a px number, convert it — or better, **ask for the
+   RULE** ("the stub should be about as tall as the label"), which landed first try and is what got
+   written into the code, since a relationship survives a resize and a magic number doesn't.
+
+**Also settled here:** backlog item 7 — **texture files need only `/reload`**, proven by replacing
+two in place (see that item). Fonts remain the sole restart exception.
+
+**Left open, the owner's call:** dimming the background behind the shared `UI.nameDialog` /
+`UI.confirm` modals. He raised it in GA's session — they blend into the panel behind them — and it
+matters more now that every delete in the Auras tab routes through `UI.confirm`. **This is a HUB
+change** (`Skin.lua`), it benefits all four tabs, and it is internal behaviour: no new API, so no
+MINOR bump and no consumer gates move.
+
 # SESSION RECORD — 2026-07-25d (logos, the shared tab header, footer + Media counts)
 
 Same session as 25c, after Phase G closed. All of it done **from the GloomsHub session**, touching
@@ -538,8 +578,9 @@ moved it to `GloomsHub:ResolveAssetPath`. Nothing in the suite reads ST data any
   non-Default profiles**. Renaming those globals silently resets it.
 
 ## Polish backlog — in SUITE-STATE; don't start it mid-phase
-The **Auras tab layout rework** (its own session), and **Overlays' Width / Height / X / Y should be
-sliders, not typed boxes**.
+~~The Auras tab layout rework~~ — **✅ DONE + QA'd 2026-07-25** (to-do item 1; see the session
+record at the top of this file). What remains: **Overlays' Width / Height / X / Y should be
+sliders, not typed boxes**, and GB's modifier symbols.
 
 ## Other reminders
 - ONE minimap launcher for the suite (the Hub's GS button) — never one per tool.

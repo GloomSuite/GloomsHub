@@ -186,9 +186,13 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
   stays on GA's own files — user configs store those paths; see the §1 note pattern.)
   **Phase E (QA'd 2026-07-24):** its private name dialog + confirm modal are
   DELETED (`OpenNameDialog` aliases
-  `UI.nameDialog`; `C:OpenConfirm` wraps `UI.confirm`), and the Profiles drawer now hosts
-  `UI.profileBlock` instead of its own list + four buttons. The drawer itself stays — moving
-  Auras to a GB-style always-visible rail belongs with the landing-page item on the backlog.
+  `UI.nameDialog`; `C:OpenConfirm` wraps `UI.confirm`), and the shared `UI.profileBlock`
+  replaced its own list + four buttons.
+  **Layout rework (QA'd 2026-07-25):** the profile DRAWER is gone — the block now sits
+  permanently at the top of a GB-style left rail, and GA consumes `UI.tabHeader`, so its gate
+  is **MINOR 4** (§6). Four of GA's docked drawers were deleted in that pass; only the
+  transient pickers remain. All three tools now drive the same profile control in the same
+  place, which is what the shared block was for.
 - **Gloom's Overlays** — ✅ migrated (Phase E, both gates QA'd 2026-07-24): repo
   `~/GloomsOverlays`, hard-deps
   the Hub, resolver → `GloomsHub:ResolveAssetPath` (**the suite's last StoneTweaks consumer —
