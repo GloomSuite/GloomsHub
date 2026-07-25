@@ -300,7 +300,8 @@ works; updates work.
 2. **Shared footer** — generic (close only), or a global profile/enable indicator across tools?
 3. **Compat shim lifetime** — keep `StoneTweaks_ResolveAssetPath` global forever (free
    insurance, recommended) or remove once Overlays is updated?
-4. **`LibGloomSkin` versioned API surface** — finalize exactly which toolkit fns are public.
+4. ~~**`LibGloomSkin` versioned API surface**~~ — CLOSED (Phase C, 2026-07-24): pinned in
+   CONTRACTS §4 (MINOR 1; `makeSection` deliberately excluded — accordion stays per-tab).
 5. ~~GloomsBuildBarn as a future tab consumer~~ — CLOSED: OUT of the suite (see decisions block).
 6. **Stray `BoordensStreet.otf`** — carry into `GloomsHub/Fonts` (harmless dead file) or drop
    during the copy? (Minor.)

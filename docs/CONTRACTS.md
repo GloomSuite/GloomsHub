@@ -23,9 +23,14 @@ consumed via `LibGloomSkin`. Values are the established family language:
 - `FONT`: `title` Khand-SemiBold · `head` Khand-Medium · `body` GeneralSans-Regular ·
   `bodyM` GeneralSans-Medium · `label` GeneralSans-Semibold — files under
   `Interface\AddOns\GloomsHub\Media\fonts\`.
-- The widget toolkit lives in `GloomsHub.UI` (Skin.lua) — becomes `LibGloomSkin-1.0` in Phase C.
-> GB and GA still carry their own token/toolkit copies until Phases C/D swap them to consume
-> these. Until then, a change here must be mirrored there (or better: not made until C/D).
+- The widget toolkit is `LibGloomSkin-1.0` (Skin.lua is the lib body; `GloomsHub.UI` is the
+  Hub-side alias) — formalized Phase C, surface pinned in §4.
+> **GB consumes these since Phase C (2026-07-24)** — its local toolkit copy is deleted; its
+> `GB.COLOR` aliases the lib's table. (Deliberate exception: `GB.FONT` still points at GB's own
+> font FILES for the bar engine — bar text rasterizes per (path, size), and a path swap would
+> cold-start every user's bar text; the files are byte-identical to the Hub's. Config-UI text
+> uses the lib FONT.) GA still carries its own copy until Phase D — until then a change here
+> must be mirrored there (or better: not made until D).
 
 ## 2. The tabbed-shell API (GloomsHub owns)
 ```lua
@@ -60,20 +65,60 @@ GloomsHub.Media:AddFont(name,file) / :RemoveFont(i) / :AddTexture(…) / :AddGra
   so VibeOverlay/Overlays keeps resolving graphics the moment the Hub is installed.
 - SavedVariable `GloomsHubDB.fonts/.textures/.graphics` — same `{name,file}` shape as `StoneTweaksDB`.
 
-## 4. LibGloomSkin-1.0 (the shared toolkit, embedded everywhere)
-The stateless widget factory + tokens, exposed as a LibStub lib so any tool can build widgets
-even before the Hub's frames exist. Public surface (finalize during Phase C; list here as lifted):
-`setFont`, `newText`, `addEdges`/`skinPlate`, `hLine`, `flatButton` (purple off / orange on),
-`makeToggle` (sliding switch), `makeScrollbar`, `makeSection` (accordion), tooltip helper.
-- **`UI.WarmFonts` is part of the toolkit contract (added Phase B, QA-proven):** WoW draws a
-  cold (font file, size) pair BLANK the first time it's drawn each client session (a /reload
-  heals it; the next cold start re-breaks it). The Hub pre-warms every pair its UI uses at
-  `PLAYER_ENTERING_WORLD`. **Every (font, size) pair ANY suite tab uses must be in the warm
-  list** — when a tool migrates (C/D/E), enumerate its sizes and warm them.
-> When Phase C extracts the toolkit, pin the exact exported names + signatures HERE so GB/GA/
-> Overlays all call the identical API.
+## 4. LibGloomSkin-1.0 (the shared toolkit) — **PINNED (Phase C, 2026-07-24)**
+Registered via LibStub: `local Skin = LibStub("LibGloomSkin-1.0")`. GloomsHub is the canonical
+shipper — its `Skin.lua` IS the lib body (embedding a copy in each tool via `.pkgmeta`
+externals is Phase G work). `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are Hub-side aliases of the
+same tables. Consumers: **GB since Phase C**; GA swaps in D; Overlays in E.
+
+**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 1) — the whole API; nothing else is public:**
+- `Skin.COLOR` — `purple · heroic · green · red · orange` (each `{r,g,b,hex}`), `dark`, `rim`
+  (both `{r,g,b,a}`), `text`, `mute` (`{r,g,b}`). The §1 literals.
+- `Skin.FONT` — `title · head · body · bodyM · label` → font files under
+  `Interface\AddOns\GloomsHub\Media\fonts\` (pre-warmed paths; see the warm-list contract).
+- `Skin.MEDIA` — `"Interface\AddOns\GloomsHub\Media\"` (the permanent Hub path — locked).
+- `Skin.UI` — the stateless widget factory:
+  - `UI.CARET` (caret art path) · `UI.CARET_DOWN` (rotation radians for "open")
+  - `UI.setFont(fs, path, size, flags?)` — SetFont with stock-font fallback
+  - `UI.newText(parent, fontPath, size, color?, justify?)` → FontString
+  - `UI.addEdges(frame, color, thick?)` — four 1px edge textures (squared border)
+  - `UI.skinPlate(frame)` → the flat dark base Texture
+  - `UI.hLine(parent)` → 1px rim Texture (caller anchors; SetWidth(1)+anchors for vertical)
+  - `UI.flatButton(parent, w, h, color, label?, textSize?)` → Button with `.text`, `:SetActive(on)`,
+    `:SetBase(alpha)` — ★ purple/heroic when off, ORANGE when active, for EVERY flatButton
+  - `UI.makeToggle(parent, get, set)` → 40×20 sliding switch, `:refresh()`
+  - `UI.flatEditBox(parent, w, h)` → EditBox (faint purple fill, brighter on focus)
+  - `UI.sliderRow(parent, yTop, label, min, max, step, get, set, fmt?, sub?)` →
+    `{ refresh, setEnabled, SetShown }` (44px row; ~15px taller with `sub`)
+  - `UI.colorSwatch(parent, get, set, withAlpha?)` → `{ swatch, refresh }` — get/set use
+    `{r,g,b[,a]}` ARRAYS (ColorPickerFrame flow)
+  - `UI.dirRow(parent, yTop, label, get, set)` → `{ refresh, setEnabled }` — "up"|"down"|"left"|"right"
+  - `UI.makeScrollbar(parent, scrollFrame, place)` → thin orange-thumb bar with `:Sync()`
+  - `UI.attachTip(frame, title, body)` — the family hover tooltip (HookScript, coexists)
+  - `UI.WarmFonts(extraPairs?)` — **the Hub calls this, once, at PLAYER_ENTERING_WORLD**
+    (Media.lua's RegisterAll); draws the base list + everything registered + the arg
+  - `UI.RegisterWarmPairs({ {fontPath, size}, … })` — **how a TOOL warms its pairs**: call at
+    file load; pairs queue and warm with the Hub's PEW batch (called after the batch — e.g.
+    load-on-demand — it warms immediately). Each (path, size) draws at most once per session.
+- **NOT exported (deliberate):** `makeSection` — each tab's accordion closes over its own
+  scroll/relayout/one-open state, so the Media tab and the Bars tab each keep a local copy of
+  the small pattern. Revisit at Phase D if GA shows a clean shared shape; adding it then is a
+  MINOR bump, not a break.
+- **Warm-list contract (QA-proven Phase B):** WoW draws a cold (font file, size) pair BLANK the
+  first time it's drawn each client session (a /reload heals it; the next cold start re-breaks
+  it). The Hub's base list covers the shell + Media tab (`title 21 · head 16 · body
+  10.5/11/12/13 · bodyM 11/12/13`) + each catalog font at 11/13/14 (picker sizes). **Every
+  (font, size) pair ANY suite tab draws beyond that must go through `RegisterWarmPairs`** —
+  when a tool migrates (D/E), enumerate its sizes (`grep -oE 'FONT\.\w+, [0-9.]+' Config.lua |
+  sort -u`) and register the ones the base list misses. GB registers: `title 17/18 · head
+  12/13 · body 9.5/10/12.5 · label 10/10.5/11` (Config.lua, right after the toolkit aliases).
+- **Versioning:** LibStub newest-wins. Additive changes bump MINOR here + in `Skin.lua`
+  (`local MAJOR, MINOR`) in the same session; breaking changes need a new MAJOR ("-2.0") and
+  The owner's sign-off.
 
 ## 5. Consumers to keep in lockstep
-- **GloomsBars** — tokens + toolkit (→ LibGloomSkin), `/gb` config reroute, Bars tab.
+- **GloomsBars** — ✅ migrated (Phase C, 2026-07-24): consumes LibGloomSkin, mounts the Bars
+  tab, `/gb` + minimap button route to `GloomsHub:ToggleWindow("bars")`, hard-depends on the
+  Hub. (Bar ENGINE keeps `GB.FONT` on GB's own files — see the §1 note.)
 - **GloomsAuras** — tokens + toolkit, `/ga`, Auras tab, `CatStoneTweaks` → `GloomsHub:ListMedia`.
 - **Gloom's Overlays** — `ResolveAssetPath` call site + label, `/go`, Overlays tab, full reskin.

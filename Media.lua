@@ -65,12 +65,16 @@ end
 -- ============================================================
 
 function Media:RegisterAll()
-    -- Pre-warm the UI's font/size pairs plus each catalog font at the Media
-    -- tab's preview size, so lazily-built text never draws a cold pair blank
-    -- (see Skin.lua's WarmFonts).
+    -- Pre-warm the UI's font/size pairs plus each catalog font at every size
+    -- the suite draws it: 13 = the Media tab's preview rows, 11 / 14 = the
+    -- tools' font pickers (dropdown label / flyout rows — GB's, and GA's come
+    -- Phase D). Lazily-built text must never draw a cold pair blank (see
+    -- Skin.lua's WarmFonts).
     local warm = {}
     for _, entry in ipairs(GloomsHubDB.fonts) do
-        warm[#warm + 1] = { FONT_PATH .. entry.file, 13 }
+        for _, size in ipairs({ 11, 13, 14 }) do
+            warm[#warm + 1] = { FONT_PATH .. entry.file, size }
+        end
     end
     GloomsHub.UI.WarmFonts(warm)
 

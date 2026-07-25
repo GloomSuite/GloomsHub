@@ -81,9 +81,14 @@ local function BuildPanel()
     CreateColor(COLOR.orange.r, COLOR.orange.g, COLOR.orange.b, 0))
   UI.addEdges(panel, COLOR.rim, 1)
 
-  -- Title bar: wordmark only for now (Hub logo art is still an open item).
+  -- Title bar: the GS monogram (Media/ui/logo.png — the owner's Gloom Suite logo,
+  -- 2026-07-24; 197×295 art shown at native aspect) left of the wordmark.
+  local logo = panel:CreateTexture(nil, "ARTWORK")
+  logo:SetTexture(Hub.MEDIA .. "ui\\logo.png")
+  logo:SetSize(19, 28)
+  logo:SetPoint("TOPLEFT", 14, -10)
   local mark = UI.newText(panel, FONT.title, 21, { r = 1, g = 1, b = 1 }, "LEFT")
-  mark:SetPoint("TOPLEFT", 16, -13); mark:SetText("GLOOM SUITE")
+  mark:SetPoint("LEFT", logo, "RIGHT", 9, 0); mark:SetText("GLOOM SUITE")
   local close = UI.flatButton(panel, 22, 20, COLOR.heroic, "X", 12)
   close:SetPoint("TOPRIGHT", -8, -13); close:SetScript("OnClick", function() panel:Hide() end)
   local tdiv = UI.hLine(panel)
