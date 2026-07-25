@@ -91,8 +91,10 @@ commit metadata.
   GloomsAuras and GloomsBuildBarn had to be **deleted and recreated** to truly remove them; that is
   the only reliable purge. Verify a purge **unauthenticated against the PUBLIC repo** (expect
   **422**); a 404 from a private repo proves nothing. Full account in docs/HANDOFF.md.
-- **Still true:** the mirror backups in `~/glooms-scrub-backups-2026-07-24/` still contain the old
-  identity — never push them anywhere.
+- **The scrub backups were DELETED on 2026-07-24** at the owner's instruction, once all five repos
+  were confirmed public, clean and in sync. No copy of the old identity remains on disk. There is
+  therefore **no undo** for the history rewrite — which is fine, the rewrite is verified — but any
+  future rewrite must take fresh backups first.
 
 > The owner works structured & catalog-first; NEVER "v1"/"later phase" framing; GUI over slash
 > for user controls; never rush toward closing a session. **QA as you go — do not build a large

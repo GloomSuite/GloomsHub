@@ -42,8 +42,10 @@ metadata. Flipping the repos PRIVATE on 2026-07-24 contained it; this rewrite re
 
 ### How it was done
 - **Backups first:** `git clone --mirror` of all five → `~/glooms-scrub-backups-2026-07-24/`
-  (38 MB), plus `GloomsBuildBarn-SERVER-TRUE.git` (see trap 2). ⚠ **These backups still contain
-  the old identity — they are the undo, and must never be pushed anywhere.**
+  (38 MB, later 71 MB), plus `GloomsBuildBarn-SERVER-TRUE.git` — which is what made trap 2
+  recoverable. **These were DELETED on 2026-07-24** once every repo was public, verified clean and
+  in sync, because they were the last copy of the old identity on disk. Take fresh backups before
+  any future rewrite; there is no undo now.
 - **Tool:** `git-filter-repo` 2.47.0 (`brew install git-filter-repo`).
 - **Rules:** one replacements file used for BOTH `--replace-text` (blobs) and `--replace-message`
   (commit messages), plus a `--mailmap` mapping the old name/email **and** the handle's
