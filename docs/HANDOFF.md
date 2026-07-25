@@ -119,13 +119,11 @@ Two things worth stealing for the other tools:
   (`DISABLE` · `BLEND` · `ALPHAKEY` · `ADD` · `MOD`, per `Blizzard_SharedXML/UI.xsd:43-51`), of which
   the client really only uses ADD, BLEND and a handful of MOD.
 
-### ⚠ A REAL CAVEAT IN THIS FILE'S OWN `luac -l … _ENV` CHECK — found and diagnosed
-The check promoted by GA's and GO's sessions reported a global as **REMOVED** from a file that had only
-gained lines. **It was a false removal.** Past ~255 constants the compiler stops using the compact
-`GETTABUP … ; _ENV "name"` form and emits `GETUPVAL _ENV` + `LOADK "name"` + `GETTABLE` — the same
-global read, spelled differently, and the grep pattern no longer matches. **On large files, treat
-REMOVED entries as suspect; only ADDED entries are the real signal.** The check is still worth running
-— it is what proved the moved UI block's helpers were in scope — but read it with this in mind.
+### Tooling caveat (for whoever codes next — not a project fact)
+The `_ENV` global-read diff promoted by GA's and GO's sessions reports **false REMOVALS on large
+files**: past ~255 constants the same global read compiles to a different opcode form and the grep
+stops matching it. **Only ADDED entries are signal.** Still worth running — it is what proved the
+moved UI block's helpers were in scope.
 
 ---
 
