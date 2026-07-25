@@ -82,11 +82,20 @@ touched; all 25 Lua files pass `luac -p`; no binary asset contained the identity
 
 ### Still open (deliberately NOT done)
 - **Nothing was made public.** All five repos remain PRIVATE.
-- **Old commits may linger on GitHub addressable by SHA.** A force-push leaves the pre-rewrite
-  objects unreachable but not necessarily purged. The airtight version is delete-and-recreate,
-  which needs a `delete_repo` scope the `gh` token lacks
-  (`gh auth refresh -h github.com -s delete_repo`). Bars/Auras would be cheap to recreate — their
-  releases regenerate automatically from a tag push. **Build Barn must NOT be deleted.**
+- **★★ PROVEN: force-push does NOT purge. Old commits ARE still served, and go PUBLIC with the
+  repo.** Tested 2026-07-24: with the repos private, `GET /repos/…/commits/<old-sha>` returned
+  404, which looked like a purge — **it was not; a private repo 404s that endpoint regardless.**
+  The moment the repos were flipped public, the pre-rewrite SHAs returned **200 with
+  `the old identity` in the author, committer and message.** They were flipped
+  straight back to private (~2 min public). **A 404 while private proves NOTHING. Never treat a
+  force-push as a purge, and never validate the purge from a private repo.**
+- **Therefore GloomsBars, GloomsAuras and GloomsBuildBarn CANNOT go public as they stand.** The
+  only fix is delete-and-recreate, which needs a scope the `gh` token lacks — the owner must run
+  `gh auth refresh -h github.com -s delete_repo` once. Their releases regenerate automatically
+  from a tag push, and GBB's current data can be republished immediately via
+  `gh workflow run weekly-data.yml`, so recreating costs nothing but the run time.
+- **GloomsHub and GloomsOverlays are safe to publish now** — they were created on 2026-07-24 and
+  only ever received scrubbed history, so they have no pre-rewrite objects to leak.
 - These repos were PUBLIC with the identity until 2026-07-24, so third-party mirrors of public
   GitHub event data are outside anyone's control. This scrub is forward-looking.
 - `.claude/settings.json` `additionalDirectories` now reads `~/GloomsBars` etc. — confirm `~`
