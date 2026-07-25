@@ -1,6 +1,7 @@
 # Gloom's Hub — Session Handoff
 
-**Last updated: 2026-07-25.** **ALL SEVEN PHASES (A–G) ARE DONE AND QA'd BY THE OWNER.** All four
+**Last updated: 2026-07-25e** — the newest record below is the **Auras tab layout rework**
+(polish to-do item 1, done + QA'd). **ALL SEVEN PHASES (A–G) ARE DONE AND QA'd BY THE OWNER.** All four
 addons publish **`v1.0.1`** from the **`GloomSuite`** org, and both the install and update paths are
 proven in the live client. **The plan is finished; only the polish backlog remains.**
 
