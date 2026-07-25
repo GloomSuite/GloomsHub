@@ -35,6 +35,44 @@ symlinked into `…/Interface/AddOns/`. Disparate repos drift. The rule that pre
   contract, change it HERE and update every consumer in the same session.
 - GB's, GA's and Overlays' `CLAUDE.md` carry a "part of the Gloom Suite" pointer back here.
 
+## ★★ ROUTE THE REQUEST BEFORE YOU DO THE WORK (the owner, 2026-07-25)
+**The suite is ONE product at runtime but FOUR repos on disk, and every repo is in the session's
+working directories — so a request aimed at the wrong repo can be silently fulfilled from the
+wrong place. Do not let that happen. Route first, then work.**
+
+> **THE RULE: before starting any change, decide which repo OWNS it. If that is not the repo this
+> session is in, STOP and say so BEFORE editing anything. Name the repo the work belongs in, say
+> in one line what it would touch, and let the owner decide whether to switch. Do not "just do it
+> from here", do not make a partial edit first, and do not quietly edit across repos.**
+
+The owner's words: *"if I make a request for a change/addition while working in one project that is
+better suited for one of the other projects, actually tell me, so I can switch over and make the
+request in the proper place."*
+
+**Who owns what:**
+| The change is about… | It belongs in |
+|---|---|
+| Action-bar skin, shapes/catalog, glows, layout, presets, GB's tab contents | `~/GloomsBars` |
+| Cooldown-Manager auras, displays, GA's tab contents | `~/GloomsAuras` |
+| Overlays engine, conditions, spritesheets, GO's tab contents | `~/GloomsOverlays` |
+| The Suite window/shell + tab API · the shared toolkit `LibGloomSkin` (tokens, widgets, `UI.*`) · media registration/catalog/resolver + the Media tab · the ONE minimap launcher · the suite docs + phase ledger | **`~/GloomsHub`** (here) |
+| Gloom's Build Barn | `~/Desktop/glooms-build-barn` — **NOT a suite member**, see below |
+
+**Rough test:** *does it change how ONE tool looks or behaves?* → that tool's repo. *Does it change
+something all three share, or the window they live in?* → here.
+
+**Three carve-outs — these are correct, not violations:**
+1. **Suite docs/ledger updates in `GloomsHub` from any suite session.** Required, in fact: any
+   session that moves the suite updates SUITE-STATE here. Say you're doing it; don't ask permission.
+2. **A shared-contract change and its consumers, in the same session.** If a `LibGloomSkin` or tab-API
+   change lands, every consumer must be updated with it (see CONTRACTS) — multi-repo is the *point*.
+   Still say up front which repos it will touch.
+3. **Read-only cross-repo work** — grepping siblings for consumers, verifying a symbol, comparing a
+   pattern. Look freely; the rule is about WRITING.
+
+**If ownership is genuinely ambiguous** (e.g. a tool needs a widget that arguably belongs in the
+shared toolkit), say so and give a recommendation — don't guess silently and don't stall.
+
 ## The family (and what's IN vs OUT of the suite)
 - **IN:** Gloom's Auras (`~/GloomsAuras`), Gloom's Bars (`~/GloomsBars`), Gloom's Overlays
   (`~/GloomsOverlays` — the renamed VibeOverlay; migrated + reskinned in Phase E, 2026-07-24).
