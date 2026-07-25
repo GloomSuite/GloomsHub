@@ -115,6 +115,12 @@ org membership still private.
   registered and silently trigger nothing — re-push the tags if no run appears.
 - **GBB's `weekly-data.yml` only releases when the data CHANGED**, so `workflow_dispatch` on
   unchanged data is a no-op. To force a release, re-push the tag (fires `release.yml`).
+- **★ Recreating releases out of order breaks "latest" — which is what WoWup installs.** After the
+  recreate, GBB's latest resolved to `v2026.07.06` and GB's to `v0.0.1`, because the older tags were
+  re-pushed last. Fixed with
+  `gh api -X PATCH repos/<owner>/<repo>/releases/<id> -f make_latest=true`. **Always finish by
+  checking `/releases/latest` anonymously** — and note that endpoint caches, so a stale answer may
+  just need a re-read before you go chasing it.
 - These repos were PUBLIC with the identity until 2026-07-24, so third-party mirrors of public
   GitHub event data are outside anyone's control. This scrub is forward-looking.
 - `.claude/settings.json` `additionalDirectories` now reads `~/GloomsBars` etc. — confirm `~`
