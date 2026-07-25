@@ -329,6 +329,11 @@ local function relayout()
     end
     scrollChild:SetHeight(math.max(1, y))
     if scrollbar then scrollbar.Sync() end
+    -- Counts live here because relayout() is the single path every mutation
+    -- funnels through: initial build, add, remove, and the tab's refresh hook.
+    for _, s in ipairs(sections) do
+        if s.updateCount then s.updateCount() end
+    end
 end
 
 -- One-open accordion (the family convention; all start closed).
@@ -339,7 +344,11 @@ local function toggleSection(target)
     relayout()
 end
 
-local function makeSection(title, buildBody)
+-- countFn (optional) → a number shown right-aligned on the header. The owner,
+-- 2026-07-25: "would be nice to show how many assets are in each of those
+-- categories without having to expand the section." Kept on the HEADER so it
+-- reads while the accordion is CLOSED, which is the whole point.
+local function makeSection(title, buildBody, countFn)
     local s = { open = false }
     local header = CreateFrame("Button", nil, scrollChild)
     header:SetHeight(SECTION_HDR_H)
@@ -351,6 +360,12 @@ local function makeSection(title, buildBody)
     caret:SetSize(9, 9); caret:SetPoint("LEFT", 18, 0)
     local h = UI.newText(header, FONTS.head, 16, COLOR.purple, "LEFT")
     h:SetPoint("LEFT", caret, "RIGHT", 11, -1); h:SetText(title:upper())
+    if countFn then
+        local cnt = UI.newText(header, FONTS.body, 12, COLOR.mute, "RIGHT")
+        cnt:SetPoint("RIGHT", -18, -1)      -- -1 matches the title's optical baseline
+        s.updateCount = function() cnt:SetText(tostring(countFn() or 0)) end
+        s.updateCount()
+    end
     local div = UI.hLine(header)
     div:SetPoint("BOTTOMLEFT", 0, 0); div:SetPoint("BOTTOMRIGHT", 0, 0)
 
@@ -527,7 +542,9 @@ local function BuildMediaTab(container)
     end)
 
     for _, spec in ipairs(SPECS) do
-        makeSection(spec.title, function(body) buildCatalogSection(body, spec) end)
+        makeSection(spec.title,
+            function(body) buildCatalogSection(body, spec) end,
+            function() return #(spec.getEntries() or {}) end)
     end
     relayout()
     setStatus("The suite's shared media catalog — fonts, statusbar textures, and overlay graphics.")

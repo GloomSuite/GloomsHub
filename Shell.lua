@@ -26,10 +26,42 @@ local ordered = {}    -- defs sorted by order
 local panel, tabStrip
 local current         -- id of the focused tab
 
-function Hub:Version()
-  local v = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("GloomsHub", "Version")
-  if type(v) ~= "string" or v == "" or v:find("@") then return "dev" end
+-- The suite's four addons, in tab order. ★ Gloom's Build Barn is deliberately
+-- NOT here — it is not a suite member (a locked decision; it mounts no tab).
+-- Adding a fifth tool means adding it here.
+local SUITE = {
+  { addon = "GloomsHub",      short = "Hub" },
+  { addon = "GloomsBars",     short = "Bars" },
+  { addon = "GloomsAuras",    short = "Auras" },
+  { addon = "GloomsOverlays", short = "Overlays" },
+}
+
+-- Version of any suite addon. nil = NOT INSTALLED (so the footer can omit it);
+-- "dev" = the TOC still holds the packager's literal @project-version@, i.e. a
+-- dev checkout / symlink rather than a WoWup-installed build.
+function Hub:Version(addon)
+  local v = C_AddOns and C_AddOns.GetAddOnMetadata
+        and C_AddOns.GetAddOnMetadata(addon or "GloomsHub", "Version")
+  if type(v) ~= "string" or v == "" then return nil end
+  if v:find("@") then return "dev" end
   return v
+end
+
+-- ★ EVERY installed suite addon's version, not just the Hub's (the owner,
+-- 2026-07-25: "the individual addon version isn't shown anywhere in GH").
+-- The four addons version INDEPENDENTLY — the synchronized scheme was relaxed
+-- the same day — so one number could never describe the install. This is also
+-- the first question in any support exchange, and the alternative was hovering
+-- four separate entries in Blizzard's addon list.
+-- This is the long-open "shared-footer contents" question, answered.
+function Hub:VersionLine()
+  local parts = {}
+  for _, e in ipairs(SUITE) do
+    local v = Hub:Version(e.addon)
+    if v then parts[#parts + 1] = e.short .. " " .. v end
+  end
+  if #parts == 0 then return "Gloom Suite" end
+  return "Gloom Suite  —  " .. table.concat(parts, "   ·   ")
 end
 
 -- ------------------------------------------------------------
@@ -115,11 +147,11 @@ local function BuildPanel()
   sdiv:SetPoint("TOPLEFT", 0, TITLE_DIV_Y - TAB_STRIP_H)
   sdiv:SetPoint("TOPRIGHT", 0, TITLE_DIV_Y - TAB_STRIP_H)
 
-  -- Footer: divider + version (generic by design — see SUITE-PLAN §6).
+  -- Footer: divider + the version line for EVERY installed suite addon.
   local fdiv = UI.hLine(panel)
   fdiv:SetPoint("BOTTOMLEFT", 0, FOOTER_H); fdiv:SetPoint("BOTTOMRIGHT", 0, FOOTER_H)
   local ver = UI.newText(panel, FONT.body, 10.5, COLOR.mute, "LEFT")
-  ver:SetPoint("BOTTOMLEFT", 16, 10); ver:SetText("Gloom Suite — GloomsHub " .. Hub:Version())
+  ver:SetPoint("BOTTOMLEFT", 16, 10); ver:SetText(Hub:VersionLine())
 
   tinsert(UISpecialFrames, "GloomsSuiteWindow")   -- Escape closes it
   RebuildTabStrip()

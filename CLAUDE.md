@@ -105,7 +105,12 @@ His words: *"new files don't matter. I install new addons all the time via WoWup
 /reload in the game to get them to work."* The old blanket "new files/assets need a FULL CLIENT
 RESTART" rule is **RETIRED** — it was costing him restarts he never needed. If a newly added asset
 genuinely fails to appear, a restart is a reasonable *debugging* step, but it is not the default
-ritual and QA instructions should stop demanding it. Ships via BigWigs packager → GitHub Releases (repo
+ritual and QA instructions should stop demanding it. **★ ONE REAL EXCEPTION — FONTS.** WoW loads font
+files at LAUNCH; `/reload` does not reload them, so a NEW `.ttf` needs a full restart. Verified
+against Warcraft Wiki + WoWInterface/WowAce 2026-07-25. The Media tab's Fonts warning is CORRECT —
+do not "fix" it. (Textures may be the same; unverified — test before claiming either way.)
+**SavedVariables are NOT a reason to restart:** the client writes them on logout, disconnect, quit
+AND `/reload` — `/reload` is a genuine save point. Ships via BigWigs packager → GitHub Releases (repo
 `GloomSuite/GloomsHub`), WoWup installs/updates. GB/GA/Overlays all hard-depend on it
 (`## Dependencies: GloomsHub`) as of Phase E.
 

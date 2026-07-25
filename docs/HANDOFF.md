@@ -60,7 +60,12 @@ proven in the live client. **The plan is finished; only the polish backlog remai
    to work."* **The old "new files/assets → FULL CLIENT RESTART" rule is RETIRED** — it was in
    CLAUDE.md, this file and every QA script, and it cost him restarts he never needed. Stop writing
    it into instructions. A restart is a fine thing to *try* if an asset genuinely doesn't appear;
-   it is not a prerequisite.
+   it is not a prerequisite. **★ ONE REAL EXCEPTION — FONTS.** WoW loads font
+   files at LAUNCH; `/reload` does not reload them, so a NEW `.ttf` needs a full restart. Verified
+   against Warcraft Wiki + WoWInterface/WowAce 2026-07-25. The Media tab's Fonts warning is CORRECT —
+   do not "fix" it. (Textures may be the same; unverified — test before claiming either way.)
+   **SavedVariables are NOT a reason to restart:** the client writes them on logout, disconnect, quit
+   AND `/reload` — `/reload` is a genuine save point.
 7. **★ Route the request before doing the work (the owner, 2026-07-25).** Decide which repo owns a
    change BEFORE starting; if it isn't this session's repo, stop and say so. Full rule + ownership
    table in [../CLAUDE.md](../CLAUDE.md). The reason is context, not file access: a tool's
@@ -73,6 +78,76 @@ proven in the live client. **The plan is finished; only the polish backlog remai
    Point at the Hub's SUITE-STATE instead of copying the fact.
 
 ---
+
+# SESSION RECORD — 2026-07-25d (logos, the shared tab header, footer + Media counts)
+
+Same session as 25c, after Phase G closed. All of it done **from the GloomsHub session**, touching
+GB and GO as well — the owner's explicit call, and the shared-contract carve-out.
+
+### The new logo set (backlog 1, 3, 4 — DONE)
+The owner redrew all five marks at **512×512, square, transparent, with the addon name removed**
+from under the letters. At header size that text was a few pixels tall and read as an artifact.
+The old art was PORTRAIT (197×295, 179×247, 115×128) and **every draw site hardcoded a matching
+portrait size**, so the sizes moved with the art: shell title bar `19×28 → 28×28`, Overlays rail
+`18×25 → 26×26`.
+
+★ **GS and Gh are DIFFERENT MARKS for different things** — the owner drew both deliberately:
+- **GS = the SUITE** → the Suite window title bar, the minimap launcher, the GitHub org avatar.
+- **Gh = the HUB AS AN ADDON** → the Hub's TOC `IconTexture`, and the Media tab's header.
+
+Also: Overlays had **no `## IconTexture` at all** and was showing a generic `?` in the addon list
+(backlog 3, fixed); the Hub's `minimap.png` was 64×64 against its siblings' 256 (backlog 4, now 512);
+and `GloomsBars/Media/ui/minimap.png` + `GloomsAuras/Media/minimap.png` were deleted as orphans of
+the minimap buttons removed in Phases C and D.
+
+⚠ **`GloomsAuras/Media/ga_logo_full.png` was deliberately NOT touched** — it is the landing-page
+splash (monogram + wordmark at 197×248, where the wordmark IS legible), and that splash is being
+retired in GA's own session.
+
+### `UI.tabHeader` — LibGloomSkin MINOR 4 (backlog 2 — DONE except GA)
+Overlays had built the mark + wordmark + divider header inline; the owner wanted it on every tab, so
+the geometry was **promoted into the lib and Overlays now consumes it**. Bars gained a header it
+never had (its rail opened straight onto PROFILE) and its rail contents shifted down 48px. The Media
+tab gained one wearing **Gh**.
+
+★ **Auras is deliberately excluded and its gate stays at MINOR 3** — its tab is getting a full
+layout rework, and the splash being retired sits exactly where a header would go. Adding one now
+means designing that space twice.
+
+★ **The owner caught a 2px misalignment** — the Media header sat at `x = 16` (matching that tab's own
+status line) while Bars and Overlays sat at 14. He compares these **by tabbing between them**, so
+cross-tab alignment beats internal alignment. All three now pass 14 and take every other value from
+the widget default. **The only thing that differed was the one value passed by hand** — which is the
+argument for the shared widget in miniature.
+
+★ **First live exercise of the version gate:** adding `UI.tabHeader` bumped the lib to MINOR 4, so
+`SKIN_NEEDS` moved to 4 in the two files that call it **in the same commit**. The requirement table
+in CONTRACTS §6 is now deliberately non-uniform (GB/GO editor at 4, GA + GO preview at 3) — each
+file declares what IT uses. That is the gate working, not drift.
+
+### Footer + Media counts (backlog 8, 9 — DONE)
+- **The footer lists EVERY installed suite addon's version**, not just the Hub's — `Hub · Bars ·
+  Auras · Overlays`, omitting any that aren't installed. `Hub:Version(addon)` now takes an addon and
+  returns `nil` for not-installed / `"dev"` for a `@project-version@` TOC. **This closes the
+  long-open "shared-footer contents" question.** Build Barn is deliberately not in the `SUITE` list.
+- **The Media tab shows each category's count on the section header**, readable while COLLAPSED
+  (which was the point). Counts update from `relayout()` — the one path that build, add, remove and
+  the tab's refresh hook all funnel through.
+
+### ★★ RESEARCHED, because two of us were guessing: reload vs restart vs relog
+The owner asked for sources rather than reasoning. Findings (2026-07-25):
+1. **SavedVariables are written on logout, disconnect, quit AND `/reload`** — `/reload` IS a genuine
+   save point (Warcraft Wiki). So "the clear doesn't take until I log out" is a real observation with
+   the wrong mechanism: a `/reload` would also have flushed it.
+2. **New addons/files need only `/reload`** — installable and updatable without closing the client
+   since October 2020 (Wowhead). The owner's correction stands.
+3. **★ FONTS ARE A GENUINE EXCEPTION.** WoW loads font files at LAUNCH; `/reload` does not reload
+   them, so a new `.ttf` needs a full restart. **The Media tab's Fonts warning is CORRECT — do not
+   "fix" it.** The blanket retirement of the restart rule earlier in this session was too broad and
+   has been corrected in all four repos. (Textures may be the same — UNVERIFIED, test before
+   claiming.)
+4. **Hand-editing a SavedVariables file needs the client fully closed** — the in-memory copy
+   overwrites the file at every save point. This is the case that genuinely requires an exit.
 
 # SESSION RECORD — 2026-07-25c (PHASE G QA — the plan is complete)
 
@@ -99,7 +174,8 @@ not evidence — go read the registry directly.*
 ### Other findings
 - ★ **A WoWup update needs no full client restart — `/reload` is enough** (the owner). `v1.0.0` → `v1.0.1`
   changed no files — only TOC metadata — and applied without one. He then confirmed it holds generally:
-  he installs new addons via WoWup and just `/reload`s. **The blanket restart rule is RETIRED.**
+  he installs new addons via WoWup and just `/reload`s. **The blanket restart rule is RETIRED —
+  EXCEPT for fonts.** See the research note in the 2026-07-25d record.
 - **The dev symlinks make the version string the load-source test.** A packaged install reads
   `v1.0.x`; a dev symlink reads the literal `@project-version@`. That single field tells you which
   copy the client actually loaded — worth checking first, since every later result depends on it.

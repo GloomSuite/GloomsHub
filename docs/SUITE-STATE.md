@@ -4,7 +4,7 @@
 > UPDATE it at the end of any session that moves the suite.** Home of record: this repo.
 > Full design in [SUITE-PLAN.md](SUITE-PLAN.md). Shared contracts in [CONTRACTS.md](CONTRACTS.md).
 
-**Last updated:** 2026-07-25b — **★★ PHASE G IS DONE AND THE 7-PHASE PLAN IS COMPLETE.** The owner
+**Last updated:** 2026-07-25d — **★★ PHASE G IS DONE AND THE 7-PHASE PLAN IS COMPLETE.** The owner
 QA'd the WoWup install AND update paths on 2026-07-25; all four addons now publish **`v1.0.1`**.
 No phase work remains — everything left is the polish backlog below.
 **★ THE FOUR SUITE REPOS ALSO MOVED TO A NEW GITHUB ORG, `GloomSuite`.**
@@ -13,6 +13,13 @@ No phase work remains — everything left is the polish backlog below.
 Membership is PRIVATE on both orgs (verified unauthenticated). Full record + the "second org, never
 a rename" reasoning in HANDOFF's session record.
 
+**Also 2026-07-25 (records 25c/25d):** the **new 512×512 square logo set** landed across all four
+addons (GS = the suite, **Gh = the Hub as an addon**); **`UI.tabHeader` promoted into LibGloomSkin
+as MINOR 4** and adopted by Bars, Overlays and Media (**GA deliberately excluded** until its layout
+rework); the **shell footer now lists every installed addon's version**; the **Media tab shows
+per-category counts** on collapsed headers; and the **version GATE** was added to every LibGloomSkin
+consumer, which is what makes independent versioning safe.
+
 Earlier context: Phases **A–F** were built + QA'd on 2026-07-24 — StoneTweaks is RETIRED and the
 identity scrub (TASK 0) is DONE with all five repos PUBLIC. **Phase G** was built 2026-07-24 and
 QA'd 2026-07-25. 2026-07-25 also swept GB's and GA's docs for release facts the release had
@@ -20,65 +27,44 @@ falsified, and added the **route-the-request rule** to all four `CLAUDE.md` file
 
 ## ▶ THE TO-DO LIST (single answer to "what's left?")
 
-**★★ THE 7-PHASE PLAN IS COMPLETE — Phase G was QA'd by the owner 2026-07-25. Nothing is open.**
-1. ~~Phase G QA — fresh WoWup install + update cycle.~~ **DONE 2026-07-25.** All four installed from
-   the new `GloomSuite` org, loaded, and updated `v1.0.0` → `v1.0.1` in the client. Detail in the
-   Phase G row below and HANDOFF's session record.
+**★★ THE 7-PHASE PLAN IS COMPLETE (Phase G QA'd 2026-07-25). No phase work remains.**
+Everything below is polish. ✅ items are done and kept for the record.
 
-**Polish backlog — each its own session, by the owner's call (detail at the bottom of this file)**
-2. **Auras tab LAYOUT REWORK** — kill the docked drawer for a GB-style always-visible rail, plus the
-   landing-page question. Treat the whole Auras tab as the unit of work.
-3. **Overlays: Width / Height / X / Y → SLIDERS**, not typed boxes. "It just needs to happen."
-
-**Gloom's Bars (GB repo — route it there)**
-4. **Modifier symbols (⌘⇧⌃⌥) take no outline/shadow** — deferred, but the owner wants it; the approved
-   path is in GB's handoff item (d). **No open GB bugs.**
-
-**★ LOGO / MARK REWORK (the owner, 2026-07-25) — new**
-5. **Redo all four logos to drop the baked-in name text.** Today each `logo.png` is the big stylized
-   two letters with the addon name in a small font underneath — which is why the files are portrait
-   (`GloomsHub` 197×295, `GloomsOverlays` 179×247, `GloomsBars` 115×128) rather than square. At the
-   size a tab-header mark is drawn, that text is a few pixels tall and **reads as an artifact, not
-   as type**. Settle on the **two-letter monogram convention** everywhere; the art then becomes
-   square, which is also the right shape for the in-tab mark. **Each tool's logo lives in ITS repo —
-   route accordingly.** Hub's is here.
-6. **Apply "small mark beside the tab name" to ALL tabs** — the owner saw it on one addon page, likes
-   it, and wants it as the suite pattern. Shared-toolkit change here + one call site per tool; a good
-   single cross-cutting pass **once the new art exists**. Don't start before item 5.
-7. **`GloomsOverlays` has NO `## IconTexture`** in its TOC, so it shows a generic default in the
-   in-game addon list while its three siblings show their marks. It already has `Media/ui/logo.png`.
-   **GO's repo — route it there.**
-8. **The Hub's `Media/ui/minimap.png` is only 64×64** where GB's and GA's are 256×256. It doubles as
-   the TOC `IconTexture`; regenerate at 256 while the art is being redone.
-9. **Org avatar for `GloomSuite`** — the ONLY way to change what WoWup shows at install (its GitHub
-   provider hardcodes `owner.avatar_url`; it never reads the addon TOC or zip). 1000×1000 PNG,
-   **solid background — NOT transparent** (GitHub renders avatars on white in light theme, so a
-   transparent near-black mark disappears), a little padding for the rounded corners, must read at
-   48px. Suite colors: background **`#060714`**, bottom glow **`#ff7729` @ 11% alpha** fading out by
-   ~55% height (≈ `#211316` at the very bottom edge).
-   ⚠ **`COLOR.dark` in Skin.lua is `#12131F`, NOT the on-screen color** — it is pre-compensated
-   because WoW darkens it. Artwork must use **`#060714`**, what actually lands on screen.
+**Each its own session, in the repo that owns it — route it there**
+1. **Auras tab LAYOUT REWORK** · `~/GloomsAuras` — kill the docked drawer for a GB-style
+   always-visible rail, **retire the landing splash** (the owner, 2026-07-25: "that's going to have
+   to go away"), and add the shared `UI.tabHeader` as part of the new layout. **GA is the ONE tab
+   with no header, deliberately** — the splash occupies exactly where it goes, so doing it now means
+   designing that space twice. Its gate stays at MINOR 3 until then. Treat the whole tab as the unit.
+2. **Overlays: Width / Height / X / Y → SLIDERS** · `~/GloomsOverlays` — "It just needs to happen."
+   `UI.sliderRow` as Rotation/Alpha already use, probably slider + typed box so exact values stay
+   enterable. Nudge arrows stay.
+3. **Modifier symbols (⌘⇧⌃⌥) take no outline/shadow** · `~/GloomsBars` — deferred but wanted; the
+   approved path is in GB's handoff item (d). **No open GB bugs.**
 
 **Small / housekeeping**
-10. **Media tab: show each category's asset count on the COLLAPSED accordion header** (the owner,
-   2026-07-25 during Phase G QA) — "would be nice to show how many assets are in each of those
-   fonts/textures/graphics categories without having to expand the section." Today the counts are
-   only visible once a section is open. Hub work (`Media.lua`). Small, self-contained.
-11. Remove the leftover **`test-remove`** graphic from the Media catalog (inherited from StoneTweaks;
-   removable in the Media tab).
-12. **★ Show EVERY installed addon's version in the shell footer** (the owner, 2026-07-25 Phase G QA:
-   "the individual addon version isn't shown anywhere in GH"). Today the footer reads
-   `Gloom Suite — GloomsHub v1.0.0` — the HUB's version only, while four addons version
-   independently. **This session proved the drift is real**: Bars went to `v1.0.1` while the other
-   three sat at `v1.0.0` and nothing in the UI said so. It is the first question in any support
-   exchange ("what version are you on?"), and the answer currently requires hovering four entries in
-   Blizzard's addon list. **This ANSWERS the long-open "shared-footer contents" question** — that is
-   what the footer is for. Hub work (`Shell.lua`); each tool already registers a tab, so the version
-   can come from its TOC via `C_AddOns.GetAddOnMetadata`.
-13. Open question below: the stray **`BoordensStreet.otf`**.
-14. **Before sharing widely:** the public repo PAGES expose `CLAUDE.md` + `docs/` to anyone with the
+4. Remove the leftover **`test-remove`** graphic from the Media catalog (inherited from StoneTweaks;
+   removable in the Media tab — an in-game action, no code).
+5. Open question: the stray **`BoordensStreet.otf`** — keep or drop?
+6. **Before sharing widely:** the public repo PAGES expose `CLAUDE.md` + `docs/` to anyone with the
    link. Excluded from the packaged zips and identity-clean, so not a privacy defect — just working
    notes being visible. The owner's call, flagged 2026-07-25.
+7. **Unverified:** do NEW TEXTURE files need a client restart the way new FONTS do? Fonts are
+   confirmed (see HANDOFF 2026-07-25d); textures are assumed `/reload`-able and untested. The Media
+   tab's Textures note currently claims `/reload` is enough — prove or correct it.
+
+**✅ Done 2026-07-25 (kept for the record)**
+- ~~Phase G QA — WoWup install + update cycle~~ — **DONE**, the plan is complete.
+- ~~Redo all four logos, drop the baked-in name text~~ — **DONE.** 512×512 square set; every
+  hardcoded portrait draw size moved with it. **GS = the suite, Gh = the Hub as an addon.**
+- ~~Small mark beside every tab name~~ — **DONE as `UI.tabHeader` (LibGloomSkin MINOR 4)**, on Bars,
+  Overlays and Media. **GA excluded on purpose — see item 1.**
+- ~~Overlays has no `## IconTexture`~~ — **DONE.** No more `?` in the addon list.
+- ~~Hub's `minimap.png` is only 64×64~~ — **DONE**, now 512.
+- ~~Org avatar for `GloomSuite`~~ — **DONE**, the owner uploaded the GS mark.
+- ~~Media tab: category counts on collapsed headers~~ — **DONE.**
+- ~~Footer shows every addon's version~~ — **DONE**, which also closes the long-open
+  **"shared-footer contents"** question.
 
 **Not a task — context:** the owner considers the suite **still in active development and is NOT
 ready to share it with friends/guildies yet** (2026-07-25). Don't push distribution work.
@@ -147,7 +133,7 @@ QA'd in the same pass.
 ## What's physically in place right now
 - `~/GloomsHub` git repo, symlinked into AddOns as `GloomsHub` (matches GB/GA convention).
 - `Core.lua` (namespace, `GloomsHubDB`, ST copy-migration, dormant compat shim, `/gh` probe),
-  `Skin.lua` (**now the body of `LibGloomSkin-1.0`** — LibStub-registered, **MINOR 3**; tokens +
+  `Skin.lua` (**now the body of `LibGloomSkin-1.0`** — LibStub-registered, **MINOR 4**; tokens +
   toolkit + `WarmFonts`/`RegisterWarmPairs`; `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are aliases.
   MINOR 3 (Phase E gate B) added `UI.dropdown` + `UI.flyout` (promoted from GB's private
   `animDropdown`), `UI.nameDialog` + `UI.confirm` (the modals GB and GA each hand-maintained a
