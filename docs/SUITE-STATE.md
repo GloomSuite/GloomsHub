@@ -4,7 +4,8 @@
 > UPDATE it at the end of any session that moves the suite.** Home of record: this repo.
 > Full design in [SUITE-PLAN.md](SUITE-PLAN.md). Shared contracts in [CONTRACTS.md](CONTRACTS.md).
 
-**Last updated:** 2026-07-24 (one session built + QA'd Phases C **and** D; **next: Phase E — Gloom's Overlays**, briefing in HANDOFF.md).
+**Last updated:** 2026-07-24 (Phases C **and** D built + QA'd; **Phase E is IN PROGRESS — gate A
+(rename + data migration) is QA'd, gate B (tab mount + reskin) is next**, briefing in HANDOFF.md).
 
 ## Phase status
 
@@ -15,7 +16,7 @@
 | **B** | Empty tabbed shell + Media tab. Add `/gloom`. Old windows still work. | **DONE — QA'd by the owner 2026-07-24** (window/toggle/Escape/drag; catalog 1/6/36 with previews; accordion + orange scrollbar; add/remove incl. `.otf` rejection; old windows untouched; cold-start re-verified). Two findings baked in: (1) **cold-start blank-text quirk** — WoW draws a cold (font file, size) pair blank the first time each session (a /reload heals, next cold start re-breaks); fixed by Skin.lua's `UI.WarmFonts` login pre-warmer — EXTEND its pair list whenever new UI font sizes appear (Phase C!). (2) overlapping family windows interleave (same strata, pre-existing GB/GA quirk) — accepted by the owner; self-resolves as tools mount tabs (C–E). |
 | **C** | Migrate Gloom's Bars as the proof (Bars tab, `/gb` reroute, toolkit → LibGloomSkin). | **DONE — QA'd by the owner 2026-07-24** (gate passed; the one first-pass gap — no suite launcher — was filled same day and verified: the Hub owns the ONE GS minimap button, GB's is deleted). Shipped: `LibGloomSkin-1.0` (surface pinned CONTRACTS §4, incl. `RegisterWarmPairs`); GB hard-deps the Hub; local toolkit + standalone window DELETED; editor mounts as the Bars tab with its own in-tab footer row; `/gb` → `ToggleWindow("bars")` (diagnostics untouched). GB's bar-ENGINE fonts deliberately stay on GB paths (CONTRACTS §1 note). **The container-mount pattern is PROVEN.** |
 | **D** | Migrate Gloom's Auras (Auras tab; flip `CatStoneTweaks` → `GloomsHub:ListMedia`). | **DONE — QA'd by the owner 2026-07-24** ("works as it did before"). Shipped: GA hard-deps the Hub; local toolkit copy + standalone window DELETED; options UI mounts as the **Auras** tab (centered 620-wide column; docked drawers parent to the container); `/ga` → `ToggleWindow("auras")`; `/ga minimap` drives the Hub's button; GA's minimap button DELETED; `CatStoneTweaks` → `GloomsHub:ListMedia` ("Suite Graphics" — GA reads NO StoneTweaks data anymore). Shell grew to 860×740 (content 860×626 PINNED, CONTRACTS §2); lib at MINOR 2. Noted for polish (below): the Auras landing page. |
-| **E** | Rename VibeOverlay → Gloom's Overlays; mount Overlays tab; **reskin in one go**. | **NOT STARTED** ← next (cold-start briefing in HANDOFF.md, incl. VibeOverlay recon + the SavedVariables-rename trap) |
+| **E** | Rename VibeOverlay → Gloom's Overlays; mount Overlays tab; **reskin in one go**. | **IN PROGRESS — split into two QA gates** (the handoff's own "QA the migration FIRST" instruction, so a reskin bug can never be mistaken for data loss). **Gate A DONE — QA'd by the owner 2026-07-24**: clean BugSack; addon list shows "Gloom's Overlays", VibeOverlay gone; overlays render identically; `/go list` correct; **Goldset renders on Gloomthorn** (the per-character proof); `/go overlays` + `/go preview` work (still native chrome); `/vibe` retired. **Gate B NOT STARTED** ← next: mount the Overlays tab + full LibGloomSkin reskin + docked asset browser. |
 | **F** | Retire StoneTweaks (delete last, non-destructively). | not started |
 | **G** | Packaging/release: `.pkgmeta`, `## Dependencies: GloomsHub`, embed LibGloomSkin, WoWup. | not started |
 
@@ -68,15 +69,35 @@
   `GA.COLOR` aliases the lib; `/ga` config branch → `ToggleWindow("auras")`; `/ga minimap` →
   the Hub's button; GA's `MinimapButton.lua` DELETED (+ TOC lib lines + `.pkgmeta` externals).
   All `/ga` diagnostics untouched; Displays/CDM engines untouched.
+- **`~/GloomsOverlays` (Phase E gate A, QA'd):** NEW git repo on `master`, symlinked into AddOns
+  as `GloomsOverlays`; the old raw `VibeOverlay/` folder was **moved (not deleted)** to
+  `~/Desktop/VibeOverlay-retired-2026-07-24`. Three renamed Lua files
+  (`GloomsOverlays.lua` / `_Editor.lua` / `_Preview.lua`), all `Vibe`/`VIBEOVERLAY` identifiers
+  rebranded; TOC `## Interface: 120007` + `## Dependencies: GloomsHub`; `Media/ui/logo.png`
+  (the owner's GO mark, 2026-07-24). Resolver → `GloomsHub:ResolveAssetPath` — **this was the
+  suite's LAST StoneTweaks dependency; Phase F can now retire ST.** Editor label says "Suite
+  media name". Slash `/go` (`/vibe` retired outright — the owner chose the clean break over the
+  alias; `overlays`/`preview`/`list`/`debug` subcommands kept). **UI is still the old native
+  BackdropTemplate chrome — that is gate B's job.**
+  ★ **`VibeOverlayDB` / `VibeOverlayDBChar` are DELIBERATELY unchanged** — see the trap note below.
+- **The SavedVariables migration (gate A, done):** WoW keys SV off the addon FOLDER name, so
+  all **23** save files were copied `VibeOverlay.lua` → `GloomsOverlays.lua` in place (1 account
+  + **22 characters**), byte-verified, originals left as rollback. The character files are NOT
+  boilerplate: **12 ride non-Default profiles** (`Goldset` ×2 — Gloomthorn, Gloomwraith;
+  `Empty` ×10). Keeping the SV globals unchanged is what makes the copies load with zero Lua
+  migration; renaming them later needs a real shim, not a find-and-replace (recorded in the
+  Overlays TOC + CLAUDE.md).
 - **Live on the owner's account:** `GloomsHubDB` = 1 font / 6 textures / 36 graphics,
   `migratedFromST = true`, plus `lastTab` + `minimap`; Hub wins the LSM names (ST prints skip
   lines); compat shim dormant. VibeOverlay/StoneTweaks still completely untouched.
 - GB & GA `CLAUDE.md` carry a "part of the Gloom Suite → GloomsHub" pointer.
 
 ## Open (non-blocking) questions — see SUITE-PLAN §6
-Overlays slash name; shared-footer contents; compat-shim lifetime; stray `BoordensStreet.otf`
-fate. (~~LibGloomSkin public surface~~ — CLOSED Phase C, pinned in CONTRACTS §4. ~~Hub logo~~
-— CLOSED, the owner delivered the GS monogram 2026-07-24.)
+Shared-footer contents; compat-shim lifetime; stray `BoordensStreet.otf` fate; where the
+Overlays GO logo belongs inside the tab (NOT a splash — see the polish backlog).
+(~~LibGloomSkin public surface~~ — CLOSED Phase C, pinned in CONTRACTS §4. ~~Hub logo~~ —
+CLOSED, the owner delivered the GS monogram 2026-07-24. ~~Overlays slash name~~ — CLOSED Phase E
+gate A: **`/go`, and `/vibe` is retired outright**, the owner 2026-07-24.)
 
 ## Suite polish backlog (post-migration UI work, gathered during QA)
 - **Auras tab landing page (the owner, Phase D QA 2026-07-24):** the old standalone window's

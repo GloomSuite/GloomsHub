@@ -136,4 +136,10 @@ same tables. Consumers: **GB since Phase C, GA since Phase D**; Overlays swaps i
   tab (centered 620 column), `/ga` → `GloomsHub:ToggleWindow("auras")`, `CatStoneTweaks` →
   `GloomsHub:ListMedia` (relabelled "Suite Graphics"), hard-depends on the Hub. (`GA.FONT`
   stays on GA's own files — user configs store those paths; see the §1 note pattern.)
-- **Gloom's Overlays** — `ResolveAssetPath` call site + label, `/go`, Overlays tab, full reskin.
+- **Gloom's Overlays** — 🔄 half-migrated (Phase E gate A, 2026-07-24): repo `~/GloomsOverlays`,
+  hard-deps the Hub, resolver call site + editor label swapped to `GloomsHub:ResolveAssetPath`
+  (**the suite's last StoneTweaks consumer — gone**), slash is `/go` (`/vibe` retired).
+  **Still owed by gate B:** consume LibGloomSkin (it still ships the old native
+  `BackdropTemplate` chrome and its own `MakeButton`/`MakeSlider`/`MakeCheck` locals), register
+  the `overlays` tab (id reserved §2, order 30), dock the asset browser, and register its warm
+  pairs §4. Note it keeps SavedVariables globals `VibeOverlayDB`/`VibeOverlayDBChar` on purpose.
