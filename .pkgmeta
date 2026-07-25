@@ -1,0 +1,39 @@
+# BigWigs packager config. Publishes to GitHub Releases ONLY (no CurseForge/
+# Wago) — same model as GloomsBars/GloomsAuras/GloomsBuildBarn. WoWUp installs
+# + auto-updates from those releases via the repo URL.
+#
+# ★ The Hub MUST publish releases: GloomsBars, GloomsAuras and GloomsOverlays
+#   all declare `## Dependencies: GloomsHub`, so a tool cannot install without
+#   a Hub release to install alongside it.
+
+package-as: GloomsHub
+
+enable-nolib-creation: no
+
+# Embedded libraries — all five the TOC loads. Fetched into Libs/ at release
+# build time only; NOT committed (gitignored). Locally, Libs/ is present in the
+# working copy. The Hub carries more than the tools do because it owns both the
+# media registration (LibSharedMedia) and the ONE suite minimap launcher
+# (LibDataBroker + LibDBIcon) — the tools dropped those in Phases C/D.
+externals:
+  Libs/LibStub: https://repos.wowace.com/wow/libstub/trunk
+  Libs/CallbackHandler-1.0: https://repos.wowace.com/wow/callbackhandler/trunk/CallbackHandler-1.0
+  Libs/LibSharedMedia-3.0: https://repos.wowace.com/wow/libsharedmedia-3-0/trunk/LibSharedMedia-3.0
+  Libs/LibDataBroker-1.1: https://github.com/tekkub/libdatabroker-1-1
+  Libs/LibDBIcon-1.0: https://repos.wowace.com/wow/libdbicon-1-0/trunk/LibDBIcon-1.0
+
+# Keep repo-management files out of the packaged addon zip.
+#
+# ⚠ DO NOT add Fonts/, Textures/, Graphics/ or Media/ here. Unlike the other
+#   repos, the Hub's committed assets ARE the product — the 43-file salvaged
+#   media catalog, the GS/GO marks, and the suite's 5 UI fonts. Ignoring them
+#   ships a Hub that registers nothing and renders unstyled.
+ignore:
+  - README.md
+  - CLAUDE.md
+  - .claude
+  - .github
+  - .gitignore
+  - .pkgmeta
+  - docs
+  - tools
