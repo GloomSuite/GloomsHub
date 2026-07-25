@@ -11,9 +11,11 @@
 local Hub = GloomsHub
 local UI, COLOR, FONT = Hub.UI, Hub.COLOR, Hub.FONT
 
--- Sized to host GB's three-pane layout (820 wide) inside the
--- content area come Phase C, plus the tab strip row.
-local SHELL_W, SHELL_H = 860, 680
+-- Sized to host the tools' layouts: GB's three-pane body (820 wide, Phase C)
+-- and GA's 620×~614 master/detail column (Phase D — the height driver).
+-- The resulting content area (860 × 626) is PINNED in CONTRACTS §2: the shell
+-- may grow it, but never shrink below that without updating every tab.
+local SHELL_W, SHELL_H = 860, 740
 local TITLE_DIV_Y = -48          -- title bar divider (family constant)
 local TAB_STRIP_H = 34
 local FOOTER_H = 30

@@ -25,12 +25,12 @@ consumed via `LibGloomSkin`. Values are the established family language:
   `Interface\AddOns\GloomsHub\Media\fonts\`.
 - The widget toolkit is `LibGloomSkin-1.0` (Skin.lua is the lib body; `GloomsHub.UI` is the
   Hub-side alias) — formalized Phase C, surface pinned in §4.
-> **GB consumes these since Phase C (2026-07-24)** — its local toolkit copy is deleted; its
-> `GB.COLOR` aliases the lib's table. (Deliberate exception: `GB.FONT` still points at GB's own
-> font FILES for the bar engine — bar text rasterizes per (path, size), and a path swap would
-> cold-start every user's bar text; the files are byte-identical to the Hub's. Config-UI text
-> uses the lib FONT.) GA still carries its own copy until Phase D — until then a change here
-> must be mirrored there (or better: not made until D).
+> **GB (Phase C) and GA (Phase D) both consume these — the duplicated toolkits are GONE**
+> (2026-07-24): each tool's local copy is deleted and its `.COLOR` aliases the lib's table.
+> Deliberate exception, both tools: `GB.FONT`/`GA.FONT` still point at each tool's OWN font
+> FILES — GB's bar text rasterizes per (path, size) so a swap would cold-start it; GA's users
+> have GA paths STORED in their configs (cfg.text.font via the font picker). The files are
+> byte-identical to the Hub's; config-UI chrome uses the lib FONT everywhere.
 
 ## 2. The tabbed-shell API (GloomsHub owns)
 ```lua
@@ -51,7 +51,15 @@ GloomsHub:ToggleWindow(id?)  -- slash semantics (added Phase B): open→close if
 - `build` runs lazily on first show (never at login). A tool whose addon isn't loaded simply
   doesn't register; the shell shows present tools' tabs + the always-present Media tab.
 - A tool's former window-local footer controls move INTO its tab container, not the shared footer.
-- Reserved tab ids: `auras`, `bars`, `overlays`, `media`.
+- Reserved tab ids: `auras` (order 10, live Phase D), `bars` (order 20, live Phase C),
+  `overlays` (Phase E), `media` (order 90).
+- **Container content size — PINNED (Phase D, 2026-07-24): at least 860 wide × 626 high.**
+  Tabs may lay out against these as deterministic minimums (GA's centered 620-wide column
+  does; GB's panes stretch). The shell (Hub-owned `SHELL_W/H`, currently 860×740) may GROW
+  the area, but never shrink it below this without updating every tab in the same session.
+- The container fires normal OnShow/OnHide as the tab gains/loses visibility (window
+  open/close AND tab switches) — tools may hook these for show/hide side effects (GB ends
+  move mode there; GA toggles its editor preview + closes its docked drawers).
 
 ## 3. Media / resolver (GloomsHub owns; salvaged from StoneTweaks)
 ```lua
@@ -69,9 +77,9 @@ GloomsHub.Media:AddFont(name,file) / :RemoveFont(i) / :AddTexture(…) / :AddGra
 Registered via LibStub: `local Skin = LibStub("LibGloomSkin-1.0")`. GloomsHub is the canonical
 shipper — its `Skin.lua` IS the lib body (embedding a copy in each tool via `.pkgmeta`
 externals is Phase G work). `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are Hub-side aliases of the
-same tables. Consumers: **GB since Phase C**; GA swaps in D; Overlays in E.
+same tables. Consumers: **GB since Phase C, GA since Phase D**; Overlays swaps in E.
 
-**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 1) — the whole API; nothing else is public:**
+**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 2) — the whole API; nothing else is public:**
 - `Skin.COLOR` — `purple · heroic · green · red · orange` (each `{r,g,b,hex}`), `dark`, `rim`
   (both `{r,g,b,a}`), `text`, `mute` (`{r,g,b}`). The §1 literals.
 - `Skin.FONT` — `title · head · body · bodyM · label` → font files under
@@ -81,7 +89,9 @@ same tables. Consumers: **GB since Phase C**; GA swaps in D; Overlays in E.
   - `UI.CARET` (caret art path) · `UI.CARET_DOWN` (rotation radians for "open")
   - `UI.setFont(fs, path, size, flags?)` — SetFont with stock-font fallback
   - `UI.newText(parent, fontPath, size, color?, justify?)` → FontString
-  - `UI.addEdges(frame, color, thick?)` — four 1px edge textures (squared border)
+  - `UI.addEdges(frame, color, thick?)` — four 1px edge textures (squared border); returns a
+    handle with `.top/.bottom/.left/.right` + `:SetColor(color, alpha?)` (MINOR 2 — GA's
+    richer variant; ignoring the return stays fine)
   - `UI.skinPlate(frame)` → the flat dark base Texture
   - `UI.hLine(parent)` → 1px rim Texture (caller anchors; SetWidth(1)+anchors for vertical)
   - `UI.flatButton(parent, w, h, color, label?, textSize?)` → Button with `.text`, `:SetActive(on)`,
@@ -112,6 +122,8 @@ same tables. Consumers: **GB since Phase C**; GA swaps in D; Overlays in E.
   when a tool migrates (D/E), enumerate its sizes (`grep -oE 'FONT\.\w+, [0-9.]+' Config.lua |
   sort -u`) and register the ones the base list misses. GB registers: `title 17/18 · head
   12/13 · body 9.5/10/12.5 · label 10/10.5/11` (Config.lua, right after the toolkit aliases).
+  GA registers: `title 13/16/17/18/20 · head 12/13 · label 11/12` (same spot in its Config.lua;
+  pairs dedupe across addons, so overlap with GB's list is free).
 - **Versioning:** LibStub newest-wins. Additive changes bump MINOR here + in `Skin.lua`
   (`local MAJOR, MINOR`) in the same session; breaking changes need a new MAJOR ("-2.0") and
   The owner's sign-off.
@@ -120,5 +132,8 @@ same tables. Consumers: **GB since Phase C**; GA swaps in D; Overlays in E.
 - **GloomsBars** — ✅ migrated (Phase C, 2026-07-24): consumes LibGloomSkin, mounts the Bars
   tab, `/gb` + minimap button route to `GloomsHub:ToggleWindow("bars")`, hard-depends on the
   Hub. (Bar ENGINE keeps `GB.FONT` on GB's own files — see the §1 note.)
-- **GloomsAuras** — tokens + toolkit, `/ga`, Auras tab, `CatStoneTweaks` → `GloomsHub:ListMedia`.
+- **GloomsAuras** — ✅ migrated (Phase D, 2026-07-24): consumes LibGloomSkin, mounts the Auras
+  tab (centered 620 column), `/ga` → `GloomsHub:ToggleWindow("auras")`, `CatStoneTweaks` →
+  `GloomsHub:ListMedia` (relabelled "Suite Graphics"), hard-depends on the Hub. (`GA.FONT`
+  stays on GA's own files — user configs store those paths; see the §1 note pattern.)
 - **Gloom's Overlays** — `ResolveAssetPath` call site + label, `/go`, Overlays tab, full reskin.

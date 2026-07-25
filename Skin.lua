@@ -9,7 +9,7 @@
 -- change it THERE and every consumer in the same session.
 -- ============================================================
 
-local MAJOR, MINOR = "LibGloomSkin-1.0", 1
+local MAJOR, MINOR = "LibGloomSkin-1.0", 2   -- MINOR 2 (Phase D): addEdges returns the edge handle
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if lib then
@@ -78,9 +78,12 @@ function UI.newText(parent, font, size, cc, justify)
   return fs
 end
 
--- Four 1px edge textures forming a squared border.
+-- Four 1px edge textures forming a squared border. Returns a handle exposing
+-- .top/.bottom/.left/.right + :SetColor(c, a?) — GA's richer variant (MINOR 2);
+-- callers that ignore the return (GB, the Hub) are unaffected.
 function UI.addEdges(f, cc, thick)
   thick = thick or 1
+  local e = {}
   local function edge(p1, p2, w, h)
     local t = f:CreateTexture(nil, "OVERLAY")
     t:SetColorTexture(cc.r, cc.g, cc.b, cc.a or 1)
@@ -89,10 +92,16 @@ function UI.addEdges(f, cc, thick)
     if h then t:SetHeight(h) end
     return t
   end
-  edge("TOPLEFT", "TOPRIGHT", nil, thick)
-  edge("BOTTOMLEFT", "BOTTOMRIGHT", nil, thick)
-  edge("TOPLEFT", "BOTTOMLEFT", thick, nil)
-  edge("TOPRIGHT", "BOTTOMRIGHT", thick, nil)
+  e.top    = edge("TOPLEFT", "TOPRIGHT", nil, thick)
+  e.bottom = edge("BOTTOMLEFT", "BOTTOMRIGHT", nil, thick)
+  e.left   = edge("TOPLEFT", "BOTTOMLEFT", thick, nil)
+  e.right  = edge("TOPRIGHT", "BOTTOMRIGHT", thick, nil)
+  function e:SetColor(c, a)
+    for _, t in pairs({ self.top, self.bottom, self.left, self.right }) do
+      t:SetColorTexture(c.r, c.g, c.b, a or c.a or 1)
+    end
+  end
+  return e
 end
 
 -- Flat dark fill (renders #060714 on screen; the pre-compensated token above).
