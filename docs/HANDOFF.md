@@ -1,8 +1,8 @@
 # Gloom's Hub — Session Handoff
 
-**Last updated: 2026-07-25f** — the newest record below is the **modal scrim + the housekeeping
-sweep** (done + QA'd). **The polish backlog is down to TWO items, and NEITHER is in this repo** —
-Overlays' sliders and GB's modifier symbols. **ALL SEVEN PHASES (A–G) ARE DONE AND QA'd BY THE OWNER.** All four
+**Last updated: 2026-07-25g** — the newest record below is **Overlays' sliders** (done + QA'd, in
+`~/GloomsOverlays`). **The polish backlog is down to ONE item, and it is not in this repo** — GB's
+modifier symbols. **ALL SEVEN PHASES (A–G) ARE DONE AND QA'd BY THE OWNER.** All four
 addons publish **`v1.0.1`** from the **`GloomSuite`** org, and both the install and update paths are
 proven in the live client. **The plan is finished; only the polish backlog remains.**
 
@@ -81,22 +81,59 @@ proven in the live client. **The plan is finished; only the polish backlog remai
 
 ---
 
-# ▶ NEXT SESSION — Overlays' sliders, in `~/GloomsOverlays`
+# ▶ NEXT SESSION — GB's modifier symbols, in `~/GloomsBars`
 
-**The owner is going there next (2026-07-25).** To-do item 2: Width / Height / X / Y should be
-`UI.sliderRow`, not `flatEditBox` — slider + typed box so exact values stay enterable, nudge arrows
-kept. Rotation and Alpha already show the shape to copy.
+**It is the LAST item on the suite to-do list** (item 3): the modifier symbols (⌘⇧⌃⌥) take no
+outline/shadow. Deferred but wanted; the approved path is in GB's own handoff item (d). Finish it
+and the backlog is empty.
 
-**Two things that session must not miss:**
-1. **Tick item 2 off in [SUITE-STATE.md](SUITE-STATE.md) when it lands**, even though it is GO-only
-   work — see the warning on the item itself. GO's `CLAUDE.md` says to update the ledger "after
-   *suite* work", which a slider swap does not obviously read as. If it's on the suite to-do list,
-   finishing it means editing that file, whatever repo the work happened in.
-2. **Expect NO `SKIN_NEEDS` bump.** `UI.sliderRow` is long-standing, so consuming it adds no new lib
-   requirement. Needing a *new* widget would mean a MINOR bump + a CONTRACTS §6 gate move in the same
-   commit — and it would stop being GO-only work.
+~~Overlays' sliders~~ — **✅ DONE + QA'd 2026-07-25**, and ticked off in
+[SUITE-STATE.md](SUITE-STATE.md) (to-do item 2, where the full record lives). It landed with no
+`SKIN_NEEDS` bump and no Hub change, exactly as this section predicted. Session record below.
 
-After that, only **GB's modifier symbols** (to-do 3) remain, and the backlog is empty.
+# SESSION RECORD — 2026-07-25g (Overlays' sliders — done in `~/GloomsOverlays`)
+
+**Suite to-do item 2 is CLOSED.** The work was GO's and was done in GO's repo, correctly routed;
+what lands HERE is the ledger tick and this record. **Nothing in the Hub changed — no new widget,
+no MINOR bump, no gate move.** Full detail is on the item in [SUITE-STATE.md](SUITE-STATE.md);
+what follows is what other tools should steal.
+
+- **Slider + typed box, with no lib change.** `UI.sliderRow` parks a read-only value FontString at
+  its TOPRIGHT; pass a `fmt` that returns `""` and drop a `flatEditBox` into that slot, and the box
+  becomes both readout and input. Typed values clamp into the slider's range, so the two can never
+  disagree about what is stored. **If GB or GA ever wants the same shape, copy this before
+  proposing a `UI.numberRow`** — it costs nothing and needs no MINOR.
+- **★ A half-width slider needs a half-width PARENT.** `sliderRow` always spans its parent (fixed
+  18px insets), so lay out column FRAMES, not x offsets — anchored to the pane's `TOP` so they
+  split whatever width the shell hands over. Same trick seats a button pair beside a slider
+  instead of under it. The owner, 2026-07-25: *"so much horizontal width available, no point in
+  stacking everything."* Worth remembering when a tab feels cramped: it usually isn't.
+- **★★ ADDING A SLIDER CAN EXPOSE A PERFORMANCE BUG A TYPED BOX HID.** A box applies once, on
+  Enter; a slider applies ~60×/second while dragged. Overlays' apply path rebuilt **every** live
+  overlay frame per change, and **WoW never reclaims a frame** — a 3-second drag on a 19-overlay
+  profile parked ~3,400 dead frames (each with a unique global name) for the rest of the session.
+  Rotation and Alpha had been doing this since Phase E; nobody noticed because nobody profiled a
+  drag. The owner's call was *"fix this right now… I don't want to squander any more overhead than
+  is necessary"*. **Before converting a control to a slider anywhere in the suite, look at what its
+  setter does per change.**
+- ⚠ **The fix — a frame POOL — has one trap: a recycled frame arrives wearing the last occupant's
+  settings.** Everything applied *conditionally* must be explicitly reset at the top of the build
+  (the OnUpdate animation, the texture, its texcoord, its rotation), and the frame shown with
+  `SetShown`, not `Hide` — a recycled slot can come back hidden, and **a hidden frame never runs
+  its OnUpdate**, so a spinning overlay would sit frozen.
+- **★ The `luac -l … _ENV` global-read diff caught a real defect this session**, exactly as the GA
+  session promised it would. Renaming an engine function left one stale call in another file;
+  `luac -p` passed it happily (an undefined global is valid Lua) and it would have thrown the
+  moment the owner clicked a nudge arrow. **Run the diff after any rename or block deletion**, not
+  just after deletions.
+- **Also landed, unplanned:** the owner asked whether WoW's 7 stratas were a Blizzard limit. They
+  are — the list is fixed and cannot be extended — but **frame LEVEL is a numeric z-index within
+  a strata**, and Overlays exposed none of it (every overlay drew at the same level, so strata was
+  the only separation it had). The tab now offers **all NINE** stratas (`WORLD` and
+  `FULLSCREEN_DIALOG` were missing; the latter is referenced 5× more often than `FULLSCREEN` across
+  the client's other addons) plus a Level row. ★ **`/fstack`'s `<N>` prefix IS the frame level** —
+  that is how you find the number to beat; corroborated in the owner's own screenshot, where
+  `UIParent` reads `<0>` and a live overlay reads `<1>`.
 
 # SESSION RECORD — 2026-07-25f (the modal scrim + the housekeeping sweep)
 

@@ -4,11 +4,14 @@
 > UPDATE it at the end of any session that moves the suite.** Home of record: this repo.
 > Full design in [SUITE-PLAN.md](SUITE-PLAN.md). Shared contracts in [CONTRACTS.md](CONTRACTS.md).
 
-**Last updated:** 2026-07-25f — **the MODAL SCRIM is DONE and QA'd** (the dialogs now dim what's
+**Last updated:** 2026-07-25g — **Overlays' SLIDERS are DONE and QA'd** (to-do item 2), so **ONE
+polish item is left in the whole suite: GB's modifier symbols.** That session also did two things
+that were NOT on this list, both GO-only: the overlay engine now **recycles its live frames**
+instead of building new ones on every apply, and the Layer section gained a numeric **Level**
+(z-order within a strata) plus WoW's two missing stratas. Before that: **the MODAL SCRIM is DONE and QA'd** (the dialogs now dim what's
 behind them), and **the whole housekeeping section of the to-do list is CLOSED**: the `test-remove`
 graphic is out of the catalog, `BoordensStreet.otf` is deleted, and the repo-pages visibility
-question was **accepted and closed — do not raise it again**. **Only two polish items remain, both
-in sibling repos:** Overlays' sliders and GB's modifier symbols. Before that: the **AURAS TAB LAYOUT
+question was **accepted and closed — do not raise it again**. Before that: the **AURAS TAB LAYOUT
 REWORK (to-do item 1) is DONE and QA'd**; see the to-do list below. And before that: **★★ PHASE G IS DONE AND THE 7-PHASE PLAN IS COMPLETE.** The owner
 QA'd the WoWup install AND update paths on 2026-07-25; all four addons now publish **`v1.0.1`**.
 No phase work remains — everything left is the polish backlog below.
@@ -36,7 +39,7 @@ falsified, and added the **route-the-request rule** to all four `CLAUDE.md` file
 Everything below is polish. ✅ items are done and kept for the record.
 
 **Each its own session, in the repo that owns it — route it there**
-(item 1 is done; 2 and 3 remain)
+(items 1 and 2 are done; **only 3 remains**)
 1. ~~**Auras tab LAYOUT REWORK** · `~/GloomsAuras`~~ — **✅ DONE, QA'd by the owner 2026-07-25.**
    Shipped in six owner-verified steps: splash retired · the editor's aura-name banner replaced by a
    rail Rename (+ double-click) through `UI.nameDialog` · buttons restyled to the suite's language ·
@@ -54,18 +57,34 @@ Everything below is polish. ✅ items are done and kept for the record.
    shell builds a tab before showing it, the whole tab came up blank rather than just the broken
    section. Diff the file's global reads against a known-good revision after any block deletion:
    `luac -l F.lua | grep -oE '_ENV "[A-Za-z_][A-Za-z0-9_]*"' | sort -u`.
-2. **Overlays: Width / Height / X / Y → SLIDERS** · `~/GloomsOverlays` — **NEXT UP (the owner,
-   2026-07-25).** "It just needs to happen." They're `flatEditBox` today; the family answer is
-   `UI.sliderRow` as Rotation/Alpha already use, probably slider + typed box so exact values stay
-   enterable. Nudge arrows stay.
-   > ⚠ **When this lands, TICK IT OFF HERE — even though it is GO-only work.** GO's `CLAUDE.md`
-   > says to update this ledger "after suite work", and a session could reasonably read a
-   > slider swap as GO-only and skip it. It is not exempt: it is a numbered item on the suite's
-   > to-do list, so the list is wrong until it is struck out here. **Rule of thumb: if the work
-   > appears on THIS list, finishing it means editing THIS file, whatever repo it was done in.**
-   > Expect **no** `SKIN_NEEDS` bump — `UI.sliderRow` is long-standing, so consuming it adds no
-   > new lib requirement. If you find yourself needing a NEW widget, that is a MINOR bump plus a
-   > CONTRACTS §6 gate move in the same commit, and it stops being GO-only work.
+2. ~~**Overlays: Width / Height / X / Y → SLIDERS** · `~/GloomsOverlays`~~ — **✅ DONE, QA'd by the
+   owner 2026-07-25.** Each is `UI.sliderRow` **plus a typed box** so exact values stay enterable;
+   the nudge arrows stayed. **No `SKIN_NEEDS` bump**, exactly as predicted — the editor stays at
+   MINOR 4 and nothing in the Hub was touched.
+   ★ **The shape worth copying:** `UI.sliderRow` parks a read-only value FontString at its
+   TOPRIGHT, so the tab passes a `fmt` that returns `""` and puts a `flatEditBox` in that slot —
+   the box becomes the readout AND the input, with no lib change. Typed values clamp into the
+   slider's range so the two can never disagree.
+   ★ **A half-width slider means a half-width PARENT** — `sliderRow` always spans its parent with
+   fixed 18px insets, so the tab lays out column frames (anchored to the pane's `TOP`, so they
+   split whatever width the shell gives) rather than x offsets. Same trick puts the spin
+   direction buttons beside the Spin slider instead of under it. The owner's steer, 2026-07-25:
+   *"so much horizontal width available, no point in stacking everything."*
+   ★ **A slider is a NEW performance surface, and it found a real bug.** `ApplyAll` rebuilt every
+   live overlay frame on every value change — ~60×/second while dragging, and **WoW never reclaims
+   a frame**, so a 3-second drag on a 19-overlay profile parked ~3,400 dead frames for the session
+   (each with a unique global name). The owner asked for it fixed on the spot, citing general
+   framerate concerns. Both halves landed: the engine now **reuses a pool of frames** (the Nth
+   enabled overlay always draws through slot N; surplus slots are parked, not discarded), and
+   size/position/strata/level re-apply **in place** via `GloomsOverlays_ApplyLayout` without any
+   rebuild at all. ⚠ **A recycled frame carries its last occupant's settings** — everything set
+   *conditionally* (the OnUpdate animation, texture, texcoord, rotation) must be reset explicitly
+   at the top of the build, and shown with `SetShown`, not `Hide`.
+   ★ **Also landed, unplanned (the owner asked whether 7 stratas was a Blizzard limit):** the tab
+   now offers **all NINE** stratas — `WORLD` and `FULLSCREEN_DIALOG` were missing — plus a numeric
+   **Level** row (0–1000) ordering overlays *within* a strata. Every overlay used to draw at the
+   same level, so strata was the only separation there was. An overlay that has never set `level`
+   still draws at WoW's natural default (read from a real frame, not assumed), so nothing moved.
 3. **Modifier symbols (⌘⇧⌃⌥) take no outline/shadow** · `~/GloomsBars` — deferred but wanted; the
    approved path is in GB's handoff item (d). **No open GB bugs.**
 
@@ -298,10 +317,10 @@ splash. ~~Overlays profile picker~~ — CLOSED: the shared `UI.profileBlock`.)
   drawer, so the mechanism matches GB/Overlays but is still hidden behind a footer button); the
   landing page above; and a general pass against GB's layout language now that GB is the
   reference. Treat the whole Auras tab as the unit of work — these all redraw the same surface.
-- **Overlays: Width / Height / X / Y should be SLIDERS, not typed boxes (the owner, Phase E gate B
-  QA 2026-07-24).** "It just needs to happen." They're `flatEditBox` today; the family answer is
-  `UI.sliderRow` (as Rotation and Alpha already use), probably slider + typed value box like
-  GA's numeric row so exact numbers stay enterable. Nudge arrows stay either way.
+- ✅ **DONE + QA'd 2026-07-25.** ~~**Overlays: Width / Height / X / Y should be SLIDERS, not typed
+  boxes (the owner, Phase E gate B QA 2026-07-24).**~~ "It just needs to happen." Shipped as
+  `UI.sliderRow` + a typed box in the row's value slot, in two columns, with the nudge arrows
+  kept — full record in to-do item 2 above.
 - **★ GB is the UI reference for the suite, not GA (the owner, 2026-07-24).** When a pattern
   exists in both, copy Gloom's Bars. The two backlog items above are why.
 
