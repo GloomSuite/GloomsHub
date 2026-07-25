@@ -9,7 +9,7 @@
 -- change it THERE and every consumer in the same session.
 -- ============================================================
 
-local MAJOR, MINOR = "LibGloomSkin-1.0", 2   -- MINOR 2 (Phase D): addEdges returns the edge handle
+local MAJOR, MINOR = "LibGloomSkin-1.0", 3   -- MINOR 3 (Phase E): dropdown + nameDialog + confirm + profileBlock
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if lib then
@@ -376,6 +376,311 @@ function UI.makeScrollbar(parent, scroll, place)
 end
 
 -- ------------------------------------------------------------
+-- Dropdown (MINOR 3) — the family's "pick from a list": a flat button showing
+-- the current value with an orange caret, opening a flyout of rows. A
+-- full-screen catcher behind the flyout closes it on any outside click. Lifted
+-- from GB Config.lua's animDropdown/openAnimFlyout (the pattern the owner picked as
+-- correct, 2026-07-24) and generalized; the flyout scrolls past FLY_ROWS rows.
+--   getLabel()   → the button's text
+--   getOptions() → { { value =, label = }, … }
+--   getCurrent() → the selected value (rendered purple in the list)
+--   onPick(value)
+-- ------------------------------------------------------------
+local FLY_ROWS, FLY_ROW_H = 12, 22
+local flyout
+
+local function flyoutFrame()
+  if flyout then return flyout end
+  local catcher = CreateFrame("Button", nil, UIParent)
+  catcher:SetFrameStrata("FULLSCREEN"); catcher:SetAllPoints(UIParent); catcher:Hide()
+  local fly = CreateFrame("Frame", nil, catcher)
+  fly:SetFrameStrata("FULLSCREEN_DIALOG")
+  UI.skinPlate(fly); UI.addEdges(fly, COLOR.rim, 1)
+  local scroll = CreateFrame("ScrollFrame", nil, fly)
+  scroll:SetPoint("TOPLEFT", 3, -3); scroll:SetPoint("BOTTOMRIGHT", -3, 3)
+  scroll:EnableMouseWheel(true)
+  local child = CreateFrame("Frame", nil, scroll); child:SetSize(10, 10)
+  scroll:SetScrollChild(child)
+  scroll:SetScript("OnMouseWheel", function(self, delta)
+    local range = math.max(0, child:GetHeight() - self:GetHeight())
+    self:SetVerticalScroll(math.max(0, math.min(range, self:GetVerticalScroll() - delta * FLY_ROW_H)))
+  end)
+  catcher:SetScript("OnClick", function() catcher:Hide() end)
+  fly.catcher, fly.scroll, fly.child, fly.rows = catcher, scroll, child, {}
+  flyout = fly
+  return fly
+end
+
+-- The shared flyout frame, built on demand. Exposed so a consumer can observe
+-- the open list: GB keeps the selected bar pulsing while its Preset flyout is
+-- up, and clears the pulse on the flyout's OnHide.
+function UI.flyout() return flyoutFrame() end
+
+function UI.dropdown(parent, w, getLabel, getOptions, getCurrent, onPick)
+  local b = UI.flatButton(parent, w, 22, COLOR.heroic, "", 11)
+  b:SetBase(0.2); b.text:SetWordWrap(false)
+  -- Inset the label so long names truncate instead of running under the caret
+  -- (the owner: "Gloomfury - Stormrage" collided). Justify stays centered.
+  b.text:ClearAllPoints()
+  b.text:SetPoint("LEFT", 8, 0); b.text:SetPoint("RIGHT", -18, 0); b.text:SetJustifyH("CENTER")
+  local car = b:CreateTexture(nil, "ARTWORK"); car:SetTexture(UI.CARET)
+  car:SetVertexColor(COLOR.orange.r, COLOR.orange.g, COLOR.orange.b)
+  car:SetSize(8, 8); car:SetPoint("RIGHT", -8, 0); car:SetRotation(UI.CARET_DOWN)
+
+  function b:refresh() self.text:SetText(getLabel() or "?") end
+
+  b:SetScript("OnClick", function()
+    local fly = flyoutFrame()
+    local options, current = getOptions() or {}, getCurrent()
+    local y = 0
+    for i, opt in ipairs(options) do
+      local row = fly.rows[i]
+      if not row then
+        row = CreateFrame("Button", nil, fly.child); row:SetHeight(FLY_ROW_H)
+        row.hl = row:CreateTexture(nil, "BACKGROUND"); row.hl:SetAllPoints()
+        row.hl:SetColorTexture(1, 1, 1, 0.07); row.hl:Hide()
+        row:SetScript("OnEnter", function(self) self.hl:Show() end)
+        row:SetScript("OnLeave", function(self) self.hl:Hide() end)
+        row.text = UI.newText(row, FONT.body, 12, COLOR.text, "LEFT")
+        row.text:SetPoint("LEFT", 8, 0); row.text:SetPoint("RIGHT", -8, 0); row.text:SetWordWrap(false)
+        fly.rows[i] = row
+      end
+      row:ClearAllPoints()
+      row:SetPoint("TOPLEFT", 0, y); row:SetPoint("TOPRIGHT", 0, y)
+      row.text:SetText(opt.label)
+      if opt.value == current then row.text:SetTextColor(COLOR.purple.r, COLOR.purple.g, COLOR.purple.b)
+      else row.text:SetTextColor(1, 1, 1) end
+      row:SetScript("OnClick", function() fly.catcher:Hide(); onPick(opt.value); b:refresh() end)
+      row:Show()
+      y = y - FLY_ROW_H
+    end
+    for i = #options + 1, #fly.rows do fly.rows[i]:Hide() end
+
+    local shown = math.min(#options, FLY_ROWS)
+    local cw = math.max(b:GetWidth(), 150)
+    fly.child:SetSize(cw - 6, math.max(10, #options * FLY_ROW_H))
+    fly:SetSize(cw, shown * FLY_ROW_H + 6)
+    fly.scroll:SetVerticalScroll(0)
+    fly:ClearAllPoints(); fly:SetPoint("TOPRIGHT", b, "BOTTOMRIGHT", 0, -2)
+    -- The flyout outlives its anchor's frame otherwise: close it if the tab (or
+    -- the whole Suite window) goes away underneath it.
+    if not b._flyHooked then
+      b._flyHooked = true
+      b:HookScript("OnHide", function() if flyout then flyout.catcher:Hide() end end)
+    end
+    fly.catcher:Show()
+  end)
+
+  b:refresh()
+  return b
+end
+
+-- ------------------------------------------------------------
+-- Shared modal dialogs (MINOR 3). The family's replacement for
+-- StaticPopupDialogs (native chrome, and its editBox/EditBox field name shifts
+-- between clients). GB and GA each hand-maintained a near-identical copy of the
+-- name dialog before this; there is now exactly one.
+-- ------------------------------------------------------------
+local nameDlg, confirmDlg
+
+-- Text entry. onAccept(name) fires on OK / Enter; Cancel and ESC drop it.
+function UI.nameDialog(titleText, initial, onAccept)
+  if not nameDlg then
+    local W, H = 300, 132
+    local f = CreateFrame("Frame", "GloomSkinNameDialog", UIParent)
+    f:SetSize(W, H); f:SetPoint("CENTER"); f:SetFrameStrata("FULLSCREEN_DIALOG"); f:EnableMouse(true)
+    UI.skinPlate(f)
+    f.title = UI.newText(f, FONT.title, 17, COLOR.purple, "CENTER")
+    f.title:SetPoint("TOP", 0, -14)
+    f.box = UI.flatEditBox(f, W - 48, 24); f.box:SetPoint("TOP", 0, -50)
+    local okB = UI.flatButton(f, 100, 26, COLOR.purple, "OK", 13); okB:SetPoint("BOTTOMLEFT", 26, 16)
+    local noB = UI.flatButton(f, 100, 26, COLOR.heroic, "Cancel", 13); noB:SetPoint("BOTTOMRIGHT", -26, 16)
+    local function accept()
+      local name = f.box:GetText()
+      local cb = f.onAccept; f.onAccept = nil
+      f:Hide()
+      if cb then cb(name) end
+    end
+    local function cancel() f.onAccept = nil; f:Hide() end
+    okB:SetScript("OnClick", accept)
+    noB:SetScript("OnClick", cancel)
+    f.box:SetScript("OnEnterPressed", accept)
+    f.box:SetScript("OnEscapePressed", cancel)
+    tinsert(UISpecialFrames, "GloomSkinNameDialog")   -- ESC closes it
+    f:Hide()
+    nameDlg = f
+  end
+  nameDlg.onAccept = onAccept
+  nameDlg.title:SetText(titleText or "Name")
+  nameDlg.box:SetText(initial or ""); nameDlg.box:SetCursorPosition(0)
+  nameDlg:Show(); nameDlg:Raise()
+  nameDlg.box:SetFocus(); nameDlg.box:HighlightText()
+  return nameDlg
+end
+
+-- Yes/no confirm for destructive actions. ALWAYS used for deletes: a
+-- self-arming "click twice" button has no way to back out once armed
+-- (the owner 2026-07-24) — this does, via Cancel or ESC.
+function UI.confirm(bodyText, onYes, acceptLabel, titleText)
+  if not confirmDlg then
+    local W, H = 330, 144
+    local f = CreateFrame("Frame", "GloomSkinConfirm", UIParent)
+    f:SetSize(W, H); f:SetPoint("CENTER"); f:SetFrameStrata("FULLSCREEN_DIALOG"); f:EnableMouse(true)
+    UI.skinPlate(f)
+    f.title = UI.newText(f, FONT.title, 17, COLOR.orange, "CENTER")
+    f.title:SetPoint("TOP", 0, -14)
+    f.body = UI.newText(f, FONT.body, 12, COLOR.text, "CENTER")
+    f.body:SetPoint("TOP", 0, -46); f.body:SetWidth(W - 36)
+    f.yes = UI.flatButton(f, 124, 26, COLOR.orange, "Delete", 13); f.yes:SetPoint("BOTTOMLEFT", 26, 16)
+    local noB = UI.flatButton(f, 124, 26, COLOR.heroic, "Cancel", 13); noB:SetPoint("BOTTOMRIGHT", -26, 16)
+    f.yes:SetScript("OnClick", function()
+      local cb = f.onYes; f.onYes = nil; f:Hide(); if cb then cb() end
+    end)
+    noB:SetScript("OnClick", function() f.onYes = nil; f:Hide() end)
+    tinsert(UISpecialFrames, "GloomSkinConfirm")   -- ESC cancels
+    f:Hide()
+    confirmDlg = f
+  end
+  confirmDlg.onYes = onYes
+  confirmDlg.title:SetText(titleText or "Are you sure?")
+  confirmDlg.body:SetText(bodyText or "")
+  confirmDlg.yes.text:SetText(acceptLabel or "Delete")
+  confirmDlg:Show(); confirmDlg:Raise()
+  return confirmDlg
+end
+
+-- ------------------------------------------------------------
+-- profileBlock (MINOR 3) — the suite's ONE profile/preset management control.
+-- the owner, 2026-07-24: "for this mechanism (selecting a profile/preset, creating
+-- a new one, copying, renaming, deleting) they should all be using the same
+-- thing." GB's rail block was the correct shape; its one flaw — a Delete that
+-- self-armed to "Sure?" with no way to cancel — is fixed here by routing every
+-- delete through UI.confirm.
+--
+-- The tool supplies only its data plumbing; the widget owns all of the UI,
+-- wording and confirm flow, so the mechanism is identical in every tab:
+--   api.noun      "profile" | "preset"  (dialog + message wording)
+--   api.names()   → { name, … }         (already ordered)
+--   api.active()  → name
+--   api.switch(name)
+--   api.create(name)  → ok, err
+--   api.copy(name)    → ok, err          -- OPTIONAL; omit for a 3-across row
+--   api.rename(name)  → ok, err
+--   api.delete()      → ok, err          -- deletes the ACTIVE one
+--   api.onChange()                       -- OPTIONAL; after any success
+--   api.title     header text            -- OPTIONAL; defaults to noun:upper()
+--   api.tips      { dropdown=, new=, copy=, rename=, delete= }
+--                                        -- OPTIONAL; per-tool hover-help bodies
+-- `err` is shown verbatim in the inline note line; ok=false with no err is silent.
+-- Returns { frame, refresh, note, height }.
+-- ------------------------------------------------------------
+function UI.profileBlock(parent, w, api)
+  local noun = api.noun or "profile"
+  local Noun = noun:sub(1, 1):upper() .. noun:sub(2)
+  local hasCopy = type(api.copy) == "function"
+  local block = { }
+
+  local f = CreateFrame("Frame", nil, parent)
+  f:SetSize(w, hasCopy and 112 or 88)
+  block.frame = f
+
+  local head = UI.newText(f, FONT.head, 12, COLOR.mute, "LEFT")
+  head:SetPoint("TOPLEFT", 0, 0); head:SetText(api.title or noun:upper())
+
+  -- Orange, not mute: this line only ever carries failures ("name already
+  -- exists", "can't delete the last one") and read as decoration in grey.
+  local note = UI.newText(f, FONT.body, 10.5, COLOR.orange, "LEFT")
+  note:SetPoint("TOPLEFT", 0, hasCopy and -94 or -70); note:SetWidth(w)
+  note:SetWordWrap(true)
+  function block:note(text) note:SetText(text or "") end
+
+  local dd
+  local function after(ok, err)
+    if ok then
+      block:note("")
+      dd:refresh()
+      if api.onChange then api.onChange() end
+    else
+      block:note(err or "")
+    end
+  end
+
+  dd = UI.dropdown(f, w,
+    function() return api.active() end,
+    function()
+      local out = {}
+      for _, name in ipairs(api.names() or {}) do out[#out + 1] = { value = name, label = name } end
+      return out
+    end,
+    function() return api.active() end,
+    function(v) block:note(""); api.switch(v); if api.onChange then api.onChange() end end)
+  dd:SetPoint("TOPLEFT", 0, -18)
+  block.dropdown = dd
+
+  local function btn(x, y, bw, label)
+    local b = UI.flatButton(f, bw, 20, COLOR.heroic, label, 11)
+    b:SetBase(0.2); b:SetPoint("TOPLEFT", x, y)
+    return b
+  end
+
+  local bNew, bCopy, bRen, bDel
+  if hasCopy then
+    local bw = (w - 4) / 2                      -- 2×2 grid
+    bNew  = btn(0, -46, bw, "New")
+    bCopy = btn(bw + 4, -46, bw, "Copy")
+    bRen  = btn(0, -70, bw, "Rename")
+    bDel  = btn(bw + 4, -70, bw, "Delete")
+  else
+    local bw = (w - 8) / 3                      -- 3-across row
+    bNew = btn(0, -46, bw, "New")
+    bRen = btn(bw + 4, -46, bw, "Rename")
+    bDel = btn(2 * (bw + 4), -46, bw, "Delete")
+  end
+
+  bNew:SetScript("OnClick", function()
+    UI.nameDialog("New " .. noun, "", function(name)
+      if not name or name == "" then return end
+      after(api.create(name))
+    end)
+  end)
+  if bCopy then
+    bCopy:SetScript("OnClick", function()
+      UI.nameDialog("Copy " .. noun, (api.active() or "") .. " copy", function(name)
+        if not name or name == "" then return end
+        after(api.copy(name))
+      end)
+    end)
+  end
+  bRen:SetScript("OnClick", function()
+    UI.nameDialog("Rename " .. noun, api.active() or "", function(name)
+      if not name or name == "" then return end
+      after(api.rename(name))
+    end)
+  end)
+  bDel:SetScript("OnClick", function()
+    local active = api.active()
+    if not active then return end
+    UI.confirm(("Delete the %s \"%s\"?  This can't be undone."):format(noun, active),
+      function() after(api.delete()) end)
+  end)
+
+  local tips = api.tips or {}
+  UI.attachTip(dd, Noun, tips.dropdown or ("The active " .. noun .. ". Click to switch."))
+  UI.attachTip(bNew, "New " .. noun, tips.new or ("Creates a new " .. noun .. " and switches to it."))
+  if bCopy then
+    UI.attachTip(bCopy, "Copy " .. noun,
+      tips.copy or ("Duplicates this " .. noun .. " under a new name and switches to the copy."))
+  end
+  UI.attachTip(bRen, "Rename " .. noun, tips.rename or ("Renames this " .. noun .. "."))
+  UI.attachTip(bDel, "Delete " .. noun,
+    tips.delete or ("Deletes this " .. noun .. ". Asks you to confirm first."))
+
+  function block:refresh() dd:refresh() end
+  block.height = f:GetHeight()
+  return block
+end
+
+-- ------------------------------------------------------------
 -- Font pre-warmer. WoW rasterizes a (font file, size) pair the first time it
 -- is DRAWN in a client session — and the first draw of a cold pair can render
 -- blank text (QA'd 2026-07-24: cold start → blank catalog names; /reload in
@@ -393,9 +698,9 @@ end
 --     RegisterAll); it draws the base list + everything registered + the arg.
 -- Each (path, size) pair is drawn at most once per session.
 -- ------------------------------------------------------------
-local WARM = {   -- the Hub's own pairs (Shell + Media tab)
-  { "title", { 21 } },
-  { "head",  { 16 } },
+local WARM = {   -- the Hub's own pairs (Shell + Media tab + the lib's own widgets)
+  { "title", { 17, 21 } },          -- 17: nameDialog / confirm titles (MINOR 3)
+  { "head",  { 12, 16 } },          -- 12: profileBlock header (MINOR 3)
   { "body",  { 10.5, 11, 12, 13 } },
   { "bodyM", { 11, 12, 13 } },
 }

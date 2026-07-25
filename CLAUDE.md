@@ -37,8 +37,8 @@ symlinked into `…/Interface/AddOns/`. Disparate repos drift. The rule that pre
 
 ## The family (and what's IN vs OUT of the suite)
 - **IN:** Gloom's Auras (`~/GloomsAuras`), Gloom's Bars (`~/GloomsBars`), Gloom's Overlays
-  (`~/GloomsOverlays` — the renamed VibeOverlay; repo created + symlinked in Phase E gate A,
-  2026-07-24, reskin still owed). Each mounts a tab.
+  (`~/GloomsOverlays` — the renamed VibeOverlay; migrated + reskinned in Phase E, 2026-07-24).
+  Each mounts a tab; all three are live.
 - **RETIRED:** StoneTweaks (its useful half — media registration — is absorbed here). StoneCast
   (already deleted).
 - **OUT — do NOT fold in:** **Gloom's Build Barn.** It's a data-fed pipeline (a weekly cron on
@@ -60,8 +60,8 @@ symlinked into `…/Interface/AddOns/`. Disparate repos drift. The rule that pre
 Symlinked into the client at `…/Interface/AddOns/GloomsHub`. QA by the owner (non-dev): ONE
 copy-paste step at a time, verify before claiming, BugSack error text first. New files/assets
 need a full client RESTART (not /reload). Ships via BigWigs packager → GitHub Releases (repo
-`HandofDevastation/GloomsHub`), WoWup installs/updates. GB/GA/Overlays will hard-depend on it
-(`## Dependencies: GloomsHub`) once wired.
+`HandofDevastation/GloomsHub`), WoWup installs/updates. GB/GA/Overlays all hard-depend on it
+(`## Dependencies: GloomsHub`) as of Phase E.
 
 > The owner works structured & catalog-first; NEVER "v1"/"later phase" framing; GUI over slash for
 > user controls; never rush toward closing a session. (Same working style as the sibling repos.)

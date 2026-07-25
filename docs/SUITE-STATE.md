@@ -4,8 +4,10 @@
 > UPDATE it at the end of any session that moves the suite.** Home of record: this repo.
 > Full design in [SUITE-PLAN.md](SUITE-PLAN.md). Shared contracts in [CONTRACTS.md](CONTRACTS.md).
 
-**Last updated:** 2026-07-24 (Phases C **and** D built + QA'd; **Phase E is IN PROGRESS — gate A
-(rename + data migration) is QA'd, gate B (tab mount + reskin) is next**, briefing in HANDOFF.md).
+**Last updated:** 2026-07-24 (Phases C, D **and E** built + QA'd. **Phase F is next** — retire
+StoneTweaks; briefing in HANDOFF.md). Phase E gate B also promoted the whole profile/preset
+mechanism into LibGloomSkin (**MINOR 3**) and switched GB + GA onto it; all three addons were
+QA'd in the same pass.
 
 ## Phase status
 
@@ -16,7 +18,7 @@
 | **B** | Empty tabbed shell + Media tab. Add `/gloom`. Old windows still work. | **DONE — QA'd by the owner 2026-07-24** (window/toggle/Escape/drag; catalog 1/6/36 with previews; accordion + orange scrollbar; add/remove incl. `.otf` rejection; old windows untouched; cold-start re-verified). Two findings baked in: (1) **cold-start blank-text quirk** — WoW draws a cold (font file, size) pair blank the first time each session (a /reload heals, next cold start re-breaks); fixed by Skin.lua's `UI.WarmFonts` login pre-warmer — EXTEND its pair list whenever new UI font sizes appear (Phase C!). (2) overlapping family windows interleave (same strata, pre-existing GB/GA quirk) — accepted by the owner; self-resolves as tools mount tabs (C–E). |
 | **C** | Migrate Gloom's Bars as the proof (Bars tab, `/gb` reroute, toolkit → LibGloomSkin). | **DONE — QA'd by the owner 2026-07-24** (gate passed; the one first-pass gap — no suite launcher — was filled same day and verified: the Hub owns the ONE GS minimap button, GB's is deleted). Shipped: `LibGloomSkin-1.0` (surface pinned CONTRACTS §4, incl. `RegisterWarmPairs`); GB hard-deps the Hub; local toolkit + standalone window DELETED; editor mounts as the Bars tab with its own in-tab footer row; `/gb` → `ToggleWindow("bars")` (diagnostics untouched). GB's bar-ENGINE fonts deliberately stay on GB paths (CONTRACTS §1 note). **The container-mount pattern is PROVEN.** |
 | **D** | Migrate Gloom's Auras (Auras tab; flip `CatStoneTweaks` → `GloomsHub:ListMedia`). | **DONE — QA'd by the owner 2026-07-24** ("works as it did before"). Shipped: GA hard-deps the Hub; local toolkit copy + standalone window DELETED; options UI mounts as the **Auras** tab (centered 620-wide column; docked drawers parent to the container); `/ga` → `ToggleWindow("auras")`; `/ga minimap` drives the Hub's button; GA's minimap button DELETED; `CatStoneTweaks` → `GloomsHub:ListMedia` ("Suite Graphics" — GA reads NO StoneTweaks data anymore). Shell grew to 860×740 (content 860×626 PINNED, CONTRACTS §2); lib at MINOR 2. Noted for polish (below): the Auras landing page. |
-| **E** | Rename VibeOverlay → Gloom's Overlays; mount Overlays tab; **reskin in one go**. | **IN PROGRESS — split into two QA gates** (the handoff's own "QA the migration FIRST" instruction, so a reskin bug can never be mistaken for data loss). **Gate A DONE — QA'd by the owner 2026-07-24**: clean BugSack; addon list shows "Gloom's Overlays", VibeOverlay gone; overlays render identically; `/go list` correct; **Goldset renders on Gloomthorn** (the per-character proof); `/go overlays` + `/go preview` work (still native chrome); `/vibe` retired. **Gate B NOT STARTED** ← next: mount the Overlays tab + full LibGloomSkin reskin + docked asset browser. |
+| **E** | Rename VibeOverlay → Gloom's Overlays; mount Overlays tab; **reskin in one go**. | **DONE — QA'd by the owner 2026-07-24. Split into two QA gates** (the handoff's own "QA the migration FIRST" instruction, so a reskin bug can never be mistaken for data loss). **Gate A DONE — QA'd by the owner 2026-07-24**: clean BugSack; addon list shows "Gloom's Overlays", VibeOverlay gone; overlays render identically; `/go list` correct; **Goldset renders on Gloomthorn** (the per-character proof); `/go overlays` + `/go preview` work (still native chrome); `/vibe` retired. **DONE — gate B QA'd by the owner 2026-07-24** (22 steps, all passed, incl. a cold client restart on Gloomthorn/`Goldset` and the GB + GA regression checks). Shipped: the `overlays` tab (order 30) laid out like GB's — a 240 left rail (GO mark + wordmark · the shared profile block · overlay list · Duplicate/Delete) beside a scrolling editor pane, with an in-tab footer (Save & Apply + status); ALL native chrome deleted (no `BackdropTemplate`, `UIDropDownMenu`, `StaticPopupDialogs`, `UIPanel*Template`, and the `MakeButton`/`MakeCheck`/`MakeEditBox`/`MakeSlider`/`SectionLabel` locals are gone); the asset browser is a 360-wide docked drawer opened from the Texture field's **Browse…** (returns the pick via "Use This Texture"); bare `/go` toggles the tab and the old `PLAYER_LOGIN` slash-wrapping in `_Preview.lua` is gone (one router in `GloomsOverlays.lua`); warm pairs registered. **Also, per the owner 2026-07-24 — the profile/preset mechanism is now ONE shared control across the suite** (see the lib row below). |
 | **F** | Retire StoneTweaks (delete last, non-destructively). | not started |
 | **G** | Packaging/release: `.pkgmeta`, `## Dependencies: GloomsHub`, embed LibGloomSkin, WoWup. | not started |
 
@@ -34,12 +36,24 @@
   Distribution is limited (friends/guild), so "someone installs one tool alone" is a known,
   acceptable, loudly-failing edge — not a silent break.
 - **Gloom's Build Barn is OUT of the suite** (data-fed cron pipeline, not a tab tool). Do not fold it in.
+- **One profile/preset mechanism for the whole suite (the owner, 2026-07-24).** "For this mechanism
+  (selecting a profile/preset, creating a new one, copying, renaming, deleting) they should all
+  be using the same thing." That thing is `UI.profileBlock` in LibGloomSkin (MINOR 3); GB, GA and
+  Overlays all drive it. **GB is the reference for suite UI, not GA** — GA's is the one with
+  known issues (see the polish backlog).
+- **No self-arming "click twice" confirms (the owner, 2026-07-24).** GB's Delete used to flip to
+  "Sure?" with no way to cancel short of closing the addon. Destructive actions use the shared
+  `UI.confirm` modal, which has a Cancel and an ESC.
 
 ## What's physically in place right now
 - `~/GloomsHub` git repo, symlinked into AddOns as `GloomsHub` (matches GB/GA convention).
 - `Core.lua` (namespace, `GloomsHubDB`, ST copy-migration, dormant compat shim, `/gh` probe),
-  `Skin.lua` (**now the body of `LibGloomSkin-1.0`** — LibStub-registered, MINOR 1; tokens +
-  toolkit + `WarmFonts`/`RegisterWarmPairs`; `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are aliases),
+  `Skin.lua` (**now the body of `LibGloomSkin-1.0`** — LibStub-registered, **MINOR 3**; tokens +
+  toolkit + `WarmFonts`/`RegisterWarmPairs`; `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are aliases.
+  MINOR 3 (Phase E gate B) added `UI.dropdown` + `UI.flyout` (promoted from GB's private
+  `animDropdown`), `UI.nameDialog` + `UI.confirm` (the modals GB and GA each hand-maintained a
+  near-identical copy of), and `UI.profileBlock` — **the suite's ONE profile/preset control**.
+  Base warm list grew by `title 17` + `head 12`, which the lib's own widgets draw),
   `Shell.lua` (the Suite window: `RegisterTab/Open/FocusTab/ToggleWindow` + `/gloom`; title
   bar now carries the GS monogram), `Media.lua` (LSM registration, `ResolveAssetPath`,
   `ListMedia`, `Media:Add*/Remove*` API + the Media tab; catalog fonts warm at 11/13/14),
@@ -59,6 +73,11 @@
   `/gb` diagnostics untouched; bar engine untouched. GB's `MinimapButton.lua` DELETED
   (+ TOC lib lines + `.pkgmeta` LDB/LibDBIcon externals) — the Hub's GS button is the
   suite's one launcher.
+  **Phase E gate B (QA'd 2026-07-24):** GB's private name dialog, `animDropdown`/`animFlyout` and
+  the two-click `confirmable` are DELETED. Its rail PROFILE + PRESET blocks are now the shared
+  `UI.profileBlock` (delete goes through the confirm modal, so the old un-cancellable "Sure?"
+  is gone); `animDropdown` survives as a one-line alias of `UI.dropdown` for its four other
+  call sites; the Preset flyout's bar-ping now observes `UI.flyout()` (via `:IsVisible()`).
 - **`~/GloomsAuras` (Phase D, QA'd):** `## Dependencies: GloomsHub`; local toolkit
   copy + the `GloomsAurasConfig` window (chrome, panelPos, `C:Toggle`, `C:SavePanelPos`)
   DELETED; Config.lua consumes LibGloomSkin (incl. the MINOR-2 `addEdges`) and registers the
@@ -69,6 +88,10 @@
   `GA.COLOR` aliases the lib; `/ga` config branch → `ToggleWindow("auras")`; `/ga minimap` →
   the Hub's button; GA's `MinimapButton.lua` DELETED (+ TOC lib lines + `.pkgmeta` externals).
   All `/ga` diagnostics untouched; Displays/CDM engines untouched.
+  **Phase E gate B (QA'd 2026-07-24):** GA's private name dialog + confirm modal are DELETED
+  (`OpenNameDialog` = `UI.nameDialog`; `C:OpenConfirm` wraps `UI.confirm`), and the Profiles
+  drawer now hosts the shared `UI.profileBlock` instead of its own click-a-row list + four
+  buttons. The drawer stays as the host — see the polish backlog.
 - **`~/GloomsOverlays` (Phase E gate A, QA'd):** NEW git repo on `master`, symlinked into AddOns
   as `GloomsOverlays`; the old raw `VibeOverlay/` folder was **moved (not deleted)** to
   `~/Desktop/VibeOverlay-retired-2026-07-24`. Three renamed Lua files
@@ -80,6 +103,11 @@
   alias; `overlays`/`preview`/`list`/`debug` subcommands kept). **UI is still the old native
   BackdropTemplate chrome — that is gate B's job.**
   ★ **`VibeOverlayDB` / `VibeOverlayDBChar` are DELIBERATELY unchanged** — see the trap note below.
+  **Gate B (QA'd 2026-07-24):** `_Editor.lua` is a full rewrite — the `overlays` tab (rail +
+  editor + in-tab footer) built entirely on LibGloomSkin; `_Preview.lua` is the asset-browser
+  DRAWER; `GloomsOverlays.lua` owns the one slash router. The two floating windows and every
+  native template are gone. `_Preview.lua` also gained a Suite-media branch in its preview
+  lookup, so a Hub media name previews the same art the live overlay resolves.
 - **The SavedVariables migration (gate A, done):** WoW keys SV off the addon FOLDER name, so
   all **23** save files were copied `VibeOverlay.lua` → `GloomsOverlays.lua` in place (1 account
   + **22 characters**), byte-verified, originals left as rollback. The character files are NOT
@@ -97,7 +125,9 @@ Shared-footer contents; compat-shim lifetime; stray `BoordensStreet.otf` fate; w
 Overlays GO logo belongs inside the tab (NOT a splash — see the polish backlog).
 (~~LibGloomSkin public surface~~ — CLOSED Phase C, pinned in CONTRACTS §4. ~~Hub logo~~ —
 CLOSED, the owner delivered the GS monogram 2026-07-24. ~~Overlays slash name~~ — CLOSED Phase E
-gate A: **`/go`, and `/vibe` is retired outright**, the owner 2026-07-24.)
+gate A: **`/go`, and `/vibe` is retired outright**, the owner 2026-07-24. ~~Overlays logo placement~~
+— CLOSED Phase E gate B: a small GO mark + wordmark at the top of the tab's left rail, NOT a
+splash. ~~Overlays profile picker~~ — CLOSED: the shared `UI.profileBlock`.)
 
 ## Suite polish backlog (post-migration UI work, gathered during QA)
 - **Auras tab landing page (the owner, Phase D QA 2026-07-24):** the old standalone window's
@@ -105,6 +135,19 @@ gate A: **`/go`, and `/vibe` is retired outright**, the owner 2026-07-24.)
   sense in the context of the suite." Works as before for now — rethink after the
   migrations (e.g. open straight to the editor with a compact create row, logo retired or
   moved). GA-side change; coordinate the design with the family language here.
+- **★ The Auras tab needs a LAYOUT REWORK, not a tweak (the owner, Phase E gate B QA 2026-07-24):
+  "we've got to get rid of the drawer, but the whole layout of this module is now very wrong."**
+  Deferred to its own session by his call. Scope so far: kill the docked profile drawer in favour
+  of a GB-style always-visible rail (gate B put the shared `UI.profileBlock` inside the existing
+  drawer, so the mechanism matches GB/Overlays but is still hidden behind a footer button); the
+  landing page above; and a general pass against GB's layout language now that GB is the
+  reference. Treat the whole Auras tab as the unit of work — these all redraw the same surface.
+- **Overlays: Width / Height / X / Y should be SLIDERS, not typed boxes (the owner, Phase E gate B
+  QA 2026-07-24).** "It just needs to happen." They're `flatEditBox` today; the family answer is
+  `UI.sliderRow` (as Rotation and Alpha already use), probably slider + typed value box like
+  GA's numeric row so exact numbers stay enterable. Nudge arrows stay either way.
+- **★ GB is the UI reference for the suite, not GA (the owner, 2026-07-24).** When a pattern
+  exists in both, copy Gloom's Bars. The two backlog items above are why.
 
 ## How to keep this honest
 Any session that edits GB/GA/Overlays/Hub **for suite reasons** updates the relevant phase row

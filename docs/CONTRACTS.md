@@ -3,8 +3,8 @@
 > **Home of record for every fact that more than one addon depends on.** If you change
 > anything here, change it HERE and update every consumer in the SAME session. Consumers
 > (GB/GA/Overlays) must never keep their own divergent copy — that is exactly the drift this
-> file exists to prevent. Nothing below is built yet; these are the agreed shapes for the
-> phased build (see [SUITE-PLAN.md](SUITE-PLAN.md)).
+> file exists to prevent. **Everything below is BUILT and QA'd** as of Phase E (2026-07-24) —
+> §§1–4 describe live code, not proposals. Phase ledger: [SUITE-STATE.md](SUITE-STATE.md).
 
 ## 1. Design tokens (the ONE copy)
 Today GB and GA each hold a byte-identical `COLOR`/`FONT` table — that duplication is the drift
@@ -77,9 +77,9 @@ GloomsHub.Media:AddFont(name,file) / :RemoveFont(i) / :AddTexture(…) / :AddGra
 Registered via LibStub: `local Skin = LibStub("LibGloomSkin-1.0")`. GloomsHub is the canonical
 shipper — its `Skin.lua` IS the lib body (embedding a copy in each tool via `.pkgmeta`
 externals is Phase G work). `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are Hub-side aliases of the
-same tables. Consumers: **GB since Phase C, GA since Phase D**; Overlays swaps in E.
+same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Phase E**.
 
-**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 2) — the whole API; nothing else is public:**
+**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 3) — the whole API; nothing else is public:**
 - `Skin.COLOR` — `purple · heroic · green · red · orange` (each `{r,g,b,hex}`), `dark`, `rim`
   (both `{r,g,b,a}`), `text`, `mute` (`{r,g,b}`). The §1 literals.
 - `Skin.FONT` — `title · head · body · bodyM · label` → font files under
@@ -105,6 +105,30 @@ same tables. Consumers: **GB since Phase C, GA since Phase D**; Overlays swaps i
   - `UI.dirRow(parent, yTop, label, get, set)` → `{ refresh, setEnabled }` — "up"|"down"|"left"|"right"
   - `UI.makeScrollbar(parent, scrollFrame, place)` → thin orange-thumb bar with `:Sync()`
   - `UI.attachTip(frame, title, body)` — the family hover tooltip (HookScript, coexists)
+  - `UI.dropdown(parent, w, getLabel, getOptions, getCurrent, onPick)` → the family's
+    "pick from a list" (MINOR 3): a flat button + orange caret opening a flyout behind a
+    full-screen click-catcher; `getOptions()` → `{ {value=,label=}, … }`; scrolls past 12
+    rows. Returns the button with `:refresh()`. Promoted from GB's private `animDropdown`.
+  - `UI.flyout()` → the shared flyout frame (built on demand), exposed so a consumer can
+    observe the open list. **Test it with `:IsVisible()`, not `:IsShown()`** — the flyout is
+    a child of the catcher and is only ever hidden via that parent. GB pings the selected
+    bar while its Preset list is up.
+  - `UI.nameDialog(title, initial, onAccept)` — the skinned text-entry modal (MINOR 3);
+    OK/Enter accepts, Cancel/ESC drops it. Replaces StaticPopup **and** the near-identical
+    private copies GB and GA each used to carry.
+  - `UI.confirm(body, onYes, acceptLabel?, titleText?)` — the skinned yes/no modal
+    (MINOR 3). ★ **Every destructive action uses this.** A self-arming "click twice to
+    confirm" button is NOT acceptable: once armed there is no way to back out
+    (the owner 2026-07-24 — GB's old `confirmable` had exactly that trap and is retired).
+  - `UI.profileBlock(parent, w, api)` → **the suite's ONE profile/preset management
+    control** (MINOR 3): header + `UI.dropdown` + New/Copy/Rename/Delete + an inline note
+    line, with delete routed through `UI.confirm`. The tool supplies only its data
+    plumbing, so the mechanism is identical in every tab (the owner 2026-07-24: "for this
+    mechanism … they should all be using the same thing"). Omitting `api.copy` lays the
+    buttons out 3-across (GB's preset block). Returns `{ frame, refresh, note, height }`.
+    `api` = `noun · names() · active() · switch(v) · create(name) · copy(name)? ·
+    rename(name) · delete()` (each mutator → `ok, err`; `err` shows in the note line)
+    `· onChange()? · title? · tips{dropdown,new,copy,rename,delete}?`
   - `UI.WarmFonts(extraPairs?)` — **the Hub calls this, once, at PLAYER_ENTERING_WORLD**
     (Media.lua's RegisterAll); draws the base list + everything registered + the arg
   - `UI.RegisterWarmPairs({ {fontPath, size}, … })` — **how a TOOL warms its pairs**: call at
@@ -116,14 +140,17 @@ same tables. Consumers: **GB since Phase C, GA since Phase D**; Overlays swaps i
   MINOR bump, not a break.
 - **Warm-list contract (QA-proven Phase B):** WoW draws a cold (font file, size) pair BLANK the
   first time it's drawn each client session (a /reload heals it; the next cold start re-breaks
-  it). The Hub's base list covers the shell + Media tab (`title 21 · head 16 · body
-  10.5/11/12/13 · bodyM 11/12/13`) + each catalog font at 11/13/14 (picker sizes). **Every
+  it). The Hub's base list covers the shell + Media tab + **the lib's own widgets**
+  (`title 17/21 · head 12/16 · body 10.5/11/12/13 · bodyM 11/12/13`) + each catalog font at
+  11/13/14 (picker sizes). `title 17` (nameDialog/confirm) and `head 12` (profileBlock) joined
+  the base list at MINOR 3 — the lib draws them itself now, in every tool. **Every
   (font, size) pair ANY suite tab draws beyond that must go through `RegisterWarmPairs`** —
-  when a tool migrates (D/E), enumerate its sizes (`grep -oE 'FONT\.\w+, [0-9.]+' Config.lua |
+  when a tool migrates, enumerate its sizes (`grep -ohE 'FONT\.\w+, [0-9.]+' *.lua |
   sort -u`) and register the ones the base list misses. GB registers: `title 17/18 · head
   12/13 · body 9.5/10/12.5 · label 10/10.5/11` (Config.lua, right after the toolkit aliases).
-  GA registers: `title 13/16/17/18/20 · head 12/13 · label 11/12` (same spot in its Config.lua;
-  pairs dedupe across addons, so overlap with GB's list is free).
+  GA registers: `title 13/16/17/18/20 · head 12/13 · label 11/12` (same spot in its Config.lua).
+  Overlays registers: `title 16 · head 13 · label 11` (GloomsOverlays_Editor.lua). Pairs dedupe
+  across addons, so overlap — and a tool re-registering something the base already covers — is free.
 - **Versioning:** LibStub newest-wins. Additive changes bump MINOR here + in `Skin.lua`
   (`local MAJOR, MINOR`) in the same session; breaking changes need a new MAJOR ("-2.0") and
   The owner's sign-off.
@@ -132,14 +159,24 @@ same tables. Consumers: **GB since Phase C, GA since Phase D**; Overlays swaps i
 - **GloomsBars** — ✅ migrated (Phase C, 2026-07-24): consumes LibGloomSkin, mounts the Bars
   tab, `/gb` + minimap button route to `GloomsHub:ToggleWindow("bars")`, hard-depends on the
   Hub. (Bar ENGINE keeps `GB.FONT` on GB's own files — see the §1 note.)
+  **Phase E (QA'd 2026-07-24):** its private name dialog + `animDropdown` +
+  two-click `confirmable` are DELETED; the rail's PROFILE and PRESET blocks are now
+  `UI.profileBlock`, and `animDropdown` is a one-line alias of `UI.dropdown` for its four
+  remaining call sites.
 - **GloomsAuras** — ✅ migrated (Phase D, 2026-07-24): consumes LibGloomSkin, mounts the Auras
   tab (centered 620 column), `/ga` → `GloomsHub:ToggleWindow("auras")`, `CatStoneTweaks` →
   `GloomsHub:ListMedia` (relabelled "Suite Graphics"), hard-depends on the Hub. (`GA.FONT`
   stays on GA's own files — user configs store those paths; see the §1 note pattern.)
-- **Gloom's Overlays** — 🔄 half-migrated (Phase E gate A, 2026-07-24): repo `~/GloomsOverlays`,
-  hard-deps the Hub, resolver call site + editor label swapped to `GloomsHub:ResolveAssetPath`
-  (**the suite's last StoneTweaks consumer — gone**), slash is `/go` (`/vibe` retired).
-  **Still owed by gate B:** consume LibGloomSkin (it still ships the old native
-  `BackdropTemplate` chrome and its own `MakeButton`/`MakeSlider`/`MakeCheck` locals), register
-  the `overlays` tab (id reserved §2, order 30), dock the asset browser, and register its warm
-  pairs §4. Note it keeps SavedVariables globals `VibeOverlayDB`/`VibeOverlayDBChar` on purpose.
+  **Phase E (QA'd 2026-07-24):** its private name dialog + confirm modal are
+  DELETED (`OpenNameDialog` aliases
+  `UI.nameDialog`; `C:OpenConfirm` wraps `UI.confirm`), and the Profiles drawer now hosts
+  `UI.profileBlock` instead of its own list + four buttons. The drawer itself stays — moving
+  Auras to a GB-style always-visible rail belongs with the landing-page item on the backlog.
+- **Gloom's Overlays** — ✅ migrated (Phase E, both gates QA'd 2026-07-24): repo
+  `~/GloomsOverlays`, hard-deps
+  the Hub, resolver → `GloomsHub:ResolveAssetPath` (**the suite's last StoneTweaks consumer —
+  gone**), slash `/go` (`/vibe` retired; bare `/go` toggles the tab). Gate B: mounts the
+  `overlays` tab (order 30) as a GB-style rail + editor; ALL native chrome deleted (no
+  `BackdropTemplate`, `UIDropDownMenu`, `StaticPopup`, `UIPanel*Template`, `MakeButton`/
+  `MakeSlider`/`MakeCheck`); asset browser is a docked drawer; warm pairs registered.
+  Keeps SavedVariables globals `VibeOverlayDB`/`VibeOverlayDBChar` on purpose.
