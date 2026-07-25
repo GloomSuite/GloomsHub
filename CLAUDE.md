@@ -63,5 +63,30 @@ need a full client RESTART (not /reload). Ships via BigWigs packager → GitHub 
 `HandofDevastation/GloomsHub`), WoWup installs/updates. GB/GA/Overlays all hard-depend on it
 (`## Dependencies: GloomsHub`) as of Phase E.
 
-> The owner works structured & catalog-first; NEVER "v1"/"later phase" framing; GUI over slash for
-> user controls; never rush toward closing a session. (Same working style as the sibling repos.)
+## ⚠ PRIVACY — no real-world identity in any repo (2026-07-24)
+The owner ships under the `HandofDevastation` org only. Neither his real name nor his personal
+GitHub account handle may appear anywhere: not in file content, not in commit messages, not in
+commit metadata.
+
+- **Never write the owner's first/last name in docs, comments or commit messages.** Say "the
+  owner", "the author", or just state the decision. The old convention of attributing decisions
+  by first name is RETIRED — it put 300+ mentions across two then-public repos.
+- **Never write his personal GitHub handle either.** The org is the public face; the account
+  behind it is not. That account is what `gh` authenticates with, so it necessarily OWNS and
+  PUSHES the repos — but it must never appear as a commit author, in a noreply email, or in any
+  file. (Do not "helpfully" set the identity to a GitHub `…@users.noreply.github.com` address:
+  those embed the handle.)
+- Git identity is set globally to `Gloom <gloom@handofdevastation.invalid>` — matching the
+  addons' `## Author: Gloom`, and a reserved-TLD address that is undeliverable by design and
+  links to no account. Do not override it per-repo.
+- **All repos are PRIVATE as of 2026-07-24** (GloomsBars, GloomsAuras, GloomsBuildBarn were
+  flipped from public). Do not make one public without an explicit instruction — and not before
+  the scrub below is done.
+- **Owed cleanup:** strip the name from file content in all five repos, then rewrite history
+  (~168 commits carry the old author email). Until that's finished, publishing anything re-exposes
+  it. Tracked in [docs/SUITE-STATE.md](docs/SUITE-STATE.md) as a Phase G prerequisite.
+
+> The owner works structured & catalog-first; NEVER "v1"/"later phase" framing; GUI over slash
+> for user controls; never rush toward closing a session. **QA as you go — do not build a large
+> change across multiple addons and hand it over unverified.** (Same working style as the
+> sibling repos.)
