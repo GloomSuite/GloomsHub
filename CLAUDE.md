@@ -73,6 +73,22 @@ something all three share, or the window they live in?* → here.
 **If ownership is genuinely ambiguous** (e.g. a tool needs a widget that arguably belongs in the
 shared toolkit), say so and give a recommendation — don't guess silently and don't stall.
 
+## ★★ …BUT THIS IS A "TELL HIM FIRST" RULE, NOT A "GO ELSEWHERE" RULE (the owner, 2026-07-25)
+**Naming the owning repo is the whole obligation. "Just do it from here" is a valid answer EVERY
+time, and it is usually the right one.** The owner, after being told four small art items each
+"belonged" in another repo: *"Can we do those things in a session inside the GloomsHub project, or
+do I need to open new sessions in the individual projects? Because if it's the latter, I'm going to
+scream."* He was right to push back — that session then did logos, a shared-toolkit widget and TOC
+changes across **all four repos at once**, correctly.
+
+- **Say which repos it touches, then WAIT for his answer — don't answer for him**, and don't bury
+  the answer at the end of a long reply. He asked twice because the first answer wasn't up front.
+- **The four-repo split exists so FRIENDS can install and update the tools independently.** It was
+  never meant to dictate how HE works. Ceremony that only serves the file layout is pure cost.
+- **A separate session is worth it for exactly one shape:** deep design work inside ONE tool that
+  leans on that tool's own handoff and frozen decisions — the Auras layout rework is the example.
+  Swapping art, adding a TOC line, or changing a shared widget is NOT that.
+
 ## The family (and what's IN vs OUT of the suite)
 - **IN:** Gloom's Auras (`~/GloomsAuras`), Gloom's Bars (`~/GloomsBars`), Gloom's Overlays
   (`~/GloomsOverlays` — the renamed VibeOverlay; migrated + reskinned in Phase E, 2026-07-24).
