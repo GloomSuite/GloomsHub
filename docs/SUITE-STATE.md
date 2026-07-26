@@ -18,10 +18,18 @@
 **The 7-phase plan is complete and QA'd. All four addons ship and install cleanly.** GloomsHub is the
 shared base; Bars, Auras and Overlays each mount a tab in its window and hard-depend on it.
 StoneTweaks is retired, all five repos are public under the **`GloomSuite`** org (Build Barn stayed
-with `HandofDevastation`). **All four suite addons were squared up at `v1.2.0` on 2026-07-26** at the
-owner's request — a one-time sync, not a new rule; drift is still permitted (see the locked decision
-below). What's left is in [BACKLOG.md](BACKLOG.md) — four items: three are 12.1 testing, one is a
-font-licence question. **There is no known live bug in shipped code.**
+with `HandofDevastation`). What's left is in [BACKLOG.md](BACKLOG.md) — five items: three are 12.1
+testing, one is a font-licence question, and one is finishing the release cut below.
+**There is no known live bug in shipped code.**
+
+**⚠ RELEASE STATE IS MID-CUT, 2026-07-26.** All four suite repos are **tagged `v1.2.0` on their
+remotes** (a one-time squaring-up at the owner's request — *not* a new rule; drift is still
+permitted, see the locked decision below). Only **Overlays actually published**, because it is the
+one suite repo with no `.pkgmeta` externals. Bars, Auras and the Hub all failed at the packaging
+step on **`repos.wowace.com` returning HTTP 500** — a third-party SVN outage, nothing to do with the
+code. So the **published** state is: Overlays `v1.2.0` · Bars `v1.1.2` · Auras `v1.0.1` ·
+**Hub: NO published release at all** (its two earlier ones were deleted in the PII purge).
+**The tags are already pushed — finishing this is a re-run, not a re-tag.**
 
 **★ The identity scrub was INCOMPLETE until 2026-07-26 and is now re-verified on a fourth surface.**
 It had covered file contents and commit metadata; it had never covered **file paths**. A texture
