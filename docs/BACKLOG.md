@@ -56,34 +56,7 @@ Three gaps remain from the PTR pass:
 
 ---
 
-### 4 · Three releases are cut but unpublished — wowace was down ★ finish this first
-**Repo:** Hub, Bars, Auras · **Size:** one command, once the outage clears · **Evidence:** `TESTED`
-
-`v1.2.0` is **tagged and pushed on all four** suite repos. Overlays published fine; the other three
-failed in the packager because `repos.wowace.com` (the SVN host the `.pkgmeta` externals come from)
-returned **HTTP 500** on every path, twice, ~20 minutes apart on 2026-07-26. Not a code problem.
-
-**⚠ The Hub currently has NO published release**, and all three tools declare
-`## Dependencies: GloomsHub` — so a fresh WoWup install cannot currently work. Harmless while the
-suite isn't being distributed, which it isn't; it matters the moment it is.
-
-**To finish — do NOT re-tag, the tags are already on the remotes:**
-```bash
-for r in GloomsHub GloomsBars GloomsAuras; do
-  gh run rerun $(gh api repos/GloomSuite/$r/actions/runs --jq '.workflow_runs[0].id') \
-    --repo GloomSuite/$r --failed
-done
-```
-Then verify `latest` **anonymously** for each (it caches — re-read a stale answer):
-`curl -s https://api.github.com/repos/GloomSuite/<repo>/releases/latest | grep tag_name`
-
-**If wowace stays down**, the real fix is repointing the externals at GitHub mirrors — a deliberate
-packaging change, not something to improvise mid-outage.
-**Read first:** [LESSONS.md](LESSONS.md) § Git, GitHub & packaging
-
----
-
-### 5 · General Sans's redistribution terms were never verified
+### 4 · General Sans's redistribution terms were never verified
 **Repo:** all four that ship fonts · **Size:** ~15 minutes, reading · **Evidence:** `UNTESTED`
 
 The suite bundles **Khand** (SIL OFL 1.1 — `Media/fonts/OFL.txt` now ships alongside it, which is
@@ -116,6 +89,10 @@ from any bundled `.ttf` via its `name` table (IDs 13 and 14).
 - **The `ForceTaint_Strong` on a dead font path** — CLOSED 2026-07-26, no action. Tested through
   GB's skin path across 116 buttons in combat; no symptom. FINDINGS §6. **Do not re-raise without
   a real symptom.**
+- **The v1.2.0 release cut** — DONE 2026-07-26, all four published and the Hub zip verified clean
+  (404 KB, no drop-in dirs, licences present). It took three attempts: `repos.wowace.com` was
+  returning HTTP 500 for ~30 min. **A packaging failure on wowace is an outage — re-run, don't
+  debug.** Overlays was immune (no `.pkgmeta` externals).
 - **The user's own media shipping inside the addon** — FIXED 2026-07-26. `Fonts/`, `Textures/` and
   `Graphics/` are gitignored drop-in directories and were purged from all history. Do not re-add
   them; `.pkgmeta` explains why at length.

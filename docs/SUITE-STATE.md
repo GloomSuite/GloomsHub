@@ -18,18 +18,19 @@
 **The 7-phase plan is complete and QA'd. All four addons ship and install cleanly.** GloomsHub is the
 shared base; Bars, Auras and Overlays each mount a tab in its window and hard-depend on it.
 StoneTweaks is retired, all five repos are public under the **`GloomSuite`** org (Build Barn stayed
-with `HandofDevastation`). What's left is in [BACKLOG.md](BACKLOG.md) — five items: three are 12.1
-testing, one is a font-licence question, and one is finishing the release cut below.
+with `HandofDevastation`). **All four suite addons are published at `v1.2.0`** (2026-07-26, verified
+anonymously against `/releases/latest`, not copied) — a one-time squaring-up at the owner's request;
+*not* a new rule, drift is still permitted (see the locked decision below). What's left is in
+[BACKLOG.md](BACKLOG.md) — four items: three are 12.1 testing, one is a font-licence question.
 **There is no known live bug in shipped code.**
 
-**⚠ RELEASE STATE IS MID-CUT, 2026-07-26.** All four suite repos are **tagged `v1.2.0` on their
-remotes** (a one-time squaring-up at the owner's request — *not* a new rule; drift is still
-permitted, see the locked decision below). Only **Overlays actually published**, because it is the
-one suite repo with no `.pkgmeta` externals. Bars, Auras and the Hub all failed at the packaging
-step on **`repos.wowace.com` returning HTTP 500** — a third-party SVN outage, nothing to do with the
-code. So the **published** state is: Overlays `v1.2.0` · Bars `v1.1.2` · Auras `v1.0.1` ·
-**Hub: NO published release at all** (its two earlier ones were deleted in the PII purge).
-**The tags are already pushed — finishing this is a re-run, not a re-tag.**
+**The shipped zip was verified, not assumed.** `GloomsHub-v1.2.0.zip` is **404 KB** (it would have
+been ~5.4 MB before the purge), contains no `Fonts/`, `Textures/` or `Graphics/`, no identifying
+filename, both font licence files, and all 21 packager-embedded library files.
+⚠ **The release cut needed three attempts** — `repos.wowace.com`, the SVN host every `.pkgmeta`
+external is fetched from, returned HTTP 500 for roughly half an hour. Overlays was unaffected because
+it is the one suite repo with no externals. **A packaging failure on wowace is an outage, not a
+regression — re-run, don't debug.**
 
 **★ The identity scrub was INCOMPLETE until 2026-07-26 and is now re-verified on a fourth surface.**
 It had covered file contents and commit metadata; it had never covered **file paths**. A texture
