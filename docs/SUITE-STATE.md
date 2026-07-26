@@ -201,12 +201,34 @@ Ten minutes on the PTR settles it; do it before the season, not during a key.
 **The PTR is left set up and ready** (see Setup below) — symlinks, live SavedVariables and
 `SecretScan` are all in place, so re-testing costs nothing but a launch.
 
-**Setup (done 2026-07-25):** `_ptr_` is **12.1.0.68914** (`wowt`); retail is 12.0.7.68887. All four
-addons + `!BugGrabber`/`BugSack` are symlinked into `_ptr_/Interface/AddOns/` — the *same* repos as
-retail, so any future edit is live on both clients. Live SavedVariables were copied across
+**Setup (done 2026-07-25):** `_ptr_` is **12.1.0.68914** (`wowt`); retail is 12.0.7.68887.
+`_ptr_/Interface/AddOns/` has the four suite addons plus `!BugGrabber`, `BugSack`, `SecretScan`, and
+the three addons GA's config references by path (`ArcUI`, `NiceDamage`, `EnhanceQoL` + its 15
+modules — without them a font path 404s and trips FINDING 2). Live SavedVariables were copied across
 (account-level ×4, plus per-char Overlays for Gloomwick/Gloomrift); the PTR's fresh defaults are
 backed up in the session scratchpad. TOCs deliberately left at `120007` — "Load out of date AddOns"
 is enough to test.
+
+**★★ GB IS THE EXCEPTION — IT IS NOT SYMLINKED TO ITS MAIN REPO (set up 2026-07-25).** Hub, GA and
+GO all point at their normal repos on both clients, so an edit to those IS live on both. **GB does
+not:**
+
+| Client | Loads | Branch |
+|---|---|---|
+| retail (live) | `~/GloomsBars` | `main` |
+| PTR | **`~/GloomsBars-ptr`** (a `git worktree`) | **`12.1-layout`** |
+
+**All 12.1 GB work happens in `~/GloomsBars-ptr`.** `Libs/` there is a symlink to the main repo's
+(it is git-ignored, and GB won't start without `LibStub`). Git refuses to check `12.1-layout` out in
+the live folder, so the isolation is enforced, not remembered — verified. Unwind with
+`git merge 12.1-layout` → `git worktree remove ~/GloomsBars-ptr` → repoint the PTR symlink back.
+
+**PTR TESTING TRAP — cost an hour once already:** GB and GA both key profiles by **character + realm**,
+and PTR copies live on **Anasterian** while every real profile says **Stormrage**. So both addons
+auto-create *fresh empty* profiles on the PTR. For GB that means `layoutEnabled` is **off**, `ApplyAll`
+is a no-op, and any layout test silently proves nothing. `Gloomwick - Anasterian` has been switched on;
+verify before trusting any result. (GB's only profiles with layout on are `Gloomrift - Stormrage` and
+`Gloomfury - Stormrage`.)
 
 **When fixes do start:** feature-gate at runtime (`if C_UnitAuras.GetAuraDataByAuraInstanceID then`),
 don't fork; `## Interface: 120007, 120100` supports both clients from one package. Work on a branch —
