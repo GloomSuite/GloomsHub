@@ -1,182 +1,182 @@
-# Gloom's Hub — project guide
+# Gloom's Hub — the Gloom Suite's home of record
 
-> **▶ NEW SESSION: read [docs/HANDOFF.md](docs/HANDOFF.md) FIRST, then
-> [docs/SUITE-STATE.md](docs/SUITE-STATE.md)** (where the whole suite effort stands right now).
-> The design/architecture is in [docs/SUITE-PLAN.md](docs/SUITE-PLAN.md); the shared runtime
-> contracts (tokens, resolver signature, tab API) are in [docs/CONTRACTS.md](docs/CONTRACTS.md).
+**This is the ONLY project folder the owner opens.** All four suite repos are already in this
+session's working directories — `~/GloomsBars`, `~/GloomsAuras`, `~/GloomsOverlays` and this one.
+Work on any of them from here. **Never tell him to close this project and open another one.**
 
-## What GloomsHub is
-The **shared base addon** for the Gloom suite. It owns three things nothing else may own:
-1. **The one Suite window** — a tabbed shell. Gloom's Auras / Bars / Overlays each register a
-   tab; the Hub also hosts the **Media** tab (custom fonts + graphics/textures).
-2. **The shared design toolkit + tokens** (`GloomsHub.COLOR/.FONT/.UI`, and the embedded
-   `LibGloomSkin-1.0` library). This is the ONE copy — GB/GA must stop hand-maintaining their
-   own duplicate toolkits and consume this.
-3. **The media plumbing** — custom font/graphic/texture registration into LibSharedMedia +
-   `GloomsHub:ResolveAssetPath(name)` (salvaged from the retired StoneTweaks).
+---
 
-**Construction is underway** — the phase ledger in [docs/SUITE-STATE.md](docs/SUITE-STATE.md)
-is the sole source of truth for what's built and QA'd; do not trust any other file's claim
-about phase status (including this one).
+## ★★ SESSION START — do this before anything else
 
-## GloomsHub is the HOME OF RECORD for the whole suite ★ (anti-drift)
-The suite spans separate repos (`~/GloomsAuras`, `~/GloomsBars`, `~/GloomsOverlays`), each
-symlinked into `…/Interface/AddOns/`. Disparate repos drift. The rule that prevents it:
+**Read [docs/BACKLOG.md](docs/BACKLOG.md) and offer him the list.** Do not read anything else yet.
+That is the entire cold start: this file loads automatically, the backlog is short, and together
+they are enough to route any request.
 
-> **Every cross-cutting fact has exactly ONE home, here in `GloomsHub/docs/`. Other repos
-> POINT at it; they never keep their own copy.**
+Open the session roughly like this — items, repo, size, then the question:
 
-- **[docs/SUITE-STATE.md](docs/SUITE-STATE.md)** — the phase ledger. "Where are we?" Read it
-  FIRST for any suite work; UPDATE it at the end of any session that moves the suite.
-- **[docs/SUITE-PLAN.md](docs/SUITE-PLAN.md)** — the architecture + 7-phase plan + locked
-  decisions. Do not relitigate locked decisions.
-- **[docs/CONTRACTS.md](docs/CONTRACTS.md)** — the shared runtime contracts (design tokens,
-  the `RegisterTab` API, `ResolveAssetPath`, `LibGloomSkin` surface). If you change a shared
-  contract, change it HERE and update every consumer in the same session.
-- GB's, GA's and Overlays' `CLAUDE.md` carry a "part of the Gloom Suite" pointer back here.
+```
+Gloom Suite — N open items
 
-## ★★ ROUTE THE REQUEST BEFORE YOU DO THE WORK (the owner, 2026-07-25)
-**The suite is ONE product at runtime but FOUR repos on disk, and every repo is in the session's
-working directories — so a request aimed at the wrong repo can be silently fulfilled from the
-wrong place. Do not let that happen. Route first, then work.**
+  1. <title>          <repo>   <size / status>
+  2. <title>          <repo>   <size / status>
 
-> **THE RULE: before starting any change, decide which repo OWNS it. If that is not the repo this
-> session is in, STOP and say so BEFORE editing anything. Name the repo the work belongs in, say
-> in one line what it would touch, and let the owner decide whether to switch. Do not "just do it
-> from here", do not make a partial edit first, and do not quietly edit across repos.**
+Which one — or is there something else you'd rather do?
+```
 
-The owner's words: *"if I make a request for a change/addition while working in one project that is
-better suited for one of the other projects, actually tell me, so I can switch over and make the
-request in the proper place."*
+**Then, and only then, read that item's "Read first" list.** Every backlog entry names its repo and
+its reading list precisely so you never have to load all four repos' documentation to find out what
+a job needs. **Loading less is what keeps the things you do load in focus.**
 
-**Who owns what:**
+If he raises something that isn't on the list, route it (below), read that repo's `CLAUDE.md`, and
+get on with it. Add it to the backlog only if it survives the session unfinished.
+
+---
+
+## ★★ "DO THE HANDOFF RITUAL" — the closing sequence
+
+**When the owner says "do the handoff ritual", he is closing the session.** It is an explicit,
+standing instruction: run the whole checklist without asking permission for any step, including the
+commit and the push. **"Do the handoff ritual and release"** adds the release cut.
+
+The checklist lives in [.claude/skills/handoff-ritual/SKILL.md](.claude/skills/handoff-ritual/SKILL.md).
+Invoke that skill; do not improvise from memory. In short it is: update the backlog · update
+SUITE-STATE if settled state moved · update FINDINGS with evidence tags and strike anything
+disproved · add durable traps to LESSONS · archive what closed · update the owning repo's own docs ·
+commit and push every repo touched · then tell him in plain language what changed and where.
+
+**He should never have to know which documents exist or what needs updating. That is your job.**
+
+**You may also propose it.** If he swerves to something unrelated mid-session, say so plainly —
+*"that's a different job; let's do the handoff ritual and start fresh"* — so the instruction always
+comes from you and he never has to sense when a session is full.
+
+---
+
+## ★★ ROUTE THE REQUEST — name the repo, don't switch projects
+
+**Before any change, decide which repo OWNS it and say so. Then get his go-ahead and do it from
+here.** The goal is that no cross-repo edit ever happens silently. It is **not** to make him move.
+
+> "If I make a request for a change while working in one project that is better suited for one of
+> the others, actually tell me." — the owner, 2026-07-25
+
+**Naming the repo is the whole obligation.** Say it in one line, up front — not buried at the end of
+a long reply — and wait for his answer rather than answering for him. The four-repo split exists so
+**friends can install and update the tools independently**; it was never meant to dictate how he
+works.
+
 | The change is about… | It belongs in |
 |---|---|
-| Action-bar skin, shapes/catalog, glows, layout, presets, GB's tab contents | `~/GloomsBars` |
-| Cooldown-Manager auras, displays, GA's tab contents | `~/GloomsAuras` |
-| Overlays engine, conditions, spritesheets, GO's tab contents | `~/GloomsOverlays` |
-| The Suite window/shell + tab API · the shared toolkit `LibGloomSkin` (tokens, widgets, `UI.*`) · media registration/catalog/resolver + the Media tab · the ONE minimap launcher · the suite docs + phase ledger | **`~/GloomsHub`** (here) |
-| Gloom's Build Barn | `~/Desktop/glooms-build-barn` — **NOT a suite member**, see below |
+| Action-bar skin, shapes/catalog, glows, layout, presets, the Bars tab | `~/GloomsBars` |
+| Cooldown-Manager auras, displays, the Auras tab | `~/GloomsAuras` |
+| The overlay engine, conditions, spritesheets, the Overlays tab | `~/GloomsOverlays` |
+| The Suite window + tab API · `LibGloomSkin` (tokens, widgets, `UI.*`) · media registration/resolver + the Media tab · the ONE minimap launcher · the suite docs | **`~/GloomsHub`** (here) |
+| Gloom's Build Barn | `~/Desktop/glooms-build-barn` — **NOT a suite member** |
 
-**Rough test:** *does it change how ONE tool looks or behaves?* → that tool's repo. *Does it change
-something all three share, or the window they live in?* → here.
+**Rough test:** changes how ONE tool looks or behaves → that tool's repo. Changes something all
+three share, or the window they live in → here.
 
-**Three carve-outs — these are correct, not violations:**
-1. **Suite docs/ledger updates in `GloomsHub` from any suite session.** Required, in fact: any
-   session that moves the suite updates SUITE-STATE here. Say you're doing it; don't ask permission.
-2. **A shared-contract change and its consumers, in the same session.** If a `LibGloomSkin` or tab-API
-   change lands, every consumer must be updated with it (see CONTRACTS) — multi-repo is the *point*.
-   Still say up front which repos it will touch.
-3. **Read-only cross-repo work** — grepping siblings for consumers, verifying a symbol, comparing a
-   pattern. Look freely; the rule is about WRITING.
+**★ Before you WRITE to a sibling repo, read its `CLAUDE.md` first.** This is the one real cost of
+working from a single project: that repo's conventions and frozen decisions do not load
+automatically, and they are exactly the walls that stop you relitigating something settled. For a
+substantial job, read its handoff too — the backlog entry tells you which.
 
-**If ownership is genuinely ambiguous** (e.g. a tool needs a widget that arguably belongs in the
-shared toolkit), say so and give a recommendation — don't guess silently and don't stall.
+**No permission needed for:** updating the suite docs here from any session (that's required, just
+say you're doing it) · a shared-contract change plus its consumers in one pass (say which repos up
+front) · any read-only cross-repo grepping. **Ambiguous ownership?** Say so and recommend — don't
+guess silently, don't stall.
 
-## ★★ …BUT THIS IS A "TELL HIM FIRST" RULE, NOT A "GO ELSEWHERE" RULE (the owner, 2026-07-25)
-**Naming the owning repo is the whole obligation. "Just do it from here" is a valid answer EVERY
-time, and it is usually the right one.** The owner, after being told four small art items each
-"belonged" in another repo: *"Can we do those things in a session inside the GloomsHub project, or
-do I need to open new sessions in the individual projects? Because if it's the latter, I'm going to
-scream."* He was right to push back — that session then did logos, a shared-toolkit widget and TOC
-changes across **all four repos at once**, correctly.
+**A separate session is worth it for exactly one shape:** deep design work inside ONE tool that
+leans on that tool's own frozen decisions. The Auras `AuraContainer` migration is the example.
+Swapping art, adding a TOC line or changing a shared widget is not that.
 
-- **Say which repos it touches, then WAIT for his answer — don't answer for him**, and don't bury
-  the answer at the end of a long reply. He asked twice because the first answer wasn't up front.
-- **The four-repo split exists so FRIENDS can install and update the tools independently.** It was
-  never meant to dictate how HE works. Ceremony that only serves the file layout is pure cost.
-- **A separate session is worth it for exactly one shape:** deep design work inside ONE tool that
-  leans on that tool's own handoff and frozen decisions — the Auras layout rework is the example.
-  Swapping art, adding a TOC line, or changing a shared widget is NOT that.
+---
 
-## The family (and what's IN vs OUT of the suite)
-- **IN:** Gloom's Auras (`~/GloomsAuras`), Gloom's Bars (`~/GloomsBars`), Gloom's Overlays
-  (`~/GloomsOverlays` — the renamed VibeOverlay; migrated + reskinned in Phase E, 2026-07-24).
-  Each mounts a tab; all three are live.
-- **RETIRED:** StoneTweaks — **fully retired in Phase F, 2026-07-24**: disabled and its folder moved
-  out of AddOns to `~/Desktop/StoneTweaks-retired-2026-07-24` (not deleted; `StoneTweaksDB` left in
-  WTF, so rollback is moving it back). Its useful half — media registration — lives here now, and the
-  Hub is the suite's only media registrar. `StoneTweaks_ResolveAssetPath` survives as a **permanent**
-  one-line compat shim in `Core.lua` (CONTRACTS §3) — do not "clean it up". StoneCast (already deleted).
-- **OUT — do NOT fold in:** **Gloom's Build Barn.** It's a data-fed pipeline (a weekly cron on
-  hodguild.com pulls WarcraftLogs talent builds via API into the addon), NOT a config-UI tool
-  that would mount a tab. The owner explicitly excluded it (2026-07-24). Do not treat it as a suite
-  member or future tab consumer.
+## The document set — read only what the job needs
 
-## Conventions (inherited from the family — see SUITE-PLAN / CONTRACTS)
+| File | What it answers | When to read it |
+|---|---|---|
+| [docs/BACKLOG.md](docs/BACKLOG.md) | What's open? | **Every session, first.** |
+| [docs/SUITE-STATE.md](docs/SUITE-STATE.md) | Where do things stand? Settled facts only. | Before changing anything structural. |
+| [docs/FINDINGS.md](docs/FINDINGS.md) | What's suspected but unproven? | Any bug or 12.1 work. |
+| [docs/LESSONS.md](docs/LESSONS.md) | What traps have already cost us? | The section matching the task. |
+| [docs/CONTRACTS.md](docs/CONTRACTS.md) | The shared runtime contracts. | Touching `LibGloomSkin`, the tab API or the resolver. |
+| [docs/SUITE-PLAN.md](docs/SUITE-PLAN.md) | The architecture and why. | Rarely — the plan is complete. |
+| [docs/ARCHIVE.md](docs/ARCHIVE.md) | How did we get here? | Almost never. Only for the reasoning behind a settled decision. |
+
+**Every cross-cutting fact has exactly ONE home, here in `docs/`. Other repos POINT at it; they
+never keep their own copy.** A restated fact goes stale — release state was copied into three
+sibling docs and all three were wrong within a day.
+
+**★ Evidence tags are mandatory in FINDINGS:** `TESTED` (says how and when) · `OBSERVED` (symptom
+seen, cause unproven) · `SUSPECTED` (reasoning only) · `KILLED` (disproved, struck by name, never
+deleted). **You may not build a fix on an `OBSERVED` or `SUSPECTED` claim without establishing it
+first.** On 2026-07-26 a session came within one step of fixing a bug that did not exist, because
+the ledger recorded two suspicions in the same confident voice as its measurements.
+
+---
+
+## Working agreements
+
+1. **QA as you go. Do NOT build a mountain and hand it over.** Design check-ins are not
+   verification. Get something on screen early, then iterate.
+2. **QA is ONE copy-paste step at a time**; verify before claiming; **ask for BugSack text first**.
+   The owner is not a developer.
+3. **★ A clean BugSack is not a pass.** Say what you expect to *see*, then check for it. See the
+   "silence is not evidence" section of [docs/LESSONS.md](docs/LESSONS.md) — it has cost real time
+   four separate times.
+4. **★ `/reload` is enough, including for NEW files.** The old "new files → full client restart"
+   rule is RETIRED; it cost him restarts he never needed. **The one exception is FONTS** — WoW loads
+   them at launch, so a new `.ttf` needs a real restart. Textures do not. SavedVariables are written
+   on `/reload`, so they are never a reason to restart either.
+5. **GB is the UI reference for the suite, not GA.**
+6. **US spelling** in user-visible text ("Favorites", "color").
+7. **Never rush toward closing a session.** He works structured and catalog-first.
+
+---
+
+## Conventions
+
 - Namespace `GloomsHub` → `_G.GloomsHub`; SavedVariables `GloomsHubDB`.
-- Plain frames, plain SavedVariables, no Ace3. Libraries embedded under `Libs/` + pulled by the
-  BigWigs packager via `.pkgmeta` externals; `Libs/` git-ignored.
-- **Design language = the shared Gloom language** (bright purple `#936bff` on near-black navy,
-  Khand titles + GeneralSans body, sliding switches, no native Blizzard chrome). GloomsHub is
-  where those tokens now LIVE for the whole suite.
-- Slash: `/gloom` opens the Suite window (neutral, last-used tab). Each tool keeps its own slash
-  (`/gb`, `/ga`, `/go`) to open the window focused on its tab.
+- Plain frames, plain SavedVariables, **no Ace3**. Libraries embedded under `Libs/` and pulled by
+  the BigWigs packager via `.pkgmeta` externals; `Libs/` is git-ignored.
+- **Design language:** bright purple `#936bff` on near-black navy, Khand titles + GeneralSans body,
+  sliding switches, no native Blizzard chrome. The tokens LIVE here, in `Skin.lua`.
+- Slash: `/gloom` opens the Suite window on the last-used tab. Each tool keeps its own (`/gb`,
+  `/ga`, `/go`) to open focused on its tab.
+- Symlinked into the client at `…/Interface/AddOns/GloomsHub`. Ships via the BigWigs packager →
+  GitHub Releases → WoWup.
 
-## Testing / release
-Symlinked into the client at `…/Interface/AddOns/GloomsHub`. QA by the owner (non-dev): ONE
-copy-paste step at a time, verify before claiming, BugSack error text first.
-**★ `/reload` is enough — including for NEW files (the owner, 2026-07-25, correcting this file.)**
-His words: *"new files don't matter. I install new addons all the time via WoWup and just do a
-/reload in the game to get them to work."* The old blanket "new files/assets need a FULL CLIENT
-RESTART" rule is **RETIRED** — it was costing him restarts he never needed. If a newly added asset
-genuinely fails to appear, a restart is a reasonable *debugging* step, but it is not the default
-ritual and QA instructions should stop demanding it. **★ ONE REAL EXCEPTION — FONTS.** WoW loads font
-files at LAUNCH; `/reload` does not reload them, so a NEW `.ttf` needs a full restart. Verified
-against Warcraft Wiki + WoWInterface/WowAce 2026-07-25. The Media tab's Fonts warning is CORRECT —
-do not "fix" it. (Textures may be the same; unverified — test before claiming either way.)
-**SavedVariables are NOT a reason to restart:** the client writes them on logout, disconnect, quit
-AND `/reload` — `/reload` is a genuine save point. Ships via BigWigs packager → GitHub Releases (repo
-`GloomSuite/GloomsHub`), WoWup installs/updates. GB/GA/Overlays all hard-depend on it
-(`## Dependencies: GloomsHub`) as of Phase E.
+---
 
-## ⚠ PRIVACY — no real-world identity in any repo (2026-07-24)
-The owner ships under GitHub **orgs only, never a personal account**. Neither his real name nor his
-personal GitHub account handle may appear anywhere: not in file content, not in commit messages, not
-in commit metadata.
+## ⚠ PRIVACY — no real-world identity in any repo
 
-**★ TWO orgs as of 2026-07-25 — know which is which:**
-- **`GloomSuite`** owns the four suite repos (`GloomsHub`, `GloomsBars`, `GloomsAuras`,
-  `GloomsOverlays`). Created 2026-07-25; the repos were transferred into it. **This is the suite's
-  home and the org whose URLs friends install from.**
-- **`HandofDevastation`** is the GUILD's org and keeps the guild website + `GloomsBuildBarn`.
-  It no longer owns any suite repo.
+**The owner ships under GitHub orgs only, never a personal account. Neither his real name nor his
+personal GitHub handle may appear anywhere** — not in file content, not in commit messages, not in
+commit metadata.
 
-**Why the split (the owner, 2026-07-25):** the guild is a guild; "Gloom" is his own identity and the
-prefix of all his characters. The suite is his work, not the guild's, and guild membership may not be
-permanent — so publishing the suite under the guild's name was factually wrong and would age badly.
-Build Barn genuinely IS a guild project, so it stayed. **Both orgs have PRIVATE membership** — that
-is what keeps the personal account from being linked, and it must stay that way on both.
+**Two orgs — know which is which:**
+- **`GloomSuite`** owns the four suite repos. This is the suite's home and the org friends install
+  from.
+- **`HandofDevastation`** is the GUILD's org: the guild website + `GloomsBuildBarn`.
 
-- **Never write the owner's first/last name in docs, comments or commit messages.** Say "the
-  owner", "the author", or just state the decision. The old convention of attributing decisions
-  by first name is RETIRED — it put 300+ mentions across two then-public repos.
-- **Never write his personal GitHub handle either.** The org is the public face; the account
-  behind it is not. That account is what `gh` authenticates with, so it necessarily OWNS and
-  PUSHES the repos — but it must never appear as a commit author, in a noreply email, or in any
-  file. (Do not "helpfully" set the identity to a GitHub `…@users.noreply.github.com` address:
-  those embed the handle.)
-- Git identity is set globally to `Gloom <gloom@handofdevastation.invalid>` — matching the
-  addons' `## Author: Gloom`, and a reserved-TLD address that is undeliverable by design and
-  links to no account. Do not override it per-repo.
-- **All five repos are PUBLIC as of 2026-07-24**, after the scrub finished — that is what makes
-  the WoWup install/update path work. They were private only during the scrub. Changing any repo's
-  visibility is still the owner's call, not a routine action.
-- **The scrub is ✅ DONE (2026-07-24).** All five repos had history rewritten with
-  `git-filter-repo` — file content, commit messages AND author/committer metadata — and were
-  verified clean on fresh clones pulled back from GitHub. Full record + the two traps it hit
-  (published release ZIPs are a separate surface; a repo whose cron writes to GitHub can be AHEAD
-  of your local clone) are in [docs/HANDOFF.md](docs/HANDOFF.md) under TASK 0.
-- **★ A force-push does NOT purge old commits from GitHub — it only unlinks them.** GloomsBars,
-  GloomsAuras and GloomsBuildBarn had to be **deleted and recreated** to truly remove them; that is
-  the only reliable purge. Verify a purge **unauthenticated against the PUBLIC repo** (expect
-  **422**); a 404 from a private repo proves nothing. Full account in docs/HANDOFF.md.
-- **The scrub backups were DELETED on 2026-07-24** at the owner's instruction, once all five repos
-  were confirmed public, clean and in sync. No copy of the old identity remains on disk. There is
-  therefore **no undo** for the history rewrite — which is fine, the rewrite is verified — but any
-  future rewrite must take fresh backups first.
+The suite is his work, not the guild's, and guild membership may not be permanent — so publishing it
+under the guild's name would age badly. Build Barn genuinely IS a guild project, so it stayed.
+**Both orgs have PRIVATE membership, and that is what keeps the personal account unlinked. It must
+stay that way on both.**
 
-> The owner works structured & catalog-first; NEVER "v1"/"later phase" framing; GUI over slash
-> for user controls; never rush toward closing a session. **QA as you go — do not build a large
-> change across multiple addons and hand it over unverified.** (Same working style as the
-> sibling repos.)
+- **Never write his first or last name** in docs, comments or commit messages. Say "the owner" or
+  just state the decision. Attributing decisions by first name is a RETIRED convention — it put
+  300+ mentions across two then-public repos.
+- **Never write his personal GitHub handle either.** That account necessarily owns and pushes the
+  repos, but must never appear as a commit author, in a noreply email, or in any file. **Do not
+  "helpfully" set a git identity to a `…@users.noreply.github.com` address — those embed the
+  handle.**
+- Git identity is global: `Gloom <gloom@handofdevastation.invalid>` — a reserved-TLD address that is
+  undeliverable by design and links to no account. **Do not override it per-repo.**
+- All five repos are **PUBLIC**, which is what makes the WoWup path work. The identity scrub is
+  ✅ **DONE** and verified on fresh clones. **The scrub backups were deleted, so there is no undo —
+  any future rewrite must take fresh backups first.**
+- **★ A force-push does NOT purge old commits from GitHub — it only unlinks them.** The only
+  reliable purge is delete-and-recreate. Verify **unauthenticated against the PUBLIC repo** and
+  expect **422**; a 404 from a private repo proves nothing.

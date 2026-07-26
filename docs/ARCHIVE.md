@@ -1,97 +1,23 @@
-# Gloom's Hub — Session Handoff
+# Gloom Suite — ARCHIVE
 
-**Last updated: 2026-07-25h** — the newest record below is the **modifier symbols being DROPPED**,
-which closes the last polish item. **ALL SEVEN PHASES (A–G) ARE DONE AND QA'd BY THE OWNER, AND THE
-POLISH BACKLOG IS NOW EMPTY.** All four addons publish **`v1.0.1`** from the **`GloomSuite`** org, and
-both the install and update paths are proven in the live client. **Nothing is queued and no repo has
-an open bug.**
-
-> ## ★★ THE 7-PHASE PLAN IS COMPLETE AND THE BACKLOG IS EMPTY.
-> **Nothing is in flight, no phase work remains, and no polish item is open.** The install AND update
-> paths are both proven end-to-end; all four addons publish **`v1.0.1`**. The to-do list in
-> SUITE-STATE is kept for the record only — every item is ✅ done or explicitly dropped. Next session
-> starts from whatever the owner raises; route it to the owning repo first.
+> **History. Not current state, and not a to-do list.**
 >
-> **★ The suite also moved to a new GitHub org, `GloomSuite`** (2026-07-25). Install URLs are
-> `https://github.com/GloomSuite/<Repo>`. `GloomsBuildBarn` + the guild website stayed with
-> `HandofDevastation`. Session record below.
+> This file exists so that finished work can be *recorded in full* without bloating the documents
+> that get read every session. Nothing here is authoritative about how things are today — if this
+> file and [SUITE-STATE.md](SUITE-STATE.md) disagree, SUITE-STATE wins.
 >
-> ⚠ **If you ever re-run an install QA on THIS machine, the symlink hazard is permanent:** all four
-> AddOns entries are symlinks into the dev repos, so a WoWup install writes over live source. Move
-> them aside first and restore after — **and uninstall in WoWup BEFORE restoring the symlinks**,
-> because WoWup's Remove deletes the folder it manages and could follow a symlink into the source.
-> **Do not hand the owner an install instruction without saying this.**
+> **You almost never need to read this.** Come here only when you need the reasoning behind a
+> settled decision, or the full detail of how something was verified. The durable, reusable traps
+> have been extracted into [LESSONS.md](LESSONS.md) — read that instead.
 >
-> **★★ NEW RULE — ROUTE THE REQUEST BEFORE YOU DO THE WORK (the owner, 2026-07-25).** Full text +
-> ownership table in [../CLAUDE.md](../CLAUDE.md); a compact copy is in each tool's `CLAUDE.md`.
-> Short form: decide which repo OWNS a change before starting; if it isn't the session's repo,
-> **stop and say so before editing anything**, name the right repo, let the owner switch.
+> **Where the live documents are:**
+> [BACKLOG.md](BACKLOG.md) (what's open) · [SUITE-STATE.md](SUITE-STATE.md) (where things stand) ·
+> [FINDINGS.md](FINDINGS.md) (what's suspected) · [LESSONS.md](LESSONS.md) (traps) ·
+> [CONTRACTS.md](CONTRACTS.md) · [SUITE-PLAN.md](SUITE-PLAN.md)
 >
-> **Phase F is ✅ DONE — 2026-07-24, all 6 steps QA'd by the owner.** StoneTweaks is disabled AND its
-> folder is out of AddOns (moved, not deleted, to `~/Desktop/StoneTweaks-retired-2026-07-24`); the Hub
-> serves all media alone; the compat shim is live and proven and is **KEPT PERMANENTLY** (step 6,
-> closed). `StoneTweaksDB` was left in WTF, so rollback is still just moving the folder back.
->
-> **Task 0 (the identity scrub) is DONE — 2026-07-24.** All five repos were rewritten, verified
-> clean, and re-published. **All five repos are PUBLIC again and WoWup delivery is restored.**
-> The scrub is finished; read the Task 0 record below for the two traps and the big lesson (a
-> force-push does NOT purge — the repos had to be deleted and recreated).
-
-## Orientation (read in this order)
-1. This file.
-2. [../CLAUDE.md](../CLAUDE.md) — **the PRIVACY block is mandatory reading** before you write a
-   single line of doc, comment or commit message.
-3. [SUITE-STATE.md](SUITE-STATE.md) — the phase ledger + locked decisions + the polish backlog.
-4. [SUITE-PLAN.md](SUITE-PLAN.md) · [CONTRACTS.md](CONTRACTS.md) — architecture; shared contracts.
+> Newest records first. Everything below was true when written.
 
 ---
-
-## ★ Working agreements (learned the hard way — do not repeat these)
-
-1. **QA as you go. Do NOT build a mountain and hand it over.** Phase E gate B was written in one
-   stretch across three addons before the owner saw a single pixel. Design check-ins are not
-   verification. Get something on screen early, then iterate in small steps.
-2. **Two identities to protect, not one:** the owner's real name/email AND his personal GitHub
-   handle. See the CLAUDE.md privacy block. Do not "helpfully" set a git identity to a
-   `…@users.noreply.github.com` address — those embed the handle.
-3. **GB is the UI reference for the suite, not GA.** Copy Gloom's Bars when a pattern exists in both.
-4. **No self-arming "click twice" confirms.** Destructive actions use `UI.confirm`.
-5. **US spelling** in user-visible text ("Favorites", "color").
-6. QA is ONE copy-paste step at a time; verify before claiming; **BugSack text first**.
-   **★ `/reload` is enough, including for NEW files (the owner, 2026-07-25).** *"New files don't
-   matter. I install new addons all the time via WoWup and just do a /reload in the game to get them
-   to work."* **The old "new files/assets → FULL CLIENT RESTART" rule is RETIRED** — it was in
-   CLAUDE.md, this file and every QA script, and it cost him restarts he never needed. Stop writing
-   it into instructions. A restart is a fine thing to *try* if an asset genuinely doesn't appear;
-   it is not a prerequisite. **★ ONE REAL EXCEPTION — FONTS.** WoW loads font
-   files at LAUNCH; `/reload` does not reload them, so a NEW `.ttf` needs a full restart. Verified
-   against Warcraft Wiki + WoWInterface/WowAce 2026-07-25. The Media tab's Fonts warning is CORRECT —
-   do not "fix" it. (Textures may be the same; unverified — test before claiming either way.)
-   **SavedVariables are NOT a reason to restart:** the client writes them on logout, disconnect, quit
-   AND `/reload` — `/reload` is a genuine save point.
-7. **★ Route the request before doing the work (the owner, 2026-07-25).** Decide which repo owns a
-   change BEFORE starting; if it isn't this session's repo, stop and say so. Full rule + ownership
-   table in [../CLAUDE.md](../CLAUDE.md). The reason is context, not file access: a tool's
-   `CLAUDE.md`/handoff/settled-decisions load only in ITS session, so working on it from elsewhere
-   means working blind to its walls.
-8. **★ Check what a tag POINTS AT, not just that it exists.** GB's published `v0.2.0` looked like a
-   current release and was three phases stale (Phase G, below).
-9. **★ A cross-cutting fact restated in a second repo WILL go stale.** Release state was restated in
-   GB's CLAUDE.md + handoff and GA's handoff; all three were wrong within a day of the release.
-   Point at the Hub's SUITE-STATE instead of copying the fact.
-
----
-
-# ▶ NEXT SESSION — nothing is queued. The backlog is EMPTY.
-
-**The 7-phase plan is complete and the polish backlog is closed.** The last item (3, GB's modifier
-symbols) was **DROPPED by the owner on 2026-07-25** — see the session record directly below. There is
-no pending work anywhere in the suite and no open bugs in any of the four repos. Next session starts
-from whatever the owner raises; route it to the repo that owns it before touching anything.
-
-**★ Versions now DRIFT, as intended: `GloomsBars` is at `v1.1.1`, the other three at `v1.0.1`.** Don't
-"fix" that by tagging the others — release only what changed. The version gate (CONTRACTS §6) is what
-makes it safe.
 
 # SESSION RECORD — 2026-07-25h (modifier symbols DROPPED · GB's icon tint · `GloomsBars v1.1.0` → `v1.1.1`)
 
@@ -858,13 +784,184 @@ and there is no standalone LibGloomSkin repo to fetch anyway. Consume from the H
 - ⚠ **`.claude/settings.json` `additionalDirectories` uses `~`** — confirm it expands, or restore
   absolute paths.
 
-## Packaging traps already learned the hard way (full detail under TASK 0)
-- **Tags pushed in the same breath as the initial branch push can land before the workflow is
-  registered and silently trigger nothing.** If no run appears, re-push the tag.
-- **Recreating/pushing releases out of order breaks `latest` — which is what WoWup installs.** Always
-  finish by checking `/releases/latest` **anonymously**; that endpoint caches, so re-read a stale
-  answer before chasing it. Fix with `gh api -X PATCH repos/<owner>/<repo>/releases/<id> -f make_latest=true`.
-- **Published release ZIPs are a separate surface** from git history — after any rewrite, download and
-  grep the assets.
-- ⚠ **`.claude/settings.json` `additionalDirectories` uses `~`** — confirm it expands, or restore
-  absolute paths.
+---
+
+# ═══ MOVED FROM SUITE-STATE, 2026-07-26 ═══
+
+> The sections below were the *finished* half of the phase ledger. They were moved here whole so
+> SUITE-STATE could become a short, re-readable statement of where things stand. Nothing was
+> deleted. Open items now live in [BACKLOG.md](BACKLOG.md); diagnosis in [FINDINGS.md](FINDINGS.md).
+
+
+## The completed to-do list (every item done or explicitly dropped)
+
+**★★ THE 7-PHASE PLAN IS COMPLETE (Phase G QA'd 2026-07-25). No phase work remains.**
+Everything below is polish. ✅ items are done and kept for the record.
+
+**Each its own session, in the repo that owns it — route it there**
+(items 1 and 2 are done; **only 3 remains**)
+1. ~~**Auras tab LAYOUT REWORK** · `~/GloomsAuras`~~ — **✅ DONE, QA'd by the owner 2026-07-25.**
+   Shipped in six owner-verified steps: splash retired · the editor's aura-name banner replaced by a
+   rail Rename (+ double-click) through `UI.nameDialog` · buttons restyled to the suite's language ·
+   a flush-left 240 rail carrying `UI.tabHeader` + the shared `UI.profileBlock` + the aura tree ·
+   **groups made a first-class selection** (clicking a group's name fills the editor pane with its
+   settings, retiring the ⚙ gear, the Manage Group drawer and the confusing green "Group:" button) ·
+   the editor sections re-laid for the full-width pane · and the Trigger section rebuilt to the
+   owner's mock as a bracketed tree. **GA's gate is now MINOR 4** (CONTRACTS §6) — no tab is without
+   a header any more. **Four drawers were deleted** (Manage Group, Visibility, Text, Glow), leaving
+   only the transient pickers. Two defects were caught by the owner along the way and fixed:
+   **Delete Aura had no confirmation** (CONTRACTS §4 — it now uses the shared modal, as does every
+   other delete in the tab), and the eye icons didn't reflect that a SELECTED aura is already drawn.
+   ★ **A trap worth carrying suite-wide:** deleting a block orphaned a module-local that another
+   function still called, which became a nil global — `luac -p` does NOT catch that, and because the
+   shell builds a tab before showing it, the whole tab came up blank rather than just the broken
+   section. Diff the file's global reads against a known-good revision after any block deletion:
+   `luac -l F.lua | grep -oE '_ENV "[A-Za-z_][A-Za-z0-9_]*"' | sort -u`.
+2. ~~**Overlays: Width / Height / X / Y → SLIDERS** · `~/GloomsOverlays`~~ — **✅ DONE, QA'd by the
+   owner 2026-07-25.** Each is `UI.sliderRow` **plus a typed box** so exact values stay enterable;
+   the nudge arrows stayed. **No `SKIN_NEEDS` bump**, exactly as predicted — the editor stays at
+   MINOR 4 and nothing in the Hub was touched.
+   ★ **The shape worth copying:** `UI.sliderRow` parks a read-only value FontString at its
+   TOPRIGHT, so the tab passes a `fmt` that returns `""` and puts a `flatEditBox` in that slot —
+   the box becomes the readout AND the input, with no lib change. Typed values clamp into the
+   slider's range so the two can never disagree.
+   ★ **A half-width slider means a half-width PARENT** — `sliderRow` always spans its parent with
+   fixed 18px insets, so the tab lays out column frames (anchored to the pane's `TOP`, so they
+   split whatever width the shell gives) rather than x offsets. Same trick puts the spin
+   direction buttons beside the Spin slider instead of under it. The owner's steer, 2026-07-25:
+   *"so much horizontal width available, no point in stacking everything."*
+   ★ **A slider is a NEW performance surface, and it found a real bug.** `ApplyAll` rebuilt every
+   live overlay frame on every value change — ~60×/second while dragging, and **WoW never reclaims
+   a frame**, so a 3-second drag on a 19-overlay profile parked ~3,400 dead frames for the session
+   (each with a unique global name). The owner asked for it fixed on the spot, citing general
+   framerate concerns. Both halves landed: the engine now **reuses a pool of frames** (the Nth
+   enabled overlay always draws through slot N; surplus slots are parked, not discarded), and
+   size/position/strata/level re-apply **in place** via `GloomsOverlays_ApplyLayout` without any
+   rebuild at all. ⚠ **A recycled frame carries its last occupant's settings** — everything set
+   *conditionally* (the OnUpdate animation, texture, texcoord, rotation) must be reset explicitly
+   at the top of the build, and shown with `SetShown`, not `Hide`.
+   ★ **Also landed, unplanned (the owner asked whether 7 stratas was a Blizzard limit):** the tab
+   now offers **all NINE** stratas — `WORLD` and `FULLSCREEN_DIALOG` were missing — plus a numeric
+   **Level** row (0–1000) ordering overlays *within* a strata. Every overlay used to draw at the
+   same level, so strata was the only separation there was. An overlay that has never set `level`
+   still draws at WoW's natural default (read from a real frame, not assumed), so nothing moved.
+3. ~~**Modifier symbols (⌘⇧⌃⌥) take no outline/shadow** · `~/GloomsBars`~~ — **✅ CLOSED 2026-07-25:
+   DROPPED, WON'T DO** (the owner). *"Leave the glyphs untouched… juice isn't worth the squeeze. I can
+   deal with no stroke/dropshadow on the glyphs."* **Do not re-propose it.** No code changed — the
+   glyphs stay as unstyled inline PNGs. The full reasoning lives on **GB's handoff item (d)**, which is
+   the home of record for it; in short: WoW can never style an inline `|T…|t` texture, and the approved
+   fix (a second FontString in a glyph font) hid a **hard prerequisite nobody had written down** — a
+   bundled font actually containing U+2318/21E7/2303/2325, which GB does not have, making it a new
+   `.ttf` (the suite's one genuine restart case) plus a licensing question, on top of duplicating the
+   entire keybind styling + re-assert surface. **No open GB bugs.**
+   ★ **The lesson worth carrying:** the cost of a deferred item can be much higher than its handoff entry
+   says. This one had read as "fiddly but approved" across three sessions; pricing it properly before
+   coding is what closed it in one exchange instead of one session.
+
+**Small / housekeeping**
+4. ~~Remove the leftover **`test-remove`** graphic from the Media catalog~~ — **✅ DONE by the owner
+   in the Media tab, 2026-07-25.** The StoneTweaks inheritance is out of the catalog.
+5. ~~Open question: the stray **`BoordensStreet.otf`** — keep or drop?~~ — **✅ CLOSED: DROPPED**
+   (the owner, 2026-07-25). *"OTF fonts don't work in game."* `Fonts/BoordensStreet.otf` deleted;
+   **`BoordensStreet.ttf` sits beside it**, so no typeface was lost, and nothing referenced the file.
+6. ~~The public repo PAGES expose `CLAUDE.md` + `docs/`~~ — **✅ CLOSED: ACCEPTED, and it is not to be
+   raised again (the owner, 2026-07-25).** *"I don't care enough to go with any of the alternatives,
+   so it's fine. You can stop mentioning it."* **Do not re-flag this, and do not propose a fix.**
+   For the record, so nobody re-derives it: GitHub visibility is **per-repo, never per-path** — there
+   is no setting, `.gitattributes` or equivalent that hides a tracked file from a public repo's web
+   UI. The only real options were untracking the docs (which would cost SUITE-STATE, the home of
+   record, its history and its only off-machine backup) or moving them to a separate private repo (a
+   second clone to keep in sync + every `CLAUDE.md` pointer rewritten). Both cost more than the
+   problem: the files are identity-clean after TASK 0 and are already excluded from the packaged
+   zips, so no installer or friend ever receives them.
+7. ~~**Unverified:** do TEXTURE files need a client restart the way new FONTS do?~~ — **ANSWERED
+   2026-07-25, in the owner's client: `/reload` IS ENOUGH. The Media tab's Textures note is
+   CORRECT — leave it.** Evidence: he re-exported `GloomsAuras/Media/hidden.png` +
+   `unhidden.png` from purple to white **over the existing files**, and after a bare `/reload`
+   the new art rendered and tinted correctly. That is the *harder* case than a brand-new file —
+   the client already had those textures loaded, and it still picked up the replacements — so
+   textures are genuinely unlike FONTS, which WoW loads at launch and `/reload` will not
+   re-read (HANDOFF 2026-07-25d). Strictly, "a NEW texture file, never previously loaded" is
+   still untested, but a cache-busting replacement working makes it a safe assumption.
+
+**✅ Done 2026-07-25 (kept for the record)**
+- ~~Dim the background behind `UI.nameDialog` / `UI.confirm`~~ — **DONE + QA'd by the owner
+  2026-07-25.** Raised at the end of the Auras rework (the modals are plates in the same near-black
+  navy as the panel they open over, so they read as part of the tab). One shared scrim in
+  `Skin.lua` serves both: full-screen black, `FULLSCREEN_DIALOG` at the dialog's level −5, so it
+  dims the shell (which sits on `DIALOG`) but never the dialog. **It also eats clicks — that is what
+  makes the dialogs genuinely modal.** ★ Two calls worth keeping: clicking the scrim does **not**
+  dismiss (the family answer is always an explicit OK / Cancel / ESC — a click-elsewhere that
+  silently drops a typed name is the same trap as the retired self-arming "Sure?" button); and it
+  hides via `HookScript("OnHide")` on both dialogs rather than from the button handlers, because
+  that is **the only path that catches the `UISpecialFrames` ESC**, which never runs our own code.
+  Alpha landed at **0.72** — 0.55 read as too subtle to the owner on the first pass.
+  ★ **No MINOR bump:** internal behavior, no new API, so no consumer's `SKIN_NEEDS` gate moved.
+- ~~Phase G QA — WoWup install + update cycle~~ — **DONE**, the plan is complete.
+- ~~Redo all four logos, drop the baked-in name text~~ — **DONE.** 512×512 square set; every
+  hardcoded portrait draw size moved with it. **GS = the suite, Gh = the Hub as an addon.**
+- ~~Small mark beside every tab name~~ — **DONE as `UI.tabHeader` (LibGloomSkin MINOR 4)**, on ALL
+  FOUR tabs. Bars, Overlays and Media took it 2026-07-25; **GA followed the same day** once its
+  layout rework retired the splash that occupied the space (item 1).
+- ~~Overlays has no `## IconTexture`~~ — **DONE.** No more `?` in the addon list.
+- ~~Hub's `minimap.png` is only 64×64~~ — **DONE**, now 512.
+- ~~Org avatar for `GloomSuite`~~ — **DONE**, the owner uploaded the GS mark.
+- ~~Media tab: category counts on collapsed headers~~ — **DONE.**
+- ~~Footer shows every addon's version~~ — **DONE**, which also closes the long-open
+  **"shared-footer contents"** question.
+
+**Not a task — context:** the owner considers the suite **still in active development and is NOT
+ready to share it with friends/guildies yet** (2026-07-25). Don't push distribution work.
+When he is ready, it's **four links, Hub first**, and **no access token** — see HANDOFF.
+Phase E gate B also promoted the whole profile/preset
+mechanism into LibGloomSkin (**MINOR 3**) and switched GB + GA onto it; all three addons were
+QA'd in the same pass.
+
+## Phase status — the full QA record for all seven phases
+
+| Phase | What | Status |
+|---|---|---|
+| — | Scaffold GloomsHub repo + symlink + docs (home of record) | **DONE (not QA'd — no code yet)** |
+| **A** | Stand up GloomsHub, media-only (registration + resolver + ST→Hub copy-migration + compat shim + asset folders). Touch nothing else. | **DONE — QA'd by the owner 2026-07-24** (clean BugSack; DrukMedium serves from the Hub; catalog 1 font / 6 textures / 36 graphics, `migratedFromST = true`; Overlays unaffected). Known transition artifact: ST prints "skipped — already registered" lines at login because the Hub (loads first) now wins the LSM names — harmless, ST's own code, gone at Phase F. |
+| **B** | Empty tabbed shell + Media tab. Add `/gloom`. Old windows still work. | **DONE — QA'd by the owner 2026-07-24** (window/toggle/Escape/drag; catalog 1/6/36 with previews; accordion + orange scrollbar; add/remove incl. `.otf` rejection; old windows untouched; cold-start re-verified). Two findings baked in: (1) **cold-start blank-text quirk** — WoW draws a cold (font file, size) pair blank the first time each session (a /reload heals, next cold start re-breaks); fixed by Skin.lua's `UI.WarmFonts` login pre-warmer — EXTEND its pair list whenever new UI font sizes appear (Phase C!). (2) overlapping family windows interleave (same strata, pre-existing GB/GA quirk) — accepted by the owner; self-resolves as tools mount tabs (C–E). |
+| **C** | Migrate Gloom's Bars as the proof (Bars tab, `/gb` reroute, toolkit → LibGloomSkin). | **DONE — QA'd by the owner 2026-07-24** (gate passed; the one first-pass gap — no suite launcher — was filled same day and verified: the Hub owns the ONE GS minimap button, GB's is deleted). Shipped: `LibGloomSkin-1.0` (surface pinned CONTRACTS §4, incl. `RegisterWarmPairs`); GB hard-deps the Hub; local toolkit + standalone window DELETED; editor mounts as the Bars tab with its own in-tab footer row; `/gb` → `ToggleWindow("bars")` (diagnostics untouched). GB's bar-ENGINE fonts deliberately stay on GB paths (CONTRACTS §1 note). **The container-mount pattern is PROVEN.** |
+| **D** | Migrate Gloom's Auras (Auras tab; flip `CatStoneTweaks` → `GloomsHub:ListMedia`). | **DONE — QA'd by the owner 2026-07-24** ("works as it did before"). Shipped: GA hard-deps the Hub; local toolkit copy + standalone window DELETED; options UI mounts as the **Auras** tab (centered 620-wide column; docked drawers parent to the container); `/ga` → `ToggleWindow("auras")`; `/ga minimap` drives the Hub's button; GA's minimap button DELETED; `CatStoneTweaks` → `GloomsHub:ListMedia` ("Suite Graphics" — GA reads NO StoneTweaks data anymore). Shell grew to 860×740 (content 860×626 PINNED, CONTRACTS §2); lib at MINOR 2. Noted for polish at the time: the Auras landing page — **since resolved: the whole tab was reworked 2026-07-25 (to-do item 1), retiring the landing page, the centred 620 column and four drawers.** |
+| **E** | Rename VibeOverlay → Gloom's Overlays; mount Overlays tab; **reskin in one go**. | **DONE — QA'd by the owner 2026-07-24. Split into two QA gates** (the handoff's own "QA the migration FIRST" instruction, so a reskin bug can never be mistaken for data loss). **Gate A DONE — QA'd by the owner 2026-07-24**: clean BugSack; addon list shows "Gloom's Overlays", VibeOverlay gone; overlays render identically; `/go list` correct; **Goldset renders on Gloomthorn** (the per-character proof); `/go overlays` + `/go preview` work (still native chrome); `/vibe` retired. **DONE — gate B QA'd by the owner 2026-07-24** (22 steps, all passed, incl. a cold client restart on Gloomthorn/`Goldset` and the GB + GA regression checks). Shipped: the `overlays` tab (order 30) laid out like GB's — a 240 left rail (GO mark + wordmark · the shared profile block · overlay list · Duplicate/Delete) beside a scrolling editor pane, with an in-tab footer (Save & Apply + status); ALL native chrome deleted (no `BackdropTemplate`, `UIDropDownMenu`, `StaticPopupDialogs`, `UIPanel*Template`, and the `MakeButton`/`MakeCheck`/`MakeEditBox`/`MakeSlider`/`SectionLabel` locals are gone); the asset browser is a 360-wide docked drawer opened from the Texture field's **Browse…** (returns the pick via "Use This Texture"); bare `/go` toggles the tab and the old `PLAYER_LOGIN` slash-wrapping in `_Preview.lua` is gone (one router in `GloomsOverlays.lua`); warm pairs registered. **Also, per the owner 2026-07-24 — the profile/preset mechanism is now ONE shared control across the suite** (see the lib row below). |
+| **F** | Retire StoneTweaks (delete last, non-destructively). | **DONE — QA'd by the owner 2026-07-24** (all 6 steps; final restart confirmed "all is well" — Stone Tweaks gone from the addon list entirely, Hub registration line unchanged, no BugSack errors). ST is **disabled AND its folder is out of AddOns** (moved, not deleted, to `~/Desktop/StoneTweaks-retired-2026-07-24` — 73 files, count-verified). **`StoneTweaksDB` in WTF was deliberately left in place, so rollback is still just moving the folder back and re-enabling.** Owner-verified after a full client restart with ST off: no `StoneTweaks:` login lines and no `/st` command (ST's own code never loaded — the positive proof, not mere silence); `Gloom's Hub: Registered 1 font and 6 textures into LibSharedMedia.` unchanged; **zero Hub-prefixed "skipped" lines, so the Hub won all 7 LSM names with no third-party collision** (`EnhanceQoLSharedMedia` + `EllesmereUI` are installed and don't clash); `/gh` → 1 font / 6 textures / 36 graphics, `migratedFromST = true`; BugSack clean. **The compat shim is LIVE and proven** — `StoneTweaks_ResolveAssetPath("goldset-player-frame")` now returns the *Hub* path via Core.lua's shim. Both resolver branches (textures + graphics) resolve, DrukMedium serves from `GloomsHub\Fonts\`, **Goldset overlays render on Gloomthorn**, all four tabs open, and the Media tab previews draw. Step 1's offline sweep found: no consumer reads ST anywhere in the four repos **or the whole 105-addon client**; `GloomsHubDB` and `StoneTweaksDB` catalogs were **identical** (ST added nothing post-Phase A); all 43 catalog files exist under the Hub and the three asset folders were the **same file sets**; ST's ElvUI half was provably unused (`frameTextures` empty, `suppressGlow` false). Verified offline, nothing left to migrate: (a) **no consumer anywhere reads ST** — all four suite repos and the whole live AddOns folder grep clean for `StoneTweaks_ResolveAssetPath` / `StoneTweaksDB` / `CatStoneTweaks`; the only live-code hits are the Hub's deliberate compat shim + copy-migration in `Core.lua` (everything else is prose/comments). (b) **`GloomsHubDB` and `StoneTweaksDB` catalogs are IDENTICAL** — 1 font / 6 textures / 36 graphics, same name→file pairs, so ST registered nothing new after Phase A. (c) **All 43 catalog files exist under the Hub**, and `Fonts/`, `Textures/`, `Graphics/` are **byte-for-byte the same file sets** in both addons — retiring ST loses no asset. (d) ST's ElvUI half is provably unused (`frameTextures` empty, `suppressGlow` false), so nothing dies with it. |
+| **G** | Packaging/release: `.pkgmeta`, `## Dependencies: GloomsHub`, WoWup. | **✅ DONE — QA'd by the owner 2026-07-25.** The install AND update paths are both proven end-to-end from the new `GloomSuite` org, against a client with the dev symlinks moved aside. **Install:** all four installed via WoWup "Install from URL"; addon list showed every addon with **no missing-dependency flag**; TOC versions read **`v1.0.0`**, not `@project-version@` (the proof the client was loading the packaged copy, not a symlink); BugSack clean; `/gloom` opened the Suite window; **all four tabs registered and rendered**; Media catalog still **1 font / 6 textures / 36 graphics**; **Goldset overlays rendered on Gloomthorn**; WoWup's Author column read **`GloomSuite`** on all four and `HandofDevastation` on Build Barn. ★ **`LibStub("LibCustomGlow-1.0", true) ~= nil` → `true`** — GA's repointed external is proven AT RUNTIME, which mattered because GA loads it silently and `pcall`-guards every glow call, so a missing library would have produced no glow and **no BugSack error**: a clean sack would have read as a pass. **Update:** `v1.0.1` tagged on GloomsBars → packager → GitHub release → WoWup detected and applied it → client showed `v1.0.1`; then the other three were tagged and all four brought back to `v1.0.1`, with `/releases/latest` verified **ANONYMOUSLY** on every repo (the TASK 0 latest-pointer trap did not recur). ★ **A WoWup update needs no full client restart — `/reload` is enough** (the owner, 2026-07-25). This held for `v1.0.0` → `v1.0.1`, and he confirmed it generally: he installs new addons via WoWup and `/reload`s. **The old "new files → FULL RESTART" rule is RETIRED.** **BUILT 2026-07-24 — the build record follows.** **All four addons now publish `v1.0.0`** and every package was verified after the fact. Shipped: `GloomsHub/.pkgmeta` + `release.yml` (the blocker — the Hub previously had neither and so could not publish at all); `GloomsOverlays/.pkgmeta` + `release.yml`; `GloomsAuras/release.yml` (GA had a `.pkgmeta` but nothing to run it). All four workflow runs succeeded first try. **Verified on the published assets:** the Hub zip carries Fonts 8 / Textures 13 / Graphics 45 / Media 8 with all five libs fetched and no docs/CLAUDE.md/.github; GA's zip fetched `LibCustomGlow-1.0`; Overlays ships **no `Libs/` at all** (correct — it loads none and takes everything from the Hub); every TOC has `## Version: v1.0.0` substituted and the three tools all declare `## Dependencies: GloomsHub`; **`/releases/latest` resolves to `v1.0.0` on all four checked ANONYMOUSLY** (the TASK 0 trap — it did not recur); zero identity in any of the four packages. ★ **Two real defects were caught by doing this, both now fixed:** (1) **the published `GloomsBars` v0.2.0 was NOT merely "broken for a missing dep" as the Phase F handoff claimed — it was tagged at a 2026-07-18 commit, PRE-Phase-C, shipping only `Core.lua` + `Skin.lua` with no config UI and NO `## Dependencies: GloomsHub` line at all.** It was stale by three phases, not dependency-broken; the v1.0.0 re-cut is what actually fixes it. (2) **GA's `LibCustomGlow-1.0` external was dead** — the wowace SVN path `wow/libcustomglow-1-0/trunk` 404s (the other five externals all resolve), so GA's very first packaged build would have failed. Repointed at the maintained upstream `Stanzilla/LibCustomGlow`, whose repo root holds exactly what `Libs/LibCustomGlow-1.0` holds locally; the fetch is confirmed working in the shipped zip. Also tightened GA's `ignore:` (CLAUDE.md + docs were being packaged into its zip). **Version scheme (the owner, 2026-07-24): all four at `v1.0.0`, synchronized** — the suite is feature-complete, and a friends/guild audience should have one answer to "what version are you on?" GB jumped `v0.2.0` → `v1.0.0`. Install instructions for the non-dev audience are in [../README.md](../README.md) (Phase G item 5). ★★ **SUITE-PLAN's "embed LibGloomSkin as an external per tool" was DROPPED** (struck out in the plan itself, 2026-07-24). No tool ships or loads its own copy; all three just call `LibStub("LibGloomSkin-1.0")` and resolve to the Hub's `Skin.lua`. The hard-dependency lock guarantees the Hub is present, so embedding would create N copies for LibStub to arbitrate — precisely the drift the suite exists to prevent — and there is no standalone repo to fetch as an external anyway. Its **prior** blocking prerequisite, the identity scrub, is ✅ **DONE (2026-07-24)** and **all five repos are PUBLIC again, so WoWup delivery is restored.** History was rewritten with `git-filter-repo` across all five (content + commit messages + author/committer metadata). `GloomsBars`, `GloomsAuras` and `GloomsBuildBarn` were then **DELETED AND RECREATED** — see the lesson below — while `GloomsHub` and `GloomsOverlays` were newly created that day and only ever received scrubbed history. Verified **unauthenticated against the public repos**: pre-rewrite SHAs return 422, current commits 200, and zero identity in commit metadata, messages, all-history blobs or release ZIPs. Org membership is still private; releases are authored by `github-actions[bot]`. ★★★ **THE LESSON: a force-push does NOT purge — it only unlinks.** Old commits stayed on GitHub and were served the instant the repos went public (~2 min exposure before revert). **A 404 while a repo is private proves nothing** — that endpoint 404s for any SHA. Only delete-and-recreate purges. Two further traps, both in HANDOFF.md: (1) **published release ZIPs are a separate surface a force-push cannot reach** — GB's assets carried the name and were rebuilt by re-pushing tags; (2) **Build Barn's remote was AHEAD of its local clone** (its cron writes commits and tags directly on GitHub), so an early push rolled its `main` back a fortnight before recovery from the surviving tags — nothing lost, `BuildData.lua` verified byte-identical. |
+
+## Open questions, all since closed
+
+Where the Overlays GO logo belongs inside the tab (NOT a splash — see the polish backlog).
+(~~shared-footer contents~~ — CLOSED 2026-07-25: the footer lists every installed addon's version.
+~~stray `BoordensStreet.otf`~~ — CLOSED 2026-07-25: **dropped**, see to-do 5.)
+(~~compat-shim lifetime~~ — CLOSED Phase F step 6: **KEEP PERMANENTLY**, the owner 2026-07-24.
+Pinned in CONTRACTS §3 + commented in Core.lua. Do not "clean up" the shim.)
+(~~LibGloomSkin public surface~~ — CLOSED Phase C, pinned in CONTRACTS §4. ~~Hub logo~~ —
+CLOSED, the owner delivered the GS monogram 2026-07-24. ~~Overlays slash name~~ — CLOSED Phase E
+gate A: **`/go`, and `/vibe` is retired outright**, the owner 2026-07-24. ~~Overlays logo placement~~
+— CLOSED Phase E gate B: a small GO mark + wordmark at the top of the tab's left rail, NOT a
+splash. ~~Overlays profile picker~~ — CLOSED: the shared `UI.profileBlock`.)
+
+## The suite polish backlog, all since closed
+
+> **The first two Auras entries below are CLOSED by the 2026-07-25 layout rework** (to-do item 1).
+> Kept for the reasoning that drove them.
+- **Auras tab landing page (the owner, Phase D QA 2026-07-24):** ✅ **DONE — the splash is retired.** the old standalone window's
+  splash/landing (big GA logo + "Add … Aura" buttons on every open) "doesn't really make
+  sense in the context of the suite." Works as before for now — rethink after the
+  migrations (e.g. open straight to the editor with a compact create row, logo retired or
+  moved). GA-side change; coordinate the design with the family language here.
+- ✅ **DONE 2026-07-25.** **The Auras tab needed a LAYOUT REWORK, not a tweak (the owner, Phase E gate B QA 2026-07-24):
+  "we've got to get rid of the drawer, but the whole layout of this module is now very wrong."**
+  Deferred to its own session by his call. Scope so far: kill the docked profile drawer in favour
+  of a GB-style always-visible rail (gate B put the shared `UI.profileBlock` inside the existing
+  drawer, so the mechanism matches GB/Overlays but is still hidden behind a footer button); the
+  landing page above; and a general pass against GB's layout language now that GB is the
+  reference. Treat the whole Auras tab as the unit of work — these all redraw the same surface.
+- ✅ **DONE + QA'd 2026-07-25.** ~~**Overlays: Width / Height / X / Y should be SLIDERS, not typed
+  boxes (the owner, Phase E gate B QA 2026-07-24).**~~ "It just needs to happen." Shipped as
+  `UI.sliderRow` + a typed box in the row's value slot, in two columns, with the nudge arrows
+  kept — full record in to-do item 2 above.
+- **★ GB is the UI reference for the suite, not GA (the owner, 2026-07-24).** When a pattern
+  exists in both, copy Gloom's Bars. The two backlog items above are why.
