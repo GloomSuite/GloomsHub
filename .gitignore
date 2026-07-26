@@ -12,3 +12,16 @@
 
 # luac -l byproduct
 luac.out
+
+# ★ THE USER'S OWN MEDIA — never commit, never ship (2026-07-26).
+# These three are DROP-IN directories: the owner (and anyone installing the
+# suite) puts their own .ttf / .tga / .png files here and registers them in the
+# Media tab. They are NOT product assets — the shipped catalog (DB_DEFAULTS in
+# Core.lua) is EMPTY, so on anyone else's machine these files register nothing
+# and render nothing. They were tracked until today, which put 65 personal files
+# (~5 MB) into a public repo and into every release zip, including one whose
+# FILENAME carried real-world identity. See the PRIVACY section of CLAUDE.md.
+# The suite's actual assets live in Media/ and stay tracked.
+/Fonts/
+/Textures/
+/Graphics/

@@ -66,8 +66,20 @@ lib.UI = UI
 UI.CARET = lib.MEDIA .. "ui\\caret.png"   -- right-pointing source art
 UI.CARET_DOWN = -math.pi / 2              -- rotation for "open"
 
+-- ★ SetFont RAISES on a missing font asset — it does NOT return false. Proven
+-- in-client 2026-07-26 (FINDINGS §2): pcall(fs.SetFont, fs, "<dead path>", 14, "")
+-- → false, "Invalid font asset (…): file not found". The old
+-- `if not fs:SetFont(...)` guard here was written on the opposite assumption, so
+-- the fallback never ran and the raise escaped into the caller — which took the
+-- whole media catalog down with it (see Media.lua's RegisterAll). pcall is the
+-- only guard that works. Returns true if the requested face applied, false if
+-- the fallback was used — Media.lua reads that to name a broken font entry.
 function UI.setFont(fs, path, size, flags)
-  if not fs:SetFont(path, size, flags or "") then fs:SetFont(DEFAULT_FONT, size, flags or "") end
+  flags = flags or ""
+  local ok, applied = pcall(fs.SetFont, fs, path, size, flags)
+  if ok and applied ~= false then return true end   -- nil counts as success; only an explicit false is a refusal
+  pcall(fs.SetFont, fs, DEFAULT_FONT, size, flags)  -- guarded too: this helper must never raise, whatever it is handed
+  return false
 end
 
 function UI.newText(parent, font, size, cc, justify)
@@ -734,6 +746,9 @@ end
 --   UI.WarmFonts(extraPairs) — the Hub calls this ONCE at PEW (Media.lua's
 --     RegisterAll); it draws the base list + everything registered + the arg.
 -- Each (path, size) pair is drawn at most once per session.
+-- Both return `dead` — a `path → true` map of every pair whose face would not
+-- load, or nil if all were fine. Media.lua uses it to name a broken catalog
+-- entry; callers that don't care can ignore it.
 -- ------------------------------------------------------------
 local WARM = {   -- the Hub's own pairs (Shell + Media tab + the lib's own widgets)
   { "title", { 17, 21 } },          -- 17: nameDialog / confirm titles (MINOR 3)
@@ -745,15 +760,22 @@ local warmer, warmRan
 local pendingPairs = {}   -- registered before the PEW batch
 local warmedKeys = {}     -- "(path)@(size)" → true; never draw a pair twice
 
+-- Returns true if the face actually applied. Because every catalog font is
+-- warmed here before anything else uses it, this doubles as the one cheap
+-- existence check the client allows us — WoW exposes no filesystem API, so a
+-- failed draw is the only way to learn that a saved filename is a typo or that
+-- its .ttf has been deleted.
 local function drawPair(path, size)
-  if not path or not size then return end
+  if not path or not size then return true end
   local key = tostring(path) .. "@" .. tostring(size)
-  if warmedKeys[key] then return end
-  warmedKeys[key] = true
+  local cached = warmedKeys[key]
+  if cached ~= nil then return cached end
   local fs = warmer:CreateFontString(nil, "OVERLAY")
-  UI.setFont(fs, path, size)
+  local ok = UI.setFont(fs, path, size)
+  warmedKeys[key] = ok
   fs:SetPoint("BOTTOMLEFT", 0, 0)
   fs:SetText("Ag")
+  return ok
 end
 
 local function warmBatch(pairs)
@@ -763,14 +785,21 @@ local function warmBatch(pairs)
     warmer:SetFrameStrata("BACKGROUND")
     warmer:SetAlpha(0.01)
   end
-  for _, pair in ipairs(pairs or {}) do drawPair(pair[1], pair[2]) end
+  local dead   -- path → true, for every pair whose face would not apply
+  for _, pair in ipairs(pairs or {}) do
+    if not drawPair(pair[1], pair[2]) then
+      dead = dead or {}
+      dead[pair[1]] = true
+    end
+  end
   warmer:Show()
   C_Timer.After(2, function() warmer:Hide() end)   -- 2s on screen = safely rasterized
+  return dead
 end
 
 function UI.RegisterWarmPairs(list)
   if warmRan then
-    warmBatch(list)
+    return warmBatch(list)
   else
     for _, pair in ipairs(list or {}) do pendingPairs[#pendingPairs + 1] = pair end
   end
@@ -784,7 +813,7 @@ function UI.WarmFonts(extraPairs)
   end
   for _, pair in ipairs(pendingPairs) do all[#all + 1] = pair end
   for _, pair in ipairs(extraPairs or {}) do all[#all + 1] = pair end
-  warmBatch(all)
+  return warmBatch(all)   -- path → true for anything that would not load; Media.lua names them
 end
 
 -- Family-styled hover tooltip (dark plate, purple title, GeneralSans body).

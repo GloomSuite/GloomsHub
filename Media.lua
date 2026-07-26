@@ -76,7 +76,19 @@ function Media:RegisterAll()
             warm[#warm + 1] = { FONT_PATH .. entry.file, size }
         end
     end
-    GloomsHub.UI.WarmFonts(warm)
+    -- Warming runs BEFORE registration and now reports which faces would not
+    -- load — the only existence check the client permits (there is no
+    -- filesystem API). A catalog entry can outlive its file: AddFont validates
+    -- the extension but cannot confirm the .ttf is actually there, so a typo'd
+    -- filename or a deleted font sits in SavedVariables forever.
+    --
+    -- ⚠ This is a WARNING ONLY — registration below is deliberately NOT made
+    -- conditional on it. WoW indexes fonts at launch, so a font added this
+    -- session (file present, restart pending) may well fail the probe while
+    -- being perfectly valid. Skipping registration on that signal would
+    -- silently drop a good font, which is worse than the problem being fixed.
+    -- Whether a present-but-unloaded font passes is UNTESTED — see FINDINGS §5.
+    local dead = GloomsHub.UI.WarmFonts(warm)
 
     local lsm = GetLSM()
     if not lsm then
@@ -92,6 +104,11 @@ function Media:RegisterAll()
             fontCount = fontCount + 1
         else
             GloomsHub:Print("|cffff4444Font skipped — " .. entry.name .. ": " .. (err or "unknown") .. "|r")
+        end
+        if dead and dead[FONT_PATH .. entry.file] then
+            GloomsHub:Print("|cffff9900Font \"" .. entry.name .. "\" did not load|r — GloomsHub\\Fonts\\"
+                .. entry.file .. " is missing or misnamed. Check the filename, or remove it in the Media tab. "
+                .. "(If you only just added it, restart WoW first — fonts load at launch.)")
         end
     end
 

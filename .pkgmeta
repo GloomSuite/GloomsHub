@@ -24,10 +24,18 @@ externals:
 
 # Keep repo-management files out of the packaged addon zip.
 #
-# ⚠ DO NOT add Fonts/, Textures/, Graphics/ or Media/ here. Unlike the other
-#   repos, the Hub's committed assets ARE the product — the 43-file salvaged
-#   media catalog, the GS/GO marks, and the suite's 5 UI fonts. Ignoring them
-#   ships a Hub that registers nothing and renders unstyled.
+# ⚠ DO NOT add Media/ here. It holds the suite's 5 UI fonts and the GS/GO marks
+#   — genuine product assets. Ignoring Media/ ships a Hub that renders unstyled.
+#
+# ⚠ Fonts/, Textures/ and Graphics/ are NOT listed here because they are no
+#   longer in the repo at all — they are gitignored drop-in directories for the
+#   user's OWN media (see .gitignore). CORRECTED 2026-07-26: the note that used
+#   to sit here told every session that all four directories "ARE the product"
+#   and must keep shipping. That was true of Media/ and false of the other
+#   three, and the conflation shipped 65 personal files (~5 MB) in every release
+#   — one of them carrying real-world identity in its filename. The shipped
+#   catalog (DB_DEFAULTS) is EMPTY, so those files registered nothing on any
+#   other machine. Do not re-add them under any reasoning.
 ignore:
   - README.md
   - CLAUDE.md
