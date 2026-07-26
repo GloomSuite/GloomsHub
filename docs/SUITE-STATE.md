@@ -10,12 +10,10 @@ PTR: in combat 12.1 hands back aura instance IDs as SECRET values and every
 `GetAuraDataByAuraInstanceID`/`GetAuraDuration` call **throws** — GA keeps aura *presence* but loses
 duration, stacks and expiry entirely. It fails **silently** (the throws are `pcall`ed; BugSack stayed
 clean while nothing rendered). Fixing it means migrating to Blizzard's new `AuraContainer` model —
-a GA design session, not a patch. **GB is hit too, in THREE places that are probably ONE root cause
-(its re-assert post-hooks appear dead on 12.1): bars scatter on Edit Mode entry, don't recover on
-Edit Mode exit (FINDING 1), and jump on every COMBAT ENTRY (FINDING 4 — the most disruptive of the
-lot).** Also FINDING 2: GA's font fallback is broken on live, unrelated to 12.1. **One fix has
-shipped into the tree** — a ticker in `GloomsBars/Layout.lua` that restores bars after Edit Mode
-exit, PTR-verified working and live-verified no-regression; it treats a symptom, not the root cause.
+a GA design session, not a patch. **GB's three bar-position symptoms were ONE bug and are
+SOLVED (FINDINGS 1 + 4, 2026-07-26) — and they were never a 12.1 issue: the same bug reproduced on
+LIVE on a character whose bars sat at their Edit Mode defaults.** Also FINDING 2: GA's font fallback
+is broken on live, unrelated to 12.1.
 Everything else is diagnosis only. Before that: **★★ THE TO-DO LIST WAS EMPTY. The 7-phase plan is complete AND the
 polish backlog is closed.** The last item (3, GB's modifier symbols) was **DROPPED by the owner on
 2026-07-25** — reviewed, priced, and judged not worth the cost; no code changed, and it is not to be
@@ -180,9 +178,11 @@ QA'd in the same pass.
 
 ## ▶ 12.1 (Midnight S2) PTR READINESS — opened 2026-07-25
 
-**Status: DIAGNOSING ONLY. No code changed, nothing committed, no TOC bumped.** The PTR APIs are
-still landing in pieces over the coming weeks, so fixing now means fixing twice. Record findings
-here; act later.
+**Status: mostly DIAGNOSING — record findings here, act later.** The PTR APIs are still landing in
+pieces over the coming weeks, so fixing a genuine 12.1 change now means fixing it twice.
+**Exception, 2026-07-26: GB's bar-position bug (FINDINGS 1 + 4) was fixed and shipped to `main`**,
+because the investigation proved it was never 12.1-specific — it reproduces on live. That principle
+holds generally: a bug the PTR merely *exposed* is a live bug, and waiting for launch buys nothing.
 
 **★★ THE OWNER'S DECISION, 2026-07-25: WAIT FOR LAUNCH, THEN TRIAGE. Do not re-litigate.** The PTR
 is in flux, and he is **switching to Hunter for Season 2** — the Hunter/cooldown path is unaffected
@@ -191,7 +191,7 @@ launch.
 
 **Two carve-outs he was told about and can take any time — neither is Warlock-specific:**
 - **FINDING 2** is a live bug *today*, nothing to do with 12.1, one line.
-- **FINDING 1** hits **every character** on patch day, not just casters — Edit Mode is class-agnostic.
+- ~~**FINDING 1**~~ — **done 2026-07-26**, and it turned out to be a live bug rather than a patch-day one.
 
 **⚠ ONE THING TO TEST BEFORE SEASON 2 (starts ~2026-08-19):** "Hunter still works" was proven only
 for **SV, with two auras**. **MM was never tested**, and Precise Shots / Spotter's Mark may be
@@ -234,65 +234,57 @@ verify before trusting any result. (GB's only profiles with layout on are `Gloom
 don't fork; `## Interface: 120007, 120100` supports both clients from one package. Work on a branch —
 the owner's live client loads the working tree.
 
-### FINDING 1 — GB's bars never recover from Edit Mode exit · `~/GloomsBars` · CONFIRMED
-**`EDIT_MODE_LAYOUTS_UPDATED` no longer fires on Edit Mode exit in 12.1.** Owner-reproduced on the
-PTR and **confirmed absent on live**, so this is a real 12.1 change, not a PTR artifact.
+### FINDINGS 1 + 4 — GB's bars scattered / jumped to Blizzard positions · `~/GloomsBars` · ★ SOLVED 2026-07-26
+**★★ NOT A 12.1 REGRESSION — a latent bug in shipped GB, reproduced on LIVE 12.0.7** on a character
+whose bars still sat at their Edit Mode default positions. The PTR only exposed it because copied
+characters land on a fresh Edit Mode layout. **Do not describe this as a 12.1 issue.** The three
+symptoms (scatter on Edit Mode entry, no recovery on exit, jump on every combat entry) were ONE bug.
 
-- Symptom: enter Edit Mode → bars scatter. Exit → they **stay** scattered. `/reload` fixes it; so
-  does any other layout trigger.
-- **★ CORRECTION 2026-07-25 — the entry-scatter is NOT "by design", as this entry first claimed.**
-  [Layout.lua:34-40](../../GloomsBars/Layout.lua#L34-L40) suspends GB so it doesn't fight Blizzard's
-  show-all, but suspending only stops GB re-asserting — it does not move anything. **On LIVE the bars
-  stay exactly where GB put them when Edit Mode opens** (owner-verified). They scatter only because
-  something on 12.1 actively re-lays them. Do not repeat the "expected, by design" framing.
-- **Root cause is narrow, and two rival theories were killed by test:** `IsEditModeActive()` still
-  reports correctly (it read "closed" after exit), and `ApplyAll()` works fine on 12.1. The owner
-  grabbed a spell from the spellbook → `ACTIONBAR_SHOWGRID` → `queueApply()` → **bars snapped back
-  and stayed back.** So GB is simply waiting on an event that never arrives.
-- **Blast radius: GloomsBars ONLY.** Hub/GA/GO never register the event (grep-verified). GA's
-  `EditModeManagerFrame` use at [CDM.lua:91](../../GloomsAuras/CDM.lua#L91) is *not* affected.
-- **Fix shape (NOT yet written):** GB needs another exit signal. `IsEditModeActive()` is proven
-  working, so a ticker started on Edit Mode open that watches for the true→false transition and
-  fires `queueApply()` is the obvious candidate; `hooksecurefunc(EditModeManagerFrame, "ExitEditMode", …)`
-  is the alternative but may collide with 12.1's protected-frame lockdown.
+**Root cause — proven by a `SetPoint`/`ClearAllPoints` write-trap that named the caller, not inferred.**
+`EditModeActionBarMixin:UpdateVisibility` ends by calling
+`EditModeManagerFrame:UpdateActionBarLayout(self)` → `UpdateBottomActionBarPositions()`, which
+re-anchors **every** bottom-anchored bar in one pass, guarded by
+`if bar:IsShown() and bar:IsInDefaultPosition()`. Two GB design facts turned that into the symptoms:
+1. GB's re-assert post-hooks were **per bar**, so one bar's visibility pass silently moved the
+   others. Targeting a dummy made the PET bar re-check visibility, which moved action bars 1-3 —
+   and hovering a bar snapped only THAT bar back, because hovering pokes its own hook.
+2. GB hung its grid off the **bar frame**, which Blizzard re-anchors and re-scales at will,
+   including in combat where GB's hard wall forbids answering.
 
-### ★★ FINDINGS 1 AND 4 ARE PROBABLY ONE ROOT CAUSE — read before fixing either
-**Hypothesis (consistent with all evidence, NOT yet proven): GB's re-assert POST-HOOKS are dead on
-12.1.** Blizzard has always re-laid the bars at various moments; GB hooks
-`UpdateGridLayout` / `UpdateShownButtons` / `UpdateVisibility` / `ApplySystemAnchor`
-([Layout.lua:485-494](../../GloomsBars/Layout.lua#L485-L494)) and re-asserts instantly, so on live
-you never SEE a scatter. On 12.1 every observed symptom is "Blizzard re-laid the bars and GB did not
-put them back": Edit Mode entry, Edit Mode exit, combat entry. That is precisely what the Forbidden
-Aspects lockdown (`UntrustedScriptExecution` — addon script handlers on protected frames) would cause.
+**Hypotheses KILLED by test — do not revive:**
+- *"GB's post-hooks are dead on 12.1 / Forbidden Aspects blocks them."* **False.** All 40 hooks
+  installed and fired (`UpdateVisibility` fired 42× in one measured window). This was the leading
+  theory in this document and it was wrong.
+- *"GB's `vis` overrides provoke Blizzard's visibility + grid passes."* **False.** Reproduced on a
+  profile with `vis=nil` on all ten bars.
+- *"`EDIT_MODE_LAYOUTS_UPDATED` no longer firing on Edit Mode exit is the cause."* That event change
+  is real and separately confirmed on 12.1, but it only ever explained the *recovery* half; the
+  ticker (`80743ee`) already handles it.
 
-**Consequence: the FINDING 1 ticker fix treats a SYMPTOM, not the disease.** It restores the bars
-after Edit Mode exit and is verified working — but it does nothing for combat entry, and it would be
-unnecessary if the post-hooks fired. **Diagnose the post-hooks FIRST in any GB session**; a fix there
-may retire both findings at once. Test shape: out of combat on the PTR, cause Blizzard to re-lay a
-bar and see whether `Reassert` runs at all (the event-driven path is known to work — that is what the
-spellbook/`ACTIONBAR_SHOWGRID` trick exercised — so the post-hook path must be tested separately).
+**Facts worth keeping:** `MainActionBar:IsProtected()` → **true**, so GB may never re-anchor a bar
+frame in combat — "react faster" was never on the table. `isInDefaultPosition` is written ONLY in
+`EditModeManagerFrameMixin:UpdateSystemAnchorInfo`, reachable only from Edit Mode's own
+drag/nudge/snap; there is no event-driven route, so an addon can only write it directly — which
+taints the loop that re-anchors every *other* bottom bar, meaning blocked actions in combat on bars
+GB never touched. **Rejected on that basis; do not "just try it".**
 
-### FINDING 4 ★ — GB's bars jump to Edit Mode positions on COMBAT ENTRY · `~/GloomsBars` · CONFIRMED
-Owner-reproduced on the PTR 2026-07-25 and **confirmed ABSENT on live** — a real 12.1 change.
-Practically the most disruptive finding so far: it fires on **every pull**, not on a rare UI action.
+**Fix shipped — `afd0957` on `main`, pushed:**
+- Hook the GLOBAL reposition pass once (`UpdateBottomActionBarPositions` /
+  `UpdateRightActionBarPositions`) and re-assert every bar, instead of relying on per-bar hooks.
+- Put positions back in the SAME frame rather than the next one — deferring the repair was the
+  visible flicker on every target change.
+- **The durable fix: a bar GB positions now anchors its CONTAINERS to `UIParent`, not to the bar
+  frame**, and divides the frame's scale out of the container scale. Containers stay *children* of
+  the frame, so show/hide, alpha and the vehicle/override visibility rules inherit unchanged.
+  Blizzard may move or rescale the frame freely; the buttons no longer care. The frame is then
+  sized and placed over its own grid so Edit Mode's selection box still lands on the buttons.
+- Owner-QA'd on live: holds through combat entry, target changes and Edit Mode exit, on both a
+  default-layout character (Gloomfall) and a configured one (Gloomrift). Flyouts, glows, tints and
+  animations unaffected — nothing in Skin/Glows/Anims references the container or the bar frame.
 
-- Symptom: enter combat → all owned bars snap back to Blizzard/Edit-Mode geometry. Leave combat →
-  they return to GB's layout on their own.
-- **The recovery half is CORRECT, not a bug.** [Layout.lua:281](../../GloomsBars/Layout.lua#L281)
-  sets `pending = true` and returns without touching geometry in combat; `PLAYER_REGEN_ENABLED`
-  ([:82-83](../../GloomsBars/Layout.lua#L82-L83)) flushes it. That is GB's documented HARD WALL —
-  all geometry applies out of combat only.
-- **The bug is the trigger:** on 12.1 *something re-lays the bars when combat starts*, which never
-  happened on live. GB's wall then means it cannot recover until combat ends.
-- Suspects, none confirmed: GB's `vis` overrides (the owner's profile has 8 `hide` / 6 `show`) make
-  Blizzard re-run its visibility + grid passes; and/or GB's re-assert post-hooks
-  (`hooksecurefunc` on `UpdateGridLayout`/`UpdateShownButtons`/`UpdateVisibility`/`ApplySystemAnchor`)
-  are being blocked by 12.1's protected-frame lockdown.
-- **Fixing it may mean questioning the hard wall itself** — GB re-anchors *unprotected containers*,
-  not secure buttons, and moving an unprotected parent in combat is normally allowed (hiding is the
-  restricted operation). Whether the wall is broader than it needs to be is a real design question
-  for a GB session, NOT a quick patch. Do not "just try it" without understanding why the wall
-  was drawn where it was.
+**Remaining, accepted by the owner:** while Edit Mode is OPEN, Blizzard's grid pass re-anchors the
+containers back onto the frame, so a default-position bar visibly returns to Blizzard's spot until
+Edit Mode closes. GB stands down inside Edit Mode by design and restores on exit.
 
 ### FINDING 2 — a missing font kills the whole display · `~/GloomsAuras` · **NOT a 12.1 bug, affects LIVE**
 Found incidentally during PTR testing 2026-07-25; nothing to do with 12.1, and worth fixing on its own.
@@ -393,8 +385,9 @@ exposure surface. **GA is the bigger unknown:** [CDM.lua](../../GloomsAuras/CDM.
 - **Real instanced content** (dungeon / M+ / raid). All testing was open-world on a training dummy.
   Combat alone was enough to trigger FINDING 3, so instanced content is expected to be no better —
   but "expected" is not "verified."
-- **GB's ~40 `hooksecurefunc` calls** against the Forbidden Aspects lockdown. Only the Edit Mode
-  path (FINDING 1) surfaced; the skinning hooks were never exercised beyond a normal login.
+- **GB's ~40 `hooksecurefunc` calls** against the Forbidden Aspects lockdown. The bar-layout hooks
+  are now proven ALIVE on 12.1 (all 40 installed and firing, measured 2026-07-26); the SKINNING
+  hooks were still never exercised beyond a normal login.
 - **Overlays and the Hub shell** got a smoke test only (tabs open, window renders).
 
 Other 12.1 notes worth knowing: new interface texture filenames stop publishing to
