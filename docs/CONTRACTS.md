@@ -83,7 +83,7 @@ shipper — its `Skin.lua` IS the lib body (embedding a copy in each tool via `.
 externals is Phase G work). `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are Hub-side aliases of the
 same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Phase E**.
 
-**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 4) — the whole API; nothing else is public:**
+**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 5) — the whole API; nothing else is public:**
 - `Skin.COLOR` — `purple · heroic · green · red · orange` (each `{r,g,b,hex}`), `dark`, `rim`
   (both `{r,g,b,a}`), `text`, `mute` (`{r,g,b}`). The §1 literals.
 - `Skin.FONT` — `title · head · body · bodyM · label` → font files under
@@ -91,7 +91,12 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
 - `Skin.MEDIA` — `"Interface\AddOns\GloomsHub\Media\"` (the permanent Hub path — locked).
 - `Skin.UI` — the stateless widget factory:
   - `UI.CARET` (caret art path) · `UI.CARET_DOWN` (rotation radians for "open")
-  - `UI.setFont(fs, path, size, flags?)` — SetFont with stock-font fallback
+  - `UI.setFont(fs, path, size, flags?)` → **`true` if the requested face applied, `false` if the
+    stock fallback was used** (MINOR 5). ★ **`SetFont` RAISES on a missing asset — it does not
+    return false** (FINDINGS §2/§5), so this helper `pcall`s and can never raise, whatever it is
+    handed. Before MINOR 5 it returned nothing and carried the wrong guard internally; a consumer
+    that branches on the result **must declare `SKIN_NEEDS = 5`**, because against an older Hub the
+    return is `nil` and `if not UI.setFont(...)` takes the fallback branch every single time.
   - `UI.newText(parent, fontPath, size, color?, justify?)` → FontString
   - `UI.addEdges(frame, color, thick?)` — four 1px edge textures (squared border); returns a
     handle with `.top/.bottom/.left/.right` + `:SetColor(color, alpha?)` (MINOR 2 — GA's
@@ -151,6 +156,13 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
   - `UI.RegisterWarmPairs({ {fontPath, size}, … })` — **how a TOOL warms its pairs**: call at
     file load; pairs queue and warm with the Hub's PEW batch (called after the batch — e.g.
     load-on-demand — it warms immediately). Each (path, size) draws at most once per session.
+  - **Both return `dead`** (MINOR 5) — a `path → true` map of every pair whose face would not
+    load, or `nil` if all were fine. Because warming draws each font before anything else uses
+    it, this is the **only existence check the client permits**: WoW exposes no filesystem API,
+    so a failed draw is the one way to learn a saved filename is a typo or its file is gone.
+    `Media.lua` uses it to name a broken catalog entry in chat. ⚠ **Do not gate LSM registration
+    on it** — a font added this session with a restart pending may fail the probe while being
+    perfectly valid (fonts load at launch), and dropping a good font is worse than the warning.
 - **NOT exported (deliberate):** `makeSection` — each tab's accordion closes over its own
   scroll/relayout/one-open state, so the Media tab and the Bars tab each keep a local copy of
   the small pattern. Revisit at Phase D if GA shows a clean shared shape; adding it then is a
@@ -251,7 +263,7 @@ end
 ### Current requirement
 | Consumer | needs |
 |---|---|
-| `GloomsBars/Config.lua` | MINOR **4** — calls `UI.tabHeader` |
+| `GloomsBars/Config.lua` | MINOR **5** — branches on `UI.setFont`'s return (font picker) |
 | `GloomsAuras/Config.lua` | MINOR **4** — calls `UI.tabHeader` (adopted in its 2026-07-25 layout rework) |
 | `GloomsOverlays/GloomsOverlays_Editor.lua` | MINOR **4** — calls `UI.tabHeader` |
 | `GloomsOverlays/GloomsOverlays_Preview.lua` | MINOR **3** — the drawer needs nothing newer |
@@ -262,7 +274,7 @@ added and the two files that call it were bumped **in the same commit**. GA foll
 same discipline on 2026-07-25 when its layout rework adopted `UI.tabHeader` — gate bumped
 in the commit that first called it, which is the only maintenance this gate ever needs.
 
-Hub currently ships **MINOR 4** (`Skin.lua`).
+Hub currently ships **MINOR 5** (`Skin.lua`).
 
 **Why this exists at all (the owner, 2026-07-25):** he asked whether letting the four addons'
 versions drift was a problem he wasn't aware of. It was — this was the problem, and it was live:

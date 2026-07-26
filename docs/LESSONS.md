@@ -93,10 +93,15 @@ directly.** Four separate incidents, all the same shape:
   fs:SetFont(path, …) then <fallback> end` is therefore **backwards**: the fallback never runs and
   the *enclosing function aborts mid-way*, skipping everything after it. Guard media setters with
   `pcall` and treat both a raise and an explicit `false` as failure.
-  ⚠ **The deeper fix is what you STORE.** GA was uniquely exposed because it saved the resolved
-  **path** (`Interface\AddOns\<other addon>\…ttf`) into SavedVariables. GB and the Hub save the
-  **LSM name** and resolve at call time, so an uninstalled addon simply misses the lookup and falls
-  back to a bundled file. **Save the name, not the path**, and the dead-asset case stops existing.
+  ⚠ **Storing a NAME instead of a PATH helps, but it does NOT make the dead-asset case go away —
+  corrected 2026-07-26, having been written here as if it did.** Saving the LSM name is still the
+  right call: an addon that was never installed never registered, so the lookup misses and the
+  bundled fallback is a valid file. **But `lsm:Fetch(name, true)`'s silent-nil rescue only fires
+  when the lookup MISSES.** Anything that registers a name for a file it never verified — including
+  the Hub's own Media tab, which cannot verify, because WoW exposes no filesystem API — makes the
+  lookup *succeed* and hand back a dead path. **The shape that actually predicts exposure is
+  "builds a path out of saved data", and the catalog owner always does.** Guard the setter; don't
+  rely on the resolver. See FINDINGS §5's `KILLED` list.
 - **SavedVariables are written on logout, disconnect, quit AND `/reload`.** `/reload` is a genuine
   save point, so it is never a reason to restart.
 - **Hand-editing a SavedVariables file needs the client fully closed** — the in-memory copy
@@ -121,6 +126,25 @@ directly.** Four separate incidents, all the same shape:
   `.claude/settings.json` hook command, reached a public repo, and cost a full delete-and-recreate
   to purge. **Grep `/Users/` before committing anything that touches tooling config, scripts or
   hooks** — those are the files where an absolute path looks harmless.
+- **★★ A scrub that greps file CONTENTS but not FILENAMES is not a scrub.** 2026-07-26: the identity
+  scrub was recorded in CLAUDE.md as "✅ DONE and verified on fresh clones" — and it was, for text
+  *inside* files and for commit metadata. Nobody ever listed the *paths*. A texture named after the
+  owner's real first name sat in a public repo and inside every release zip from the repo's first
+  commit, and the "verified" label is precisely what stopped anyone looking again. **Scan all four
+  surfaces every time: file contents, file PATHS, commit metadata, and release assets.** One command
+  does the paths: `git rev-list --objects --all | grep -i <term>`.
+- **★ Assets a USER drops in must be gitignored on the day the directory is created.** The Hub's
+  `Fonts/`, `Textures/` and `Graphics/` are drop-in directories for the user's own media; they were
+  tracked instead, which shipped 65 personal files (~5 MB) — including a paid commercial font and
+  the filename above — to anyone installing. **They were also useless to every recipient**, because
+  the shipped catalog (`DB_DEFAULTS`) is empty, so nothing registered them. A directory whose
+  contents are supplied by the user is never product.
+- **★ A settled-sounding comment can weld a true rule to a false one, and then defend both.** The
+  `.pkgmeta` note said "DO NOT add Fonts/, Textures/, Graphics/ or Media/ here — the committed assets
+  ARE the product." That was true of `Media/` and false of the other three, and because it read as a
+  decided matter, every later session honoured it. **When you write a "do not change this", name the
+  ONE thing it protects and why** — a rule covering four things will be obeyed for the three it
+  should never have covered.
 - **★★ A force-push does NOT purge — it only unlinks.** Old commits stay on GitHub and are served
   the instant the repo is public. The only reliable purge is **delete the repo and recreate it**.
   Re-proven 2026-07-26: after delete-and-recreate the offending SHA returned **422** while the repo

@@ -19,6 +19,56 @@
 
 ---
 
+# SESSION RECORD — 2026-07-26 evening (PII purge + the SetFont guard — backlog items 4 and 5, closed)
+
+**Started as two small robustness items and turned up a privacy breach.** Both backlog items closed;
+one release-blocking problem was found and fixed along the way.
+
+## Item 4 — the false `SetFont` guard. It was NOT a tidy-up.
+The backlog and FINDINGS §5 both said exposure was probably low, reasoning that GB and the Hub store
+an **LSM name** rather than a path, so a miss falls back to a bundled file. **That reasoning was
+wrong, and it was the entire basis for deferring the item.** It holds for the *tools* and fails for
+the *Hub*, which is the catalog OWNER and therefore builds paths out of saved data. Three live
+routes, all closed and owner-QA'd — full detail and the `KILLED` entry are in FINDINGS §5. The worst
+of them: warming runs before registration inside `RegisterAll` and its PEW call site is not
+`pcall`-ed, so **one bad catalog entry aborted the whole thing and neither fonts nor textures reached
+LibSharedMedia**. Fixed by making `UI.setFont` `pcall` and return success (lib **MINOR 5**), adding
+`GB.SetFontSafe`, and bumping GB's `SKIN_NEEDS` to 5 in the same commit.
+
+QA that proved it: a deliberately broken catalog entry (`ZZ Broken Test` → a filename that does not
+exist) produced the named warning **and** the `Registered 2 fonts and 6 textures` line, which before
+the fix could not have appeared at all.
+
+## Item 5 — the force-taint. Closed with no action.
+Tested through the strongest path available: a dead LSM font applied to GB's keybind text, driving a
+dead path through `SetFontSafe` across all 116 buttons, then combat on a dummy with keybinds and
+stance swaps. **No blocked actions, no errors.** Recorded honestly in FINDINGS §6 — the taint was
+never confirmed to have fired (that needs `taintLog`), so this is "no consequence demonstrated", not
+"proven inert."
+
+## ★★ The privacy breach — found while auditing what ships
+A question about whether the addons ship baked-in presets or media exposed that the Hub's `Fonts/`,
+`Textures/` and `Graphics/` — the user's **drop-in** directories — were tracked in git and shipped in
+every release zip: **65 files, ~5 MB**, including a paid commercial font and **one texture whose
+filename was the owner's real first name**, public since the repo's first commit.
+
+**They were also inert for every recipient**, because `DB_DEFAULTS` ships an empty catalog, so
+nothing registered them. A `.pkgmeta` comment had been instructing every session to keep shipping
+them, on grounds that were true of `Media/` and false of the other three.
+
+Purged with `git-filter-repo`, repo deleted and recreated, verified **unauthenticated**: old commit
+**422**, blob **404**, raw path **404**, repo itself **200** (public, so the negatives mean
+something). Backups first, at `~/Desktop/gloom-pii-backup-2026-07-26`. The files remain on the
+owner's disk, gitignored, so his own catalog resolves normally. Both releases carrying the file died
+with the repo. **The durable lesson — a scrub that greps contents but not FILENAMES is not a scrub —
+is in LESSONS.**
+
+Font licence files (`OFL.txt` + `FONT-LICENSES.md`) were added to all four repos that ship fonts.
+All four suite addons were then squared up at **`v1.2.0`** at the owner's request — a one-time sync,
+not a new rule.
+
+---
+
 # SESSION RECORD — 2026-07-26 (the GA font crash — backlog item 2, closed)
 
 **One session, one backlog item, fixed and QA'd.** GA's `Displays.lua:379` guarded a font

@@ -6,7 +6,7 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-07-26
+**Last updated:** 2026-07-26 (evening — after the PII scrub and the SetFont fix)
 
 ---
 
@@ -56,29 +56,20 @@ Three gaps remain from the PTR pass:
 
 ---
 
-### 4 · The same false `SetFont` guard is still in the Hub and GB
-**Repo:** `~/GloomsHub` + `~/GloomsBars` · **Size:** small · **Evidence:** guard `TESTED` wrong,
-exposure `SUSPECTED` low
+### 4 · General Sans's redistribution terms were never verified
+**Repo:** all four that ship fonts · **Size:** ~15 minutes, reading · **Evidence:** `UNTESTED`
 
-GA's fix left the identical `if not fs:SetFont(...)` guard in `~/GloomsHub/Skin.lua:70`
-(**`UI.setFont`, the shared toolkit**) and `~/GloomsBars/Config.lua:190`/`:220`.
+The suite bundles **Khand** (SIL OFL 1.1 — `Media/fonts/OFL.txt` now ships alongside it, which is
+what the OFL requires) and **General Sans** (Indian Type Foundry / Fontshare). The credit
+requirement embedded in the General Sans files is satisfied by `Media/fonts/FONT-LICENSES.md`.
 
-**Probably NOT urgent — establish this before treating it as a bug.** GB and the Hub resolve fonts
-by **LSM name** with a bundled fallback, so a missing addon yields a *valid* path; GA was exposed
-only because it stores the raw **path**. Check whether any caller can hand `UI.setFont` a saved
-path at all. Also unchecked: **GA's three `.ogg` sound paths** into `ArcUI`/`EnhanceQoL`.
-**Read first:** [FINDINGS.md](FINDINGS.md) §5 · `~/GloomsHub/Skin.lua` around line 70
+**What is NOT established: whether the Fontshare licence permits redistributing the .ttf files
+inside a product zip at all**, as opposed to using the typeface. `https://fontshare.com/terms` is
+JS-rendered and could not be retrieved by any tool available in-session, so nobody has read it.
+Both fonts are free and this is very likely fine — but "likely" is not "read it."
 
----
-
-### 5 · A missing font asset force-taints the execution path
-**Repo:** unknown — diagnosis first · **Size:** unknown · **Evidence:** `OBSERVED` (2026-07-26)
-
-`SetFont` on a dead path printed `Lua Taint: *** ForceTaint_Strong ***` alongside the error.
-**`pcall` catches the error but not the taint**, so GA's fix leaves this open. No consequence has
-been demonstrated — it matters only because the suite leans hard on taint behavior elsewhere.
-**Do not write a fix until a real symptom exists.**
-**Read first:** [FINDINGS.md](FINDINGS.md) §6
+**Read first:** `~/GloomsHub/Media/fonts/FONT-LICENSES.md` · the embedded terms are recoverable
+from any bundled `.ttf` via its `name` table (IDs 13 and 14).
 
 ---
 
@@ -93,3 +84,11 @@ been demonstrated — it matters only because the suite leans hard on taint beha
   is not ready. Don't push it.
 - **"A missing font kills the whole GA display"** — FIXED and QA'd 2026-07-26. Record in
   [ARCHIVE.md](ARCHIVE.md); the traps it left behind are FINDINGS §2 and LESSONS.
+- **The false `SetFont` guard in the Hub and GB** — FIXED and owner-QA'd 2026-07-26. It was NOT the
+  tidy-up this list claimed; see FINDINGS §5's `KILLED` list for why that reasoning was wrong.
+- **The `ForceTaint_Strong` on a dead font path** — CLOSED 2026-07-26, no action. Tested through
+  GB's skin path across 116 buttons in combat; no symptom. FINDINGS §6. **Do not re-raise without
+  a real symptom.**
+- **The user's own media shipping inside the addon** — FIXED 2026-07-26. `Fonts/`, `Textures/` and
+  `Graphics/` are gitignored drop-in directories and were purged from all history. Do not re-add
+  them; `.pkgmeta` explains why at length.

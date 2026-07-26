@@ -9,7 +9,7 @@
 -- change it THERE and every consumer in the same session.
 -- ============================================================
 
-local MAJOR, MINOR = "LibGloomSkin-1.0", 4   -- MINOR 4 (2026-07-25): + tabHeader (the shared per-tab mark + wordmark)
+local MAJOR, MINOR = "LibGloomSkin-1.0", 5   -- MINOR 5 (2026-07-26): setFont/WarmFonts/RegisterWarmPairs now RETURN whether the face loaded
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if lib then

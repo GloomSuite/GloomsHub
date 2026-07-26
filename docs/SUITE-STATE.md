@@ -17,12 +17,18 @@
 
 **The 7-phase plan is complete and QA'd. All four addons ship and install cleanly.** GloomsHub is the
 shared base; Bars, Auras and Overlays each mount a tab in its window and hard-depend on it.
-StoneTweaks is retired, the identity scrub is done, all five repos are public under the
-**`GloomSuite`** org (Build Barn stayed with `HandofDevastation`). Versions drift by design:
-**`GloomsBars v1.1.2`**, the other three **`v1.0.1`** (verified against the published releases
-2026-07-26, not copied from this file's previous claim). What's left is in [BACKLOG.md](BACKLOG.md) —
-five items: three are 12.1 testing, and two are robustness follow-ups left behind by the Auras font
-fix. **There is no known live bug in shipped code.**
+StoneTweaks is retired, all five repos are public under the **`GloomSuite`** org (Build Barn stayed
+with `HandofDevastation`). **All four suite addons were squared up at `v1.2.0` on 2026-07-26** at the
+owner's request — a one-time sync, not a new rule; drift is still permitted (see the locked decision
+below). What's left is in [BACKLOG.md](BACKLOG.md) — four items: three are 12.1 testing, one is a
+font-licence question. **There is no known live bug in shipped code.**
+
+**★ The identity scrub was INCOMPLETE until 2026-07-26 and is now re-verified on a fourth surface.**
+It had covered file contents and commit metadata; it had never covered **file paths**. A texture
+named after the owner's real first name was public from the Hub's first commit. It was purged with
+`git-filter-repo`, the repo was deleted and recreated, and the old commit returns **422** while the
+repo is verifiably public. The user's three drop-in asset directories went with it. See
+[LESSONS.md](LESSONS.md) — all four surfaces must be scanned, every time.
 
 ---
 
@@ -52,6 +58,10 @@ Full QA evidence for every phase is in [ARCHIVE.md](ARCHIVE.md). Do not redo any
 - **★ VERSIONS MAY DRIFT — release only the addon that changed** (2026-07-25). *"It doesn't bother
   me if the versions of the individual units drift."* The shell footer lists every installed addon's
   version, which is what retired the reason for synchronizing them.
+  **Still true after the 2026-07-26 sync to `v1.2.0`** — the owner asked for a one-time squaring-up
+  because the Hub's published releases had just been deleted in the PII purge, which would have left
+  the shared base looking *older* than its own dependents. That was a tidy-up of a specific mess, not
+  a standing requirement. Do not synchronize versions again by default.
 - **★ EVERY `LibGloomSkin` CONSUMER CARRIES A VERSION GATE** — pinned in [CONTRACTS.md](CONTRACTS.md)
   §6. This is what makes drift safe. `## Dependencies: GloomsHub` checks only that the Hub is
   PRESENT, never that it is NEW ENOUGH — WoW's TOC system has no version constraint. Each consumer
@@ -76,15 +86,20 @@ Full QA evidence for every phase is in [ARCHIVE.md](ARCHIVE.md). Do not redo any
 
 **`~/GloomsHub`** — symlinked into AddOns. `Core.lua` (namespace, `GloomsHubDB`, ST copy-migration,
 the permanent compat shim, `/gh` probe) · `Skin.lua` (**the body of `LibGloomSkin-1.0`**, LibStub-
-registered, **MINOR 4** — tokens, toolkit, `WarmFonts`/`RegisterWarmPairs`; `GloomsHub.COLOR/.FONT/
+registered, **MINOR 5** — tokens, toolkit, `WarmFonts`/`RegisterWarmPairs`; `GloomsHub.COLOR/.FONT/
 .UI/.MEDIA` are aliases) · `Shell.lua` (the Suite window: `RegisterTab`/`Open`/`FocusTab`/
 `ToggleWindow` + `/gloom`) · `Media.lua` (LSM registration, `ResolveAssetPath`, `ListMedia`, the
 Media tab) · `MinimapButton.lua` (**the ONE suite launcher** — never one per tool).
-Assets: `Fonts/` 7 · `Textures/` 13 · `Graphics/` 45 · `Media/` (Khand ×2, GeneralSans ×3, the GS and
-Gh marks). `Libs/` is gitignored and pulled by the packager.
+
+**Tracked assets are `Media/` ONLY** — Khand ×2, GeneralSans ×3, their licence files, the GS and Gh
+marks. `Libs/` is gitignored and pulled by the packager. ⚠ **`Fonts/`, `Textures/` and `Graphics/`
+are the USER's drop-in directories and are gitignored** (2026-07-26). They still exist on the
+owner's disk — 7 / 13 / 45 files, which his catalog resolves normally — but they are not in the repo,
+not in history, and not in any release. **Never track them.**
 
 **`~/GloomsBars`** — `main`. Hard-deps the Hub; local toolkit and standalone window deleted; mounts
-the **Bars** tab; `/gb` → `ToggleWindow("bars")`. At **`v1.1.2`**.
+the **Bars** tab; `/gb` → `ToggleWindow("bars")`. `SKIN_NEEDS = 5` (its font picker branches on
+`UI.setFont`'s return value).
 
 **`~/GloomsAuras`** — `main`. Hard-deps the Hub; mounts the **Auras** tab, fully reworked 2026-07-25
 (rail + full-width editor; splash, name banner and four drawers gone); `SKIN_NEEDS = 4`.

@@ -237,18 +237,40 @@ identical `if not fs:SetFont(...)` construction is still live in:
 | `~/GloomsBars/Config.lua:190`, `:220` | the font flyout rows and the font-picker button |
 | `~/GloomsBars/Skin.lua:976`, `:1052`, `:1140` | `SetFont(resolveFont(...))` with **no guard at all** |
 
-**`SUSPECTED` — the exposure is nonetheless LOW, and this is the part to establish before writing
-anything.** GA was uniquely vulnerable because it stores the **raw font path** in SavedVariables
-(`"Interface\\AddOns\\NiceDamage\\fonts\\pepsi_modern.ttf"`). GB and the Hub instead store an **LSM
-name** and resolve at call time — `lsm:Fetch("font", name, true)` with the silent flag returns `nil`
-for an unregistered font, and both then fall back to a **bundled** path. An addon that isn't
-installed never registered its font, so the lookup misses and the fallback is a *valid* file.
+### ✅ SOLVED 2026-07-26 — and the "low exposure" reasoning was WRONG
 
-**So the dangerous shape is not the guard — it is storing a resolved PATH rather than a NAME.** That
-is the thing to check for elsewhere.
+**`TESTED` — all three routes are closed.** Fixed by making `UI.setFont` `pcall` and return whether
+the face applied (lib MINOR 5), plus `GB.SetFontSafe` for the bar engine. Owner-QA'd in-client the
+same day: a deliberately broken catalog entry now warns by name, the media catalog still registers,
+and a dead LSM font applied to GB's keybind text falls back visibly instead of raising.
 
-**Untested route worth one look:** whether any caller can hand `UI.setFont` a path that came from
-saved config rather than from `FONT.*`. If none can, this is a tidy-up, not a bug.
+### `KILLED` — do not revive this reasoning
+- ~~*"The exposure is LOW; GB and the Hub store an LSM NAME, not a path, so a miss falls back to a
+  valid bundled file — this is a tidy-up, not a bug."*~~ **FALSE, and it was the whole basis for
+  deferring this item.** The premise is true of the *tools* and false of the *Hub*, which is the
+  catalog OWNER and therefore the one component that builds paths out of saved data. Three live
+  routes existed:
+  1. **`Media.lua:79` → `WarmFonts` → `drawPair` → `UI.setFont`** — warm pairs built as
+     `FONT_PATH .. entry.file` straight from `GloomsHubDB.fonts`. Warming runs BEFORE the
+     registration loops and its PEW call site is not `pcall`-ed, so **one dead entry aborted
+     `RegisterAll` and NO fonts and NO textures reached LSM at all.** Same blast-radius shape as §2.
+  2. **LSM poisoning across repos.** `RegisterFont` registers a dead path under a friendly name and
+     LSM does not verify files, so GB's `resolveFont` *succeeded* and returned a dead path — the
+     `Fetch(…, true)` silent-nil fallback cannot help when the name really is registered. GB's four
+     engine writes had **no guard at all**.
+  3. **GA was still exposed through the shared toolkit** — `GloomsAuras/Config.lua:1833` passes
+     `item.path`, a saved raw path, into the lib's `setFont`. `GA.SetFontSafe` never covered it
+     because it is not GA's function.
+
+**The durable shape to check for is not "stores a path" — it is "builds a path from saved data."**
+The catalog owner always does. Promoted to [LESSONS.md](LESSONS.md).
+
+### `UNTESTED` — one question the fix deliberately leaves open
+Warming now doubles as an existence probe (the only one the client permits — there is no filesystem
+API). **Registration is deliberately NOT gated on it:** WoW indexes fonts at launch, so a font added
+this session with a restart pending may fail the probe while being perfectly valid. Nobody has
+tested which way that goes. Until someone does, the probe stays advisory — silently dropping a good
+font would be worse than the bug this fixed. Pinned in [CONTRACTS.md](CONTRACTS.md) §4.
 
 **Also unchecked:** GA's three `.ogg` sound paths into `ArcUI` and `EnhanceQoL` — the same
 "points into an addon that may not be installed" shape, through a different call. `PlaySoundFile` is
@@ -271,9 +293,20 @@ Lua Taint: *** ForceTaint_Strong ***
 untouched: on a machine genuinely missing the font, every `Discover()` would still force-taint GA's
 execution path.
 
-**No consequence has been demonstrated, and none should be assumed.** GA rarely touches protected
-calls, so this may be entirely inert. It is recorded only because the suite leans so heavily on
-taint behavior elsewhere (§1's secret values, GB's ~40 `hooksecurefunc` calls, protected bar frames)
-that an unexamined force-taint is worth a deliberate look rather than a shrug.
+### ✅ CLOSED 2026-07-26 — no action, no consequence found
 
-**Do not build anything on this.** Establish a real symptom first — per this file's own rule.
+**`TESTED` — the strongest natural test available produced no symptom.** With a dead LSM font
+selected for GB's keybind text, a dead path ran through `SetFontSafe` on **all 116 buttons** on every
+skin pass — the same execution path as GB's ~40 `hooksecurefunc` calls and the protected bar frames,
+i.e. the one place in the suite a force-taint could plausibly bite. Owner then fought a training
+dummy using keybinds and stance swaps: **no blocked actions, no "Interface action failed because of
+an AddOn", no errors.**
+
+**What that is worth, and what it is NOT.** The fallback face demonstrably applied, so we know the
+dead path was hit. We did **not** confirm the taint itself fired — that needs `taintLog`, which was
+deliberately not enabled (it costs performance and floods the log; it is the tool for tracing a
+symptom, not for discovering whether one exists). So the honest statement is: *even assuming the
+force-taint fired, nothing was blocked.* That is enough to stop treating this as a live risk. It is
+**not** a proof of inertness, and it must not be written up as one.
+
+**Stop here.** Do not build anything on this, and do not re-raise it without a real symptom.
