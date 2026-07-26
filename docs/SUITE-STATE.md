@@ -209,19 +209,13 @@ modules — without them a font path 404s and trips FINDING 2). Live SavedVariab
 backed up in the session scratchpad. TOCs deliberately left at `120007` — "Load out of date AddOns"
 is enough to test.
 
-**★★ GB IS THE EXCEPTION — IT IS NOT SYMLINKED TO ITS MAIN REPO (set up 2026-07-25).** Hub, GA and
-GO all point at their normal repos on both clients, so an edit to those IS live on both. **GB does
-not:**
-
-| Client | Loads | Branch |
-|---|---|---|
-| retail (live) | `~/GloomsBars` | `main` |
-| PTR | **`~/GloomsBars-ptr`** (a `git worktree`) | **`12.1-layout`** |
-
-**All 12.1 GB work happens in `~/GloomsBars-ptr`.** `Libs/` there is a symlink to the main repo's
-(it is git-ignored, and GB won't start without `LibStub`). Git refuses to check `12.1-layout` out in
-the live folder, so the isolation is enforced, not remembered — verified. Unwind with
-`git merge 12.1-layout` → `git worktree remove ~/GloomsBars-ptr` → repoint the PTR symlink back.
+**GB's separate PTR checkout is RETIRED (2026-07-26).** It existed so PTR-only experiments couldn't
+reach the live client. Once FINDINGS 1 + 4 proved to be a *live* bug, the fix belonged on `main` and
+the split lost its purpose: the `12.1-layout` and `container-position` branches were merged and
+deleted, the `~/GloomsBars-ptr` worktree removed, and the PTR symlink repointed at `~/GloomsBars`.
+**All four suite addons now point at their normal repos on BOTH clients**, so an edit is live on
+both — which is the thing to remember before editing during PTR work. Re-split with a fresh
+`git worktree` if genuinely 12.1-only code ever becomes necessary.
 
 **PTR TESTING TRAP — cost an hour once already:** GB and GA both key profiles by **character + realm**,
 and PTR copies live on **Anasterian** while every real profile says **Stormrage**. So both addons
