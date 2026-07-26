@@ -75,24 +75,16 @@ from any bundled `.ttf` via its `name` table (IDs 13 and 14).
 
 ## Not open — recorded so nobody re-raises them
 
-- **GB's bar-position bug** — SOLVED and shipped 2026-07-26 (`afd0957`). Was never a 12.1 issue.
-- **GB's modifier symbols (⌘⇧⌃⌥) take no outline** — **DROPPED by the owner**, do not re-propose.
-- **The public repos expose `CLAUDE.md` + `docs/`** — **ACCEPTED**, do not re-flag or propose a fix.
-- **Overlays logo placement inside the tab** — closed at Phase E gate B; a mark + wordmark in the
-  rail, not a splash.
-- **Distribution to friends/guild** — the owner considers the suite still in active development and
-  is not ready. Don't push it.
-- **"A missing font kills the whole GA display"** — FIXED and QA'd 2026-07-26. Record in
-  [ARCHIVE.md](ARCHIVE.md); the traps it left behind are FINDINGS §2 and LESSONS.
-- **The false `SetFont` guard in the Hub and GB** — FIXED and owner-QA'd 2026-07-26. It was NOT the
-  tidy-up this list claimed; see FINDINGS §5's `KILLED` list for why that reasoning was wrong.
-- **The `ForceTaint_Strong` on a dead font path** — CLOSED 2026-07-26, no action. Tested through
-  GB's skin path across 116 buttons in combat; no symptom. FINDINGS §6. **Do not re-raise without
-  a real symptom.**
-- **The v1.2.0 release cut** — DONE 2026-07-26, all four published and the Hub zip verified clean
-  (404 KB, no drop-in dirs, licences present). It took three attempts: `repos.wowace.com` was
-  returning HTTP 500 for ~30 min. **A packaging failure on wowace is an outage — re-run, don't
-  debug.** Overlays was immune (no `.pkgmeta` externals).
-- **The user's own media shipping inside the addon** — FIXED 2026-07-26. `Fonts/`, `Textures/` and
-  `Graphics/` are gitignored drop-in directories and were purged from all history. Do not re-add
-  them; `.pkgmeta` explains why at length.
+> Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
+
+- **GB's modifier symbols (⌘⇧⌃⌥) take no outline** — **DROPPED by the owner**; do not re-propose.
+- **The public repos expose `CLAUDE.md` + `docs/`** — **ACCEPTED**; do not re-flag.
+- **Distribution to friends/guild** — not ready; the owner will say when. Don't push it.
+- **The false `SetFont` guard** — FIXED, owner-QA'd 2026-07-26. It was NOT a tidy-up: FINDINGS §5's
+  `KILLED` list has why that reasoning was wrong.
+- **`ForceTaint_Strong` on a dead font path** — CLOSED, no action (FINDINGS §6). **Do not re-raise
+  without a real symptom.**
+- **The user's own media shipping in the addon** — FIXED 2026-07-26; `Fonts/`, `Textures/`,
+  `Graphics/` are gitignored and purged from history. **Never re-track them** (`.pkgmeta` says why).
+- **v1.2.0 release cut** — DONE, all four published, Hub zip verified clean. **A packaging failure
+  on `repos.wowace.com` is an outage — re-run, don't debug.**
