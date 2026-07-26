@@ -71,7 +71,24 @@ works.
 | Cooldown-Manager auras, displays, the Auras tab | `~/GloomsAuras` |
 | The overlay engine, conditions, spritesheets, the Overlays tab | `~/GloomsOverlays` |
 | The Suite window + tab API · `LibGloomSkin` (tokens, widgets, `UI.*`) · media registration/resolver + the Media tab · the ONE minimap launcher · the suite docs | **`~/GloomsHub`** (here) |
-| Gloom's Build Barn | `~/Desktop/glooms-build-barn` — **NOT a suite member** |
+| Gloom's Build Barn | `~/Desktop/glooms-build-barn` — **NOT a suite member. See the absolute rule below.** |
+
+### ★★★ GLOOM'S BUILD BARN IS NEVER INCLUDED IN ANYTHING. EVER.
+
+**GBB is never in scope. Not for sweeps, not for "all the addons", not for suite-wide changes, not
+for cross-repo tidy-ups, not for release cuts — never.** It is a separate guild project under a
+different org with its own release scheme and its own cadence. **Do not commit to it, do not tag it,
+do not release it, do not add files to it, do not include it in any batch.** The only thing that
+puts you in that repo is the owner *explicitly naming Build Barn* as the thing he wants worked on.
+
+**"All the addons" means the four suite addons. It has never meant GBB.**
+
+⚠ **This rule exists because it was broken on 2026-07-26.** A session doing a suite-wide font-licence
+pass reasoned that because GBB bundles the same two font families, it "obviously" needed the same
+licence files — and then, told to release "all of them", tagged and released it too. The routing
+table already said GBB was not a suite member. **The reasoning was plausible and it was still wrong:
+a shared *fact* about GBB is never a licence to act on it.** If GBB genuinely looks like it needs
+something, **say so and stop** — do not do it.
 
 **Rough test:** changes how ONE tool looks or behaves → that tool's repo. Changes something all
 three share, or the window they live in → here.
