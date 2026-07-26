@@ -19,6 +19,65 @@
 
 ---
 
+# SESSION RECORD — 2026-07-26 (the working-process rebuild)
+
+**The owner asked for the WORKING PROCESS to be reconsidered, not the architecture.** He was
+explicit that the repo count is not the problem — *"I don't care how many repos there are, that's
+not something I deal with."* Three things were: switching VS Code projects per repo, having to
+remember which documents needed updating at the end of a session, and knowledge going stale between
+repos. The trigger was the previous day's near-miss, where a confidently-recorded finding was wrong
+and would have produced a fix for a bug that did not exist.
+
+### What was true, and what was invented
+**★ The per-repo session rule was never a technical constraint.** All four repos already listed each
+other in `.claude/settings.json` `additionalDirectories`, so any session could always read AND write
+all four. The rule was a convention that got written into four `CLAUDE.md` files and then treated as
+a capability boundary. **The only thing switching projects ever bought was the right `CLAUDE.md`
+loading automatically** — which is now handled by an explicit read-the-repo's-guide gate instead.
+
+**★ The Hub's own CLAUDE.md already contained the correct rule and the wrong one, in that order.**
+"ROUTE THE REQUEST" (stop and switch) sat directly above a block recording the owner's objection to
+exactly that, which said *"'Just do it from here' is a valid answer EVERY time."* A model reading
+top-to-bottom hit the STOP first. Merged into one rule: name the owning repo, get a go-ahead, work
+from wherever you are.
+
+### The doc restructure — split by how a document is USED
+Cold start went from **~136 KB to ~15 KB**. The driver was not context capacity (the window is 1M)
+but attention: a 573-line ledger is never re-read, and **a document nobody re-reads is a document
+nobody corrects**. Two pieces of rot were sitting in plain sight — a "Packaging traps" section
+carried twice, and the Overlays logo question listed as open on one line and closed seven lines later.
+
+- **BACKLOG.md** — the four open items, each with its repo and an explicit "Read first" list. This
+  is the whole cold start; the rest loads only once the owner picks.
+- **FINDINGS.md** — diagnosis, separated from settled state, because a guess written beside a fact
+  inherits the fact's authority. Tags: `TESTED` / `OBSERVED` / `SUSPECTED` / `KILLED`. **No fix may
+  be built on an unproven claim without establishing it first.**
+- **LESSONS.md** — durable traps curated out of the session records instead of buried in them.
+- **SUITE-STATE.md** — 572 → 128 lines, settled facts only.
+- **HANDOFF.md → ARCHIVE.md**, kept whole. GB's handoff split 1,689 → 343, GA's 1,100 → 521.
+
+### ★★ TWO REAL FAILURES THIS SESSION, both worth keeping
+1. **An absolute home path was written into `.claude/settings.json` and pushed to a public repo.**
+   `/Users/<account>/…` carries the macOS account name, which **is the owner's real first and last
+   name** — the exact thing TASK 0 existed to remove. Cost a full delete-and-recreate of GloomsHub,
+   because a force-push only unlinks. **Grep `/Users/` before committing anything that touches
+   tooling config, scripts or hooks.** Full rule in LESSONS.
+   ★ A **full-history audit of all five repos** for both the name and the personal handle was run at
+   the same time: the handle has **never** appeared anywhere, in any blob, message or metadata.
+2. **`SUITE-STATE` was given the wrong version for GB — while being rewritten to prevent exactly
+   that.** It said `v1.1.1`; GB had shipped `v1.1.2`. The number was carried forward from the
+   previous file instead of checked. All four are now verified against `/releases/latest`
+   anonymously. **The structure does not fix the habit; "verify, don't copy" has to come with it.**
+
+### What was NOT done
+- **`UNVERIFIED`: the `SessionStart` hook has never been observed firing.** The JSON validates at the
+  right path and the stored command returns correct `additionalContext` when run verbatim, but the
+  event fires outside the session that wrote it. **If a session does not open with the backlog list,
+  that is the thing to check** — `CLAUDE.md`'s session-start section instructs it regardless, so the
+  fallback is simply asking for the backlog.
+- No VS Code multi-root workspace. Considered and dropped: it buys a file-explorer view the owner
+  rarely needs, and plain `~/GloomsHub` already reaches all four repos.
+
 # SESSION RECORD — 2026-07-25h (modifier symbols DROPPED · GB's icon tint · `GloomsBars v1.1.0` → `v1.1.1`)
 
 **Two outcomes: the backlog was emptied, and a new GB feature shipped from a cold question.** All GB
