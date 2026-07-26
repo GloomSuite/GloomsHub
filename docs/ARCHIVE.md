@@ -70,11 +70,15 @@ carried twice, and the Overlays logo question listed as open on one line and clo
    anonymously. **The structure does not fix the habit; "verify, don't copy" has to come with it.**
 
 ### What was NOT done
-- **`UNVERIFIED`: the `SessionStart` hook has never been observed firing.** The JSON validates at the
-  right path and the stored command returns correct `additionalContext` when run verbatim, but the
-  event fires outside the session that wrote it. **If a session does not open with the backlog list,
-  that is the thing to check** — `CLAUDE.md`'s session-start section instructs it regardless, so the
-  fallback is simply asking for the backlog.
+- ~~**`UNVERIFIED`: the `SessionStart` hook has never been observed firing.**~~ **`TESTED`
+  2026-07-26** — the owner opened a fresh session in this project, typed only "Hello, let's begin",
+  and it opened with the four-item backlog and the "which one?" question. The greeting works on a
+  cold start.
+  ⚠ **Still `UNPROVEN`: WHICH mechanism produced it.** The hook and `CLAUDE.md`'s session-start
+  section both instruct the same behaviour, and the two were not isolated. So the *outcome* is
+  verified; the hook itself is not independently confirmed. This does not matter in practice — the
+  redundancy is deliberate — but do not cite it as proof the hook fires. **If a session ever fails
+  to open with the backlog, that ambiguity is where to start looking.**
 - No VS Code multi-root workspace. Considered and dropped: it buys a file-explorer view the owner
   rarely needs, and plain `~/GloomsHub` already reaches all four repos.
 
