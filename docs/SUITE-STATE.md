@@ -4,7 +4,19 @@
 > UPDATE it at the end of any session that moves the suite.** Home of record: this repo.
 > Full design in [SUITE-PLAN.md](SUITE-PLAN.md). Shared contracts in [CONTRACTS.md](CONTRACTS.md).
 
-**Last updated:** 2026-07-25h — **★★ THE TO-DO LIST IS EMPTY. The 7-phase plan is complete AND the
+**Last updated:** 2026-07-25i — **★★ 12.1 BREAKS GLOOM'S AURAS IN COMBAT — see the new
+[12.1 readiness section](#-121-midnight-s2-ptr-readiness--opened-2026-07-25) below.** Proven on the
+PTR: in combat 12.1 hands back aura instance IDs as SECRET values and every
+`GetAuraDataByAuraInstanceID`/`GetAuraDuration` call **throws** — GA keeps aura *presence* but loses
+duration, stacks and expiry entirely. It fails **silently** (the throws are `pcall`ed; BugSack stayed
+clean while nothing rendered). Fixing it means migrating to Blizzard's new `AuraContainer` model —
+a GA design session, not a patch. **GB is hit too, in THREE places that are probably ONE root cause
+(its re-assert post-hooks appear dead on 12.1): bars scatter on Edit Mode entry, don't recover on
+Edit Mode exit (FINDING 1), and jump on every COMBAT ENTRY (FINDING 4 — the most disruptive of the
+lot).** Also FINDING 2: GA's font fallback is broken on live, unrelated to 12.1. **One fix has
+shipped into the tree** — a ticker in `GloomsBars/Layout.lua` that restores bars after Edit Mode
+exit, PTR-verified working and live-verified no-regression; it treats a symptom, not the root cause.
+Everything else is diagnosis only. Before that: **★★ THE TO-DO LIST WAS EMPTY. The 7-phase plan is complete AND the
 polish backlog is closed.** The last item (3, GB's modifier symbols) was **DROPPED by the owner on
 2026-07-25** — reviewed, priced, and judged not worth the cost; no code changed, and it is not to be
 re-proposed. **★ THE SAME SESSION SHIPPED A NEW GB FEATURE AND THE SUITE'S FIRST DRIFTED RELEASE:
@@ -165,6 +177,208 @@ When he is ready, it's **four links, Hub first**, and **no access token** — se
 Phase E gate B also promoted the whole profile/preset
 mechanism into LibGloomSkin (**MINOR 3**) and switched GB + GA onto it; all three addons were
 QA'd in the same pass.
+
+## ▶ 12.1 (Midnight S2) PTR READINESS — opened 2026-07-25
+
+**Status: DIAGNOSING ONLY. No code changed, nothing committed, no TOC bumped.** The PTR APIs are
+still landing in pieces over the coming weeks, so fixing now means fixing twice. Record findings
+here; act later.
+
+**★★ THE OWNER'S DECISION, 2026-07-25: WAIT FOR LAUNCH, THEN TRIAGE. Do not re-litigate.** The PTR
+is in flux, and he is **switching to Hunter for Season 2** — the Hunter/cooldown path is unaffected
+by FINDING 3, so the Warlock aura work can wait until after 12.1 ships. No aura redesign before
+launch.
+
+**Two carve-outs he was told about and can take any time — neither is Warlock-specific:**
+- **FINDING 2** is a live bug *today*, nothing to do with 12.1, one line.
+- **FINDING 1** hits **every character** on patch day, not just casters — Edit Mode is class-agnostic.
+
+**⚠ ONE THING TO TEST BEFORE SEASON 2 (starts ~2026-08-19):** "Hunter still works" was proven only
+for **SV, with two auras**. **MM was never tested**, and Precise Shots / Spotter's Mark may be
+buff-duration driven rather than cooldown driven — which would put them on FINDING 3's broken path.
+Ten minutes on the PTR settles it; do it before the season, not during a key.
+
+**The PTR is left set up and ready** (see Setup below) — symlinks, live SavedVariables and
+`SecretScan` are all in place, so re-testing costs nothing but a launch.
+
+**Setup (done 2026-07-25):** `_ptr_` is **12.1.0.68914** (`wowt`); retail is 12.0.7.68887. All four
+addons + `!BugGrabber`/`BugSack` are symlinked into `_ptr_/Interface/AddOns/` — the *same* repos as
+retail, so any future edit is live on both clients. Live SavedVariables were copied across
+(account-level ×4, plus per-char Overlays for Gloomwick/Gloomrift); the PTR's fresh defaults are
+backed up in the session scratchpad. TOCs deliberately left at `120007` — "Load out of date AddOns"
+is enough to test.
+
+**When fixes do start:** feature-gate at runtime (`if C_UnitAuras.GetAuraDataByAuraInstanceID then`),
+don't fork; `## Interface: 120007, 120100` supports both clients from one package. Work on a branch —
+the owner's live client loads the working tree.
+
+### FINDING 1 — GB's bars never recover from Edit Mode exit · `~/GloomsBars` · CONFIRMED
+**`EDIT_MODE_LAYOUTS_UPDATED` no longer fires on Edit Mode exit in 12.1.** Owner-reproduced on the
+PTR and **confirmed absent on live**, so this is a real 12.1 change, not a PTR artifact.
+
+- Symptom: enter Edit Mode → bars scatter. Exit → they **stay** scattered. `/reload` fixes it; so
+  does any other layout trigger.
+- **★ CORRECTION 2026-07-25 — the entry-scatter is NOT "by design", as this entry first claimed.**
+  [Layout.lua:34-40](../../GloomsBars/Layout.lua#L34-L40) suspends GB so it doesn't fight Blizzard's
+  show-all, but suspending only stops GB re-asserting — it does not move anything. **On LIVE the bars
+  stay exactly where GB put them when Edit Mode opens** (owner-verified). They scatter only because
+  something on 12.1 actively re-lays them. Do not repeat the "expected, by design" framing.
+- **Root cause is narrow, and two rival theories were killed by test:** `IsEditModeActive()` still
+  reports correctly (it read "closed" after exit), and `ApplyAll()` works fine on 12.1. The owner
+  grabbed a spell from the spellbook → `ACTIONBAR_SHOWGRID` → `queueApply()` → **bars snapped back
+  and stayed back.** So GB is simply waiting on an event that never arrives.
+- **Blast radius: GloomsBars ONLY.** Hub/GA/GO never register the event (grep-verified). GA's
+  `EditModeManagerFrame` use at [CDM.lua:91](../../GloomsAuras/CDM.lua#L91) is *not* affected.
+- **Fix shape (NOT yet written):** GB needs another exit signal. `IsEditModeActive()` is proven
+  working, so a ticker started on Edit Mode open that watches for the true→false transition and
+  fires `queueApply()` is the obvious candidate; `hooksecurefunc(EditModeManagerFrame, "ExitEditMode", …)`
+  is the alternative but may collide with 12.1's protected-frame lockdown.
+
+### ★★ FINDINGS 1 AND 4 ARE PROBABLY ONE ROOT CAUSE — read before fixing either
+**Hypothesis (consistent with all evidence, NOT yet proven): GB's re-assert POST-HOOKS are dead on
+12.1.** Blizzard has always re-laid the bars at various moments; GB hooks
+`UpdateGridLayout` / `UpdateShownButtons` / `UpdateVisibility` / `ApplySystemAnchor`
+([Layout.lua:485-494](../../GloomsBars/Layout.lua#L485-L494)) and re-asserts instantly, so on live
+you never SEE a scatter. On 12.1 every observed symptom is "Blizzard re-laid the bars and GB did not
+put them back": Edit Mode entry, Edit Mode exit, combat entry. That is precisely what the Forbidden
+Aspects lockdown (`UntrustedScriptExecution` — addon script handlers on protected frames) would cause.
+
+**Consequence: the FINDING 1 ticker fix treats a SYMPTOM, not the disease.** It restores the bars
+after Edit Mode exit and is verified working — but it does nothing for combat entry, and it would be
+unnecessary if the post-hooks fired. **Diagnose the post-hooks FIRST in any GB session**; a fix there
+may retire both findings at once. Test shape: out of combat on the PTR, cause Blizzard to re-lay a
+bar and see whether `Reassert` runs at all (the event-driven path is known to work — that is what the
+spellbook/`ACTIONBAR_SHOWGRID` trick exercised — so the post-hook path must be tested separately).
+
+### FINDING 4 ★ — GB's bars jump to Edit Mode positions on COMBAT ENTRY · `~/GloomsBars` · CONFIRMED
+Owner-reproduced on the PTR 2026-07-25 and **confirmed ABSENT on live** — a real 12.1 change.
+Practically the most disruptive finding so far: it fires on **every pull**, not on a rare UI action.
+
+- Symptom: enter combat → all owned bars snap back to Blizzard/Edit-Mode geometry. Leave combat →
+  they return to GB's layout on their own.
+- **The recovery half is CORRECT, not a bug.** [Layout.lua:281](../../GloomsBars/Layout.lua#L281)
+  sets `pending = true` and returns without touching geometry in combat; `PLAYER_REGEN_ENABLED`
+  ([:82-83](../../GloomsBars/Layout.lua#L82-L83)) flushes it. That is GB's documented HARD WALL —
+  all geometry applies out of combat only.
+- **The bug is the trigger:** on 12.1 *something re-lays the bars when combat starts*, which never
+  happened on live. GB's wall then means it cannot recover until combat ends.
+- Suspects, none confirmed: GB's `vis` overrides (the owner's profile has 8 `hide` / 6 `show`) make
+  Blizzard re-run its visibility + grid passes; and/or GB's re-assert post-hooks
+  (`hooksecurefunc` on `UpdateGridLayout`/`UpdateShownButtons`/`UpdateVisibility`/`ApplySystemAnchor`)
+  are being blocked by 12.1's protected-frame lockdown.
+- **Fixing it may mean questioning the hard wall itself** — GB re-anchors *unprotected containers*,
+  not secure buttons, and moving an unprotected parent in combat is normally allowed (hiding is the
+  restricted operation). Whether the wall is broader than it needs to be is a real design question
+  for a GB session, NOT a quick patch. Do not "just try it" without understanding why the wall
+  was drawn where it was.
+
+### FINDING 2 — a missing font kills the whole display · `~/GloomsAuras` · **NOT a 12.1 bug, affects LIVE**
+Found incidentally during PTR testing 2026-07-25; nothing to do with 12.1, and worth fixing on its own.
+
+[Displays.lua:379](../../GloomsAuras/Displays.lua#L379) reads
+`if not f.label:SetFont(font, size, flags) then f.label:SetFont(fallbackFont, …) end`. That guard
+assumes `SetFont` **returns false** on a bad asset — it does not, it **raises a Lua error**. So the
+fallback never runs, `ApplyConfig` aborts mid-function, and `SetTextColor` / `SetText` / `SetPoint` /
+`Show` / `ApplyGlow` are all skipped: the display breaks entirely, not just its text.
+
+- Trigger: any aura whose text font points into an addon that isn't installed. The owner's config
+  references **three** external addons — `ArcUI` (×2), `NiceDamage`, `EnhanceQoL` — so this fires the
+  moment any of them is uninstalled.
+- **This will hit friends/guildies the first time the suite is shared**, because their addon sets
+  won't match the owner's. It is not a PTR-only concern.
+- Fix (one line, NOT yet written): `pcall` the first `SetFont` and fall back on failure.
+
+### FINDING 3 ★★ — GA cannot read ANY aura detail in combat · `~/GloomsAuras` · **CONFIRMED, the big one**
+Proven 2026-07-25 on 12.1.0.68914 with GA's own `/ga capture` → `/ga probe`, on a Warlock with
+Agony/Corruption/Unstable Affliction/Haunt on a training dummy. **This is the finding the PTR test
+existed to get.**
+
+**Mechanism.** In combat, 12.1 returns the **aura instance ID as a SECRET value**. GA passes that
+secret into `C_UnitAuras.GetAuraDataByAuraInstanceID` / `GetAuraDuration` and **the call throws.**
+Every DoT logged identically:
+
+```
+frame:  IsShown=true IsActive=true | auraInstanceID=SECRET(number) present=true | expUnit=target
+aura:   player[THREW] target[THREW] | dur player[THREW] target[THREW]
+stacks: player[THREW] target[THREW]
+```
+
+**The gate is combat, and it is proven, not assumed.** Across 7 probes: out of combat → 51 secrets,
+**0 throws**; in combat with real aura instances → **60 throws**. Two other in-combat probes threw
+nothing because that character had no target debuffs, so `noID` short-circuited before any call.
+The APIs themselves are all still present (`ByInstanceID=true GetAuraDuration=true …`) — they exist
+and then refuse.
+
+**What survives: PRESENCE ONLY.** A non-nil secret still proves the aura is there, so `present=true`
+and `IsActive=true` are reliable. GA can know Agony is on the target; it **cannot** know duration,
+stacks, or expiry. That is exactly Blizzard's stated intent — display filtered aura sets, no access
+to the underlying data.
+
+**Why nothing appeared on screen:** the throws are inside `pcall`s, so the failure is SILENT —
+**BugSack stayed completely clean while every DoT display failed to light up.** Do not treat a clean
+sack as a pass anywhere in this work.
+
+**Scale: this is a migration, not a patch.** Every duration/stack-driven display in GA is affected.
+Blizzard's sanctioned replacement is the new `AuraContainer`/`AuraButton` frame types (presentation
+control, no data access); lookups **by spell ID or name** remain available for non-secret spells and
+are the other half of the answer. NOT yet designed, NOT started. This is the "deep design work inside
+ONE tool" shape that earns its own session in `~/GloomsAuras`.
+
+**Not affected:** cooldown data via `C_CooldownViewer` (the owner's SV Hunter auras ran clean), and
+presence-only displays.
+
+**★ THE ESCAPE ROUTES WERE TESTED AND ALL THREE ARE CLOSED** (2026-07-25, via `SecretScan` — a small
+local diagnostic addon in the retail AddOns folder, extended this session with `byname`, `api` and
+`newapi` modes; it is NOT in any repo). Blizzard's exact wording, worth quoting because it names the
+real gate: **`Auras cannot be accessed when secret while tainted by '<addon>'`** — the gate is
+**taint**, not combat. Combat is merely when auras become secret.
+
+| Channel tried, in combat, DoTs on target | Result |
+|---|---|
+| `GetAuraDataByIndex` (enumeration) | **THREW** — taint message above |
+| `GetUnitAuras(unit)` / `GetUnitAuraInstanceIDs(unit)` | **THREW** — same message. ★ these are the only way to OBTAIN an instance ID |
+| `GetAuraDataBySpellName` | **nil** — channel open, declines to return secret auras |
+| `GetUnitAuraBySpellID` / `GetCooldownAuraBySpellID` | **nil** |
+| `GetAuraBaseDuration`, `GetAuraApplicationDisplayCount`, `DoesAuraHaveExpirationTime` | THREW — but fed a *spell* ID, and they likely want an *aura instance* ID, so this row is INCONCLUSIVE |
+
+**Why the inconclusive row doesn't matter:** those display accessors need an aura instance ID, and
+the two bulk accessors that produce instance IDs are taint-blocked. The entry point is closed, so
+the read path is unreachable regardless. Everything works normally OUT of combat.
+
+**Three options for GA, none costed yet:**
+1. **`AuraContainer`/`AuraButton`** — Blizzard's sanctioned path. The container gathers auras
+   untainted; GA styles buttons and never touches data. Biggest rework, but the supported road.
+2. **Combat-log tracking** — derive DoT timers from `COMBAT_LOG_EVENT_UNFILTERED` application/refresh
+   events plus known base durations, the way addons did before instance IDs existed. CLEU is not on
+   any 12.1 restriction list. Real work (pandemic refresh, haste scaling) and unverified — but it
+   would keep GA's current look exactly.
+3. **Presence-only degradation** — keep the icon, drop the timer. Cheapest, and a real loss.
+
+Decide this in a GA session, not here.
+
+### The suspected cause class, for whatever comes next
+12.1's headline addon change is a security lockdown: **"Forbidden Aspects"** on protected frames
+blocking `UntrustedScriptExecution`, `EventRegistrations`, `ScriptedInput` and `QueryFocus`, plus
+aura APIs by index/slot/instance-ID erroring **during combat/encounters/M+/PvP** (by spell ID or
+name still works). GB carries ~40 `hooksecurefunc` calls ([Skin.lua](../../GloomsBars/Skin.lua),
+[Glows.lua](../../GloomsBars/Glows.lua), [Layout.lua](../../GloomsBars/Layout.lua)) — that's the
+exposure surface. **GA is the bigger unknown:** [CDM.lua](../../GloomsAuras/CDM.lua) calls
+`C_UnitAuras.GetAuraDataByAuraInstanceID` in ~8 places and `GetAuraDuration` in 4, several already
+`pcall`-wrapped against an older taint issue.
+
+### ⚠ WHAT REMAINS UNTESTED
+- **MM Hunter's auras** — the pre-season priority above. Only SV's two auras were ever run.
+- **Real instanced content** (dungeon / M+ / raid). All testing was open-world on a training dummy.
+  Combat alone was enough to trigger FINDING 3, so instanced content is expected to be no better —
+  but "expected" is not "verified."
+- **GB's ~40 `hooksecurefunc` calls** against the Forbidden Aspects lockdown. Only the Edit Mode
+  path (FINDING 1) surfaced; the skinning hooks were never exercised beyond a normal login.
+- **Overlays and the Hub shell** got a smoke test only (tabs open, window renders).
+
+Other 12.1 notes worth knowing: new interface texture filenames stop publishing to
+`ManifestInterfaceData`; new `VectorGraphics` object type gives **SVG textures**; radial masking via
+`SetRadialProgressBarPercent()`; `getglobal`/`setglobal` deprecated; `UIParentLoadAddOn` →
+`LoadAddOnWithErrorHandling`. Community-projected release **~2026-08-11**, not Blizzard-confirmed.
 
 ## Phase status
 
