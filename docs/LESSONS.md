@@ -82,6 +82,21 @@ directly.** Four separate incidents, all the same shape:
   full restart. The Media tab's Fonts warning is CORRECT — do not "fix" it.
 - **Textures are NOT an exception** — verified 2026-07-25 by replacing two in place; a bare
   `/reload` picked up the new art, which is the harder case than a brand-new file.
+- **★ DISABLING an addon does not make its media missing.** Unchecking it in the addon list stops
+  its Lua from loading; **the files stay on disk**, and WoW loads fonts, textures and sounds **by
+  file path**, with no idea which addon they came from. A font inside a disabled addon resolves
+  perfectly. **To test a missing-media path you must move or rename the FOLDER** — and then, for
+  fonts, restart (see the exception above). Cost a wasted full client restart on 2026-07-26 when
+  "disable NiceDamage and reload" was handed over as a repro step for a bug it could never trigger.
+- **★ `SetFont` RAISES on a missing asset — it does not return false**, despite reading like it
+  does (`Invalid font asset (…): file not found`, live 12.0.7, 2026-07-26). `if not
+  fs:SetFont(path, …) then <fallback> end` is therefore **backwards**: the fallback never runs and
+  the *enclosing function aborts mid-way*, skipping everything after it. Guard media setters with
+  `pcall` and treat both a raise and an explicit `false` as failure.
+  ⚠ **The deeper fix is what you STORE.** GA was uniquely exposed because it saved the resolved
+  **path** (`Interface\AddOns\<other addon>\…ttf`) into SavedVariables. GB and the Hub save the
+  **LSM name** and resolve at call time, so an uninstalled addon simply misses the lookup and falls
+  back to a bundled file. **Save the name, not the path**, and the dead-asset case stops existing.
 - **SavedVariables are written on logout, disconnect, quit AND `/reload`.** `/reload` is a genuine
   save point, so it is never a reason to restart.
 - **Hand-editing a SavedVariables file needs the client fully closed** — the in-memory copy

@@ -21,7 +21,8 @@ StoneTweaks is retired, the identity scrub is done, all five repos are public un
 **`GloomSuite`** org (Build Barn stayed with `HandofDevastation`). Versions drift by design:
 **`GloomsBars v1.1.2`**, the other three **`v1.0.1`** (verified against the published releases
 2026-07-26, not copied from this file's previous claim). What's left is in [BACKLOG.md](BACKLOG.md) —
-four items, three of them 12.1 testing, one a one-line live bug in Auras.
+five items: three are 12.1 testing, and two are robustness follow-ups left behind by the Auras font
+fix. **There is no known live bug in shipped code.**
 
 ---
 

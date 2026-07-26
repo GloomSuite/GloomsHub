@@ -19,6 +19,48 @@
 
 ---
 
+# SESSION RECORD — 2026-07-26 (the GA font crash — backlog item 2, closed)
+
+**One session, one backlog item, fixed and QA'd.** GA's `Displays.lua:379` guarded a font
+assignment with `if not fs:SetFont(...) then <fallback> end`, which assumes `SetFont` returns false
+on a bad asset. It raises. The fallback never ran and `ApplyConfig` aborted mid-function.
+
+### What shipped
+`GA.SetFontSafe(fs, path, size, flags)` in `Core.lua` — `pcall`s the set, treats a raise **or** an
+explicit `false` as failure, returns a boolean. A `nil` return counts as success, so a working font
+never triggers a pointless fallback. Applied at **three** sites carrying the same wrong guard:
+`Displays.lua:379` (aura label), `Displays.lua:238` (bar value text), `Core.lua:66` (`PreloadFonts`).
+
+### How it was verified, and how far that goes
+In-client on live 12.0.7, via `/run`:
+- `pcall(fs.SetFont, fs, "<dead path>", 14, "")` → `false — Invalid font asset (…): file not found`.
+  **This is the proof that `SetFont` raises**, re-established today rather than carried from the
+  PTR incident that first found it.
+- `GA.SetFontSafe(...)` on the same path → `false`, no error escaping.
+- The two-line fallback shape → `FONT: Fonts\FRIZQT__.TTF 20`, proving a usable font actually lands.
+  This mattered structurally: both font strings are created bare via `CreateFontString(nil,
+  "OVERLAY")` with **no template and so no inherited font**, meaning a failed fallback leaves the
+  text fontless rather than merely ugly.
+
+**Only the label path is `TESTED` end to end.** The bar value text and `PreloadFonts` use bundled
+fonts that ship with the addon; nothing short of deleting our own media would exercise them, so they
+are **fixed by inspection** and were recorded that way rather than folded into the tested claim.
+
+### Two wrong beliefs killed on the way (both are in FINDINGS §2)
+1. **"Three external addons trigger this."** Only one could. The SavedVariables has exactly one
+   `["font"]` key; the other two references are `.ogg` **sounds**.
+2. **"Disable NiceDamage and reload to reproduce."** Impossible — disabling an addon leaves its files
+   on disk and WoW loads fonts by path. **This was handed to the owner as a QA step and cost him a
+   full client restart for nothing.** Promoted to LESSONS.
+
+### Left open, deliberately
+The same false guard exists in `~/GloomsHub/Skin.lua:70` (`UI.setFont`, the shared toolkit) and in
+GB — but both resolve fonts by **LSM name** with a bundled fallback, so their exposure is much lower
+than GA's, which stored raw paths. Recorded as backlog item 4 rather than fixed silently in two
+sibling repos. A `ForceTaint_Strong` seen alongside the font error became item 5, `OBSERVED` only.
+
+---
+
 # SESSION RECORD — 2026-07-26 (the working-process rebuild)
 
 **The owner asked for the WORKING PROCESS to be reconsidered, not the architecture.** He was

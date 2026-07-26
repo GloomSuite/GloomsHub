@@ -88,28 +88,45 @@ clean), and presence-only displays.
 
 ---
 
-## §2 — A missing font kills the whole GA display
+## §2 — A missing font kills the whole GA display ✅ SOLVED
 
-**Repo:** `~/GloomsAuras` · **Status: `TESTED`** — found incidentally during PTR testing 2026-07-25.
-**Nothing to do with 12.1. This is a live bug today.**
+**Repo:** `~/GloomsAuras` · **Status: `TESTED` and FIXED** — 2026-07-26, owner-QA'd on live 12.0.7.
+Kept here for its KILLED list and its two corrections; the full record is in [ARCHIVE.md](ARCHIVE.md).
 
-`Displays.lua:379` reads:
+**The mechanism was right.** `SetFont` **raises** on a missing asset — it does not return false.
+Re-proven in-client 2026-07-26: `pcall(fs.SetFont, fs, "<dead path>", 14, "")` →
+`false — Invalid font asset (…): file not found`. The guard at `Displays.lua:379` was written on the
+opposite assumption, so the fallback never ran and `ApplyConfig` aborted mid-function.
 
-```lua
-if not f.label:SetFont(font, size, flags) then f.label:SetFont(fallbackFont, …) end
-```
+**Fixed by `GA.SetFontSafe`** (`Core.lua`), used at all **three** sites that carried the same wrong
+guard — `Displays.lua:379` (the aura label), `Displays.lua:238` (bar value text) and `Core.lua:66`
+(`PreloadFonts`). Only the label path is `TESTED` end to end; the other two use bundled fonts that
+ship with the addon and are **fixed by inspection**, which is as far as they can be taken.
 
-That guard assumes `SetFont` **returns false** on a bad asset. It does not — it **raises a Lua
-error**. So the fallback never runs, `ApplyConfig` aborts mid-function, and `SetTextColor` /
-`SetText` / `SetPoint` / `Show` / `ApplyGlow` are all skipped. **The display breaks entirely, not
-just its text.**
+### Two corrections to the original write-up
 
-- **Trigger:** any aura whose text font points into an addon that isn't installed. The owner's
-  config references three external addons — `ArcUI` (×2), `NiceDamage`, `EnhanceQoL` — so it fires
-  the moment any one of them is uninstalled.
-- **`SUSPECTED` (high confidence, untested): this will hit friends the first time the suite is
-  shared**, because their addon sets won't match the owner's. Reasoning, not a test.
-- **Fix:** `pcall` the first `SetFont` and fall back on failure. One line. **Not yet written.**
+**★ The blast radius was UNDERSTATED, and this part is `TESTED`-by-structure, not observed at
+runtime.** It is not "the display breaks entirely." `Displays.lua:151` sits *outside* the
+`if not f then` create-branch, so `ApplyConfig` re-runs for **every** display on **every**
+`GetOrCreate`; and `RefreshAll` is called unguarded at the very top of `CDM:Discover()`
+(`CDM.lua:884`). One aura with a dead font therefore aborts Discover before a single display is
+bound or hooked — **every aura in the profile goes dead, not just the one with the bad font.**
+Established by reading the call chain. Nobody watched it happen, because observing it would mean
+un-fixing the bug.
+
+**★ Unlike §1, this failure is NOT silent.** None of the ~15 `Discover()` call sites are `pcall`-ed,
+so it surfaces to BugSack.
+
+### `KILLED` — do not revive either of these
+- ~~*"The owner's config references three external addons, so uninstalling any of the three fires
+  this."*~~ **FALSE.** His SavedVariables contains exactly **one** `["font"]` key —
+  `NiceDamage\fonts\pepsi_modern.ttf`, on display `d18` ("Aimed Shot", in the
+  `Gloomrift - Stormrage` profile). The `ArcUI` (×2) and `EnhanceQoL` references are **`.ogg`
+  sounds**, which never reach `SetFont`. Only NiceDamage could ever have triggered §2.
+- ~~*"Disabling the NiceDamage addon reproduces a missing font."*~~ **FALSE, and it cost a full
+  client restart to learn.** Disabling an addon stops its Lua loading; it does **not** remove its
+  files. `SetFont` reads fonts **by file path**, so the font kept resolving perfectly. To make media
+  genuinely missing you must move or rename the folder on disk. Promoted to [LESSONS.md](LESSONS.md).
 
 ---
 
@@ -204,3 +221,59 @@ New interface texture filenames stop publishing to `ManifestInterfaceData`; a ne
 object type gives **SVG textures**; radial masking via `SetRadialProgressBarPercent()`;
 `getglobal`/`setglobal` deprecated; `UIParentLoadAddOn` → `LoadAddOnWithErrorHandling`.
 Community-projected release **~2026-08-11**, `SUSPECTED` only — not Blizzard-confirmed.
+
+---
+
+## §5 — The same false `SetFont` guard survives in the Hub and GB
+
+**Repo:** `~/GloomsHub` + `~/GloomsBars` · Found 2026-07-26 while fixing §2.
+
+**`TESTED` — the guard is wrong wherever it appears.** §2 established that `SetFont` raises. The
+identical `if not fs:SetFont(...)` construction is still live in:
+
+| Where | What it is |
+|---|---|
+| `~/GloomsHub/Skin.lua:70` — `UI.setFont` | **the shared `LibGloomSkin` helper** every tab's text flows through |
+| `~/GloomsBars/Config.lua:190`, `:220` | the font flyout rows and the font-picker button |
+| `~/GloomsBars/Skin.lua:976`, `:1052`, `:1140` | `SetFont(resolveFont(...))` with **no guard at all** |
+
+**`SUSPECTED` — the exposure is nonetheless LOW, and this is the part to establish before writing
+anything.** GA was uniquely vulnerable because it stores the **raw font path** in SavedVariables
+(`"Interface\\AddOns\\NiceDamage\\fonts\\pepsi_modern.ttf"`). GB and the Hub instead store an **LSM
+name** and resolve at call time — `lsm:Fetch("font", name, true)` with the silent flag returns `nil`
+for an unregistered font, and both then fall back to a **bundled** path. An addon that isn't
+installed never registered its font, so the lookup misses and the fallback is a *valid* file.
+
+**So the dangerous shape is not the guard — it is storing a resolved PATH rather than a NAME.** That
+is the thing to check for elsewhere.
+
+**Untested route worth one look:** whether any caller can hand `UI.setFont` a path that came from
+saved config rather than from `FONT.*`. If none can, this is a tidy-up, not a bug.
+
+**Also unchecked:** GA's three `.ogg` sound paths into `ArcUI` and `EnhanceQoL` — the same
+"points into an addon that may not be installed" shape, through a different call. `PlaySoundFile` is
+believed to return false rather than raise, but that is `SUSPECTED`, not tested.
+
+---
+
+## §6 — A missing font asset force-taints the execution path
+
+**Repo:** unknown · **Status: `OBSERVED`** — 2026-07-26, live 12.0.7, in the same `/run` that proved
+§2's mechanism.
+
+Calling `SetFont` with a dead path printed, alongside the expected error:
+
+```
+Lua Taint: *** ForceTaint_Strong ***
+```
+
+**`pcall` catches the error. It does not undo taint.** So §2's fix stops the crash and leaves this
+untouched: on a machine genuinely missing the font, every `Discover()` would still force-taint GA's
+execution path.
+
+**No consequence has been demonstrated, and none should be assumed.** GA rarely touches protected
+calls, so this may be entirely inert. It is recorded only because the suite leans so heavily on
+taint behavior elsewhere (§1's secret values, GB's ~40 `hooksecurefunc` calls, protected bar frames)
+that an unexamined force-taint is worth a deliberate look rather than a shrug.
+
+**Do not build anything on this.** Establish a real symptom first — per this file's own rule.
