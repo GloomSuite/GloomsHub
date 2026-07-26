@@ -100,8 +100,18 @@ directly.** Four separate incidents, all the same shape:
 
 ## Git, GitHub & packaging
 
+- **★★ NEVER write an absolute home path into a tracked file.** `/Users/<account>/…` carries the
+  macOS account name, which on this machine **is the owner's real first and last name** — the exact
+  thing the identity scrub existed to remove. Use `$HOME` or `~`. This happened on 2026-07-26 in a
+  `.claude/settings.json` hook command, reached a public repo, and cost a full delete-and-recreate
+  to purge. **Grep `/Users/` before committing anything that touches tooling config, scripts or
+  hooks** — those are the files where an absolute path looks harmless.
 - **★★ A force-push does NOT purge — it only unlinks.** Old commits stay on GitHub and are served
   the instant the repo is public. The only reliable purge is **delete the repo and recreate it**.
+  Re-proven 2026-07-26: after delete-and-recreate the offending SHA returned **422** while the repo
+  was verifiably **public** (`"private": false`) and current commits returned **200** — that
+  combination is the proof, because a 422 from a repo you have not confirmed is public proves
+  nothing.
 - **Never validate a purge from a private repo.** That endpoint 404s for *any* SHA while private, so
   a 404 proves nothing. Verify **unauthenticated against the PUBLIC repo** and expect **422**.
 - **Published release ZIPs are a separate surface** a force-push cannot reach. After any history
