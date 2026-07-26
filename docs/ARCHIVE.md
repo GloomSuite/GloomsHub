@@ -1163,3 +1163,22 @@ decisions are in [SUITE-STATE.md](SUITE-STATE.md). Recorded here only as the QA 
   enumerator while GA and Overlays do.
 - ~~"GA is the only selection-scoped tool."~~ **Overlays was too** — its Tint reads the selected
   overlay. Both got providers.
+
+---
+
+## MM Hunter auras on 12.1 — CLOSED, `TESTED` safe, 2026-07-26
+
+Backlog item, opened 2026-07-25 with a deadline of Season 2 (~2026-08-19). **Closed by testing, and
+its premise was disproved.** The entry assumed Precise Shots and Spotter's Mark might be
+*duration*-driven and so land on FINDINGS §1's broken path, on the spec the owner actually plays.
+They are not — every display in his MM Hunter group triggers on presence or cooldown readiness.
+
+Proven on PTR 12.1.0.68914 across 14 `/ga capture` probes at a dummy, both structural classes
+(`hasAura=false` and `hasAura=true`), read from `GloomsAurasDB.probeLog` on disk. The presence
+signal sets *and* clears in combat, and the owner confirmed the display drew on screen. Full record
+in [FINDINGS.md](FINDINGS.md) §7.
+
+**Two things it cost, both now in [LESSONS.md](LESSONS.md):** the 255-character chat-input limit
+that silently truncates a `/run` one-liner, and the discovery that secret values propagate through
+string formatting and then vanish from SavedVariables without an error — which made 14 saved
+captures look like 8 and produced a confident, wrong "your data didn't save."

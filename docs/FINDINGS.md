@@ -75,6 +75,10 @@ path is unreachable regardless.
 **`TESTED` — not affected:** cooldown data via `C_CooldownViewer` (the owner's SV Hunter auras ran
 clean), and presence-only displays.
 
+**★ `TESTED` 2026-07-26 — presence-only survival is now proven on the Hunter, both aura classes.**
+See **§7**. This bounds §1: the broken thing is the *data* path, and a profile that never asks for
+duration or stacks is untouched. The owner's MM profile is one of those; his Warlock profile is not.
+
 ### Three options, none costed
 1. **`AuraContainer` / `AuraButton`** — Blizzard's sanctioned path. The container gathers auras
    untainted; GA styles buttons and never touches data. Biggest rework, the supported road.
@@ -182,22 +186,42 @@ APIs are still landing in pieces, so fixing a genuine 12.1 change now means fixi
 for launch buys nothing.* That is why §3 was fixed and shipped immediately.
 
 ### `UNTESTED` — the gaps
-- **MM Hunter's auras.** Only SV's two auras were ever run. **The pre-season priority** — see
-  [BACKLOG.md](BACKLOG.md) item 3.
+- ~~**MM Hunter's auras.** Only SV's two auras were ever run.~~ **DONE 2026-07-26 — see §7.**
+  Both structural classes tested; MM is safe.
 - **GB's ~40 `hooksecurefunc` calls** against the Forbidden Aspects lockdown. The bar-layout hooks
   are now proven ALIVE (measured 2026-07-26); the **skinning** hooks were never exercised beyond a
-  normal login.
+  normal login — **and §8 is the first real symptom out of that gap.**
 - **Real instanced content** (dungeon / M+ / raid). All testing was open-world on a training dummy.
   Combat alone was enough to trigger §1, so instanced content is `SUSPECTED` to be no better — but
   "expected" is not "verified."
 - **Overlays and the Hub shell** got a smoke test only (tabs open, window renders).
 
-### PTR setup — done 2026-07-25, still in place
+### PTR setup — done 2026-07-25, **and it has since DRIFTED**
 `_ptr_` is **12.1.0.68914** (`wowt`); retail is 12.0.7.68887. `_ptr_/Interface/AddOns/` has the four
 suite addons plus `!BugGrabber`, `BugSack`, `SecretScan`, and the three addons GA's config
 references by path (`ArcUI`, `NiceDamage`, `EnhanceQoL` + its 15 modules — without them a font path
 404s and trips §2). Live SavedVariables were copied across. TOCs deliberately left at `120007` —
 "Load out of date AddOns" is enough.
+
+**★★ `TESTED` 2026-07-26 — the client no longer matches the paragraph above, and it produced a
+convincing false 12.1 bug.** Also installed: **`EllesmereUI`** (a full UI-replacement suite —
+`ActionBars`, `UnitFrames`, `Nameplates`, `CooldownManager`, `BlizzardSkin`, `Basics`, ~20 modules)
+and `CopyThat`. **The owner keeps most Ellesmere modules OFF on retail; the fresh PTR install turned
+them ALL ON.** `EllesmereUICooldownManager` was fighting GA over the same four Cooldown Manager
+viewers, and `EllesmereUIActionBars` sits alongside GB (that one he had already disabled).
+
+**Read the addon list BEFORE attributing anything to 12.1 on this client.** Two of three symptoms in
+the 2026-07-26 session had a competing addon sitting in the folder as a simpler explanation.
+
+### `KILLED` — do not revive this
+- ~~*"GA's 'hide Blizzard CDM icons' toggle is broken on 12.1 — it reverts on `/reload` and on
+  acquiring a target, the same shape as §3's bars."*~~ **FALSE — it was an addon conflict.**
+  `EllesmereUICooldownManager` re-lit the viewers; the owner disabled that module and the icons
+  stayed hidden. GA's `ApplyBlizzardHide` works correctly on 12.1: it had dimmed all four viewers at
+  login, and the fingerprint that gave it away was **`BuffBarCooldownViewer` still sitting at
+  `alpha=0`** while the three viewers with visible content had been reset to 1 — Ellesmere left the
+  empty one alone. `UpdateSystemSettingOpacity` still exists on 12.1 and GA's re-assert hook was
+  installed on all four. **The analogy to §3 was seductive and wrong.**
 
 **GB's separate PTR checkout is RETIRED (2026-07-26).** Once §3 proved to be a *live* bug, the fix
 belonged on `main` and the split lost its purpose. **All four suite addons now point at their normal
@@ -310,3 +334,86 @@ force-taint fired, nothing was blocked.* That is enough to stop treating this as
 **not** a proof of inertness, and it must not be written up as one.
 
 **Stop here.** Do not build anything on this, and do not re-raise it without a real symptom.
+
+---
+
+## §7 — MM Hunter is NOT affected by §1 ✅ SETTLED
+
+**Repo:** `~/GloomsAuras` · **Status: `TESTED`** — 2026-07-26 on PTR 12.1.0.68914, Gloomrift
+(Marksmanship, spec 254), 14 `/ga capture` probes at a training dummy, read from
+`GloomsAurasDB.probeLog` on disk rather than from chat.
+
+**The premise the backlog carried was wrong.** It assumed Precise Shots and Spotter's Mark might be
+*duration*-driven and so land on §1's broken path. They are not. Every display in the owner's
+**MM Hunter** group triggers on presence or cooldown readiness — `d19` Precise Shots `buff_active`,
+`d20` Spotter's Mark `buff_active`, `d18` Aimed Shot `cd_ready`+`cd_ready`+`buff_inactive` — and
+`CDM:EvalCondition` (`CDM.lua:213`) resolves those off the `buffActive` boolean table, never an
+aura read.
+
+**`TESTED` — the presence signal sets AND clears in combat.** Both structural classes, which is the
+part that matters:
+
+| Item | `hasAura` | Result |
+|---|---|---|
+| Precise Shots, Deathblow | `false` | on → **off** → on, clean each time |
+| Spotter's Mark, Take Aim | `true` | four full on/off cycles |
+
+`IsActive` came back a **plain boolean in both directions, never secret**, while the same probe line
+showed `aura: player[THREW] target[THREW]`. §1 is fully reconfirmed on the Hunter — the *data* path
+is just as dead as it is for the Warlock — but presence is intact and that is all this profile asks
+for. **Owner confirmed the red Spotter's Mark texture drew on screen**, so this is end-to-end, not
+signal-only.
+
+**The `RepollBuffPresence` fallback is what carries it.** `CDM.lua:541` calls
+`GetAuraDataByAuraInstanceID` inside a `pcall`; in combat that throws, `present` goes false, and
+line 549 falls back to `frame:IsActive()`. ⚠ **The residual risk is line 550:** if `IsActive` ever
+returns a *secret*, the code keeps the previous value and an expired buff stays lit forever. It
+never did across 14 probes — but that is the failure mode to check first if this ever regresses.
+
+**Blizzard mislabels Spotter's Mark** — `selfAura=true` / `expUnit=player` for an aura the tooltip
+puts on the target. Moot in combat: both `player[]` and `target[]` throw, so the fallback bypasses
+unit resolution entirely and `CDM.lua:417`'s workaround is not load-bearing here.
+
+### `KILLED` — do not revive this
+- ~~*"`GetSpecialization` is gone on 12.1, so GA's spec-gated groups fail closed (`CDM.lua:291`
+  returns false on a nil specID) and the whole MM Hunter group renders nothing."*~~ **FALSE.**
+  Raised because the probe header printed `spec=?`. Tested directly in-client:
+  `GetSpecialization` → `function`, index `2`, `GetSpecializationInfo` → `254`. The globals are
+  alive and the gate works. **The `spec=?` was the probe's own bug** — `CDM.lua:1455` reads the
+  *second* return (the name), which is empty on 12.1 while the ID is fine. A cosmetic fault in the
+  instrument, misread for two minutes as a fault in the thing measured.
+
+---
+
+## §8 — Quick Keybind Mode cannot bind over a button's centre
+
+**Repo:** `~/GloomsBars` · **Status: `TESTED` cause on PTR 12.1.0.68914, `UNTESTED` on live** —
+2026-07-26.
+
+**Symptom.** In Quick Keybind Mode the owner sees Blizzard's faint gold highlight on every button
+and cannot assign a binding while the pointer is over one. Moving the pointer to the button's edge
+binds normally.
+
+**`TESTED` — the caller was NAMED by `/fstack`, not inferred.** Hovering a failing spot puts mouse
+focus on `ActionButton10.TextOverlayContainer` at **frame level 56**, above `ActionButton10` itself
+at 52. `GetMouseFoci()` on a working spot returns the button (`ActionButton12 CheckButton MEDIUM
+52`). Quick Keybind listens on the *button*, so the hover never arrives.
+
+**Mechanism.** `Skin.lua:1378` raises `TextOverlayContainer` to `btn:GetFrameLevel() + 4`
+deliberately, so hotkey and count text clear GB's own skin layers (plate `+1`, decor `+2`, glow
+`+3`); the intent is documented at `Skin.lua:790`. The side effect is that a mouse-enabled container
+now outranks the button for focus.
+
+**The gold overlay is innocent** — it is Blizzard's `QuickKeybindHighlightTexture`, sitting at the
+button's own level 52. It merely happens to mark the region the text container covers, which is why
+it read as the culprit.
+
+**`SUSPECTED` fix, not yet written or QA'd:** `EnableMouse(false)` on the container alongside the
+level raise — text stays above the skin, mouse falls through to the button.
+
+### ⚠ The question that decides everything, and it is open
+**Does this reproduce on LIVE?** GB is symlinked into both clients, so this code already runs on
+retail. §3 had exactly this shape and turned out to be a latent live bug the PTR merely exposed, not
+a 12.1 regression. **Answer this before writing the fix** — §4's standing rule is that a
+PTR-exposed live bug gets fixed now rather than after launch, and the answer also decides whether
+this belongs to the 12.1 sweep at all.

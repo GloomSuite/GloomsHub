@@ -9,7 +9,7 @@
 > **Keep this file short enough to re-read.** If it passes ~180 lines, move the settled history to
 > [ARCHIVE.md](ARCHIVE.md). A document nobody re-reads is a document nobody corrects.
 
-**Last updated:** 2026-07-26
+**Last updated:** 2026-07-26 (late)
 
 ---
 
@@ -21,8 +21,12 @@ StoneTweaks is retired, all five repos are public under the **`GloomSuite`** org
 with `HandofDevastation`). **All four suite addons are published at `v1.2.0`** (2026-07-26, verified
 anonymously against `/releases/latest`, not copied) — a one-time squaring-up at the owner's request;
 *not* a new rule, drift is still permitted (see the locked decision below). What's left is in
-[BACKLOG.md](BACKLOG.md) — four items: three are 12.1 testing, one is a font-licence question.
-**There is no known live bug in shipped code.**
+[BACKLOG.md](BACKLOG.md) — four items: one GA migration, one GB defect, one testing sweep, one
+dev-tool cleanup.
+⚠ **"There is no known live bug in shipped code" NO LONGER HOLDS unconditionally** (was true as of
+the v1.2.0 cut; corrected 2026-07-26). GB's Quick Keybind defect (FINDINGS §8) is in shipped code
+and has only been observed on the PTR — **whether it also bites on live is untested**, and that
+check is the first step of BACKLOG item 2.
 
 **The shipped zip was verified, not assumed.** `GloomsHub-v1.2.0.zip` is **404 KB** (it would have
 been ~5.4 MB before the purge), contains no `Fonts/`, `Textures/` or `Graphics/`, no identifying

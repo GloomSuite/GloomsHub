@@ -39,6 +39,14 @@ directly.** Four separate incidents, all the same shape:
 - **A cross-cutting fact restated in a second repo WILL go stale.** Release state was copied into
   GB's `CLAUDE.md` + handoff and GA's handoff; all three were wrong within a day. **Point at the
   home of record; never copy the fact.**
+- **★ READ THE ADDON LIST BEFORE YOU INSTRUMENT THE CLIENT.** On 2026-07-26 a session wrote a whole
+  throwaway trap addon to find who was un-hiding GA's Cooldown Manager viewers; the answer was
+  visible in an `ls` of the AddOns folder, and the trap never fired. **A test client's addon set
+  drifts, and a fresh install of a modular UI suite enables every module** — the owner runs most of
+  `EllesmereUI` off on retail, and the PTR copy came up with all ~20 modules on, including one that
+  owns the exact frames we were debugging. **Check what else is installed before attributing a
+  symptom to the game version.** Two of three symptoms that session had a competing addon sitting in
+  the folder as the simpler explanation.
 - **Price a deferred item before you schedule it, not after you start it.** A backlog entry
   describes what someone once intended, not what it costs today. GB's modifier symbols read as
   "fiddly but approved" across three handoffs and hid a hard prerequisite (a bundled font
@@ -65,6 +73,11 @@ directly.** Four separate incidents, all the same shape:
 - **A tab that throws during `build()` takes the WHOLE tab down, silently.** The shell builds a tab
   before showing it, so an error anywhere leaves the window open, the content blank and no tab
   highlighted. It looks like the addon is dead, not like one broken section.
+- **★ WoW's chat box truncates input at 255 characters — silently.** A `/run` one-liner longer than
+  that arrives at the parser as a fragment and fails with a syntax error (`')' expected near '<eof>'`)
+  that looks like YOUR bug, not a length limit. The tell is the `msg=` local in the error: it shows
+  the string cut off mid-token. **Keep in-client one-liners well under 255**, and when a diagnostic
+  genuinely needs more, write a throwaway addon instead of golfing the line down.
 - **macOS `sed` has no `\b`.** Verify identifier renames with a token count, and `luac -p` every
   touched file.
 - **zsh does NOT word-split unquoted variables.** `for f in $files` passes the entire newline-
@@ -104,6 +117,16 @@ directly.** Four separate incidents, all the same shape:
   rely on the resolver. See FINDINGS §5's `KILLED` list.
 - **SavedVariables are written on logout, disconnect, quit AND `/reload`.** `/reload` is a genuine
   save point, so it is never a reason to restart.
+- **★★ SECRECY PROPAGATES THROUGH STRING FORMATTING, AND SECRET VALUES VANISH ON SAVE.** On 12.1
+  `UnitName("target")` is secret in combat. Format that name into a string and **the resulting
+  string is secret too** — and the SavedVariables writer stores it as `["key"] = nil --[[ secret
+  value ]]`, with no error and no warning. Proven 2026-07-26: GA's probe wrote 14 captures, and the
+  header line of every in-combat one was simply *absent* from the file because it embedded the
+  target's name. A grep keyed on that header counted 8 entries instead of 14 and produced a
+  confident, wrong "your data didn't save."
+  **Two rules follow:** never build a stored string out of anything that might be secret — store the
+  parts separately and `issecret`-guard each; and **never conclude a table is missing from
+  SavedVariables by grepping for one line inside it** — count the entries structurally.
 - **Hand-editing a SavedVariables file needs the client fully closed** — the in-memory copy
   overwrites the file at every save point. This is the one case that truly requires an exit.
 - **WoW never reclaims a frame.** Pool and reuse them. A 3-second slider drag on a 19-overlay
