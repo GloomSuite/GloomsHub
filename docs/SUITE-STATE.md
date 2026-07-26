@@ -19,7 +19,8 @@
 shared base; Bars, Auras and Overlays each mount a tab in its window and hard-depend on it.
 StoneTweaks is retired, the identity scrub is done, all five repos are public under the
 **`GloomSuite`** org (Build Barn stayed with `HandofDevastation`). Versions drift by design:
-**`GloomsBars v1.1.1`**, the other three **`v1.0.1`**. What's left is in [BACKLOG.md](BACKLOG.md) —
+**`GloomsBars v1.1.2`**, the other three **`v1.0.1`** (verified against the published releases
+2026-07-26, not copied from this file's previous claim). What's left is in [BACKLOG.md](BACKLOG.md) —
 four items, three of them 12.1 testing, one a one-line live bug in Auras.
 
 ---
@@ -82,7 +83,7 @@ Assets: `Fonts/` 7 · `Textures/` 13 · `Graphics/` 45 · `Media/` (Khand ×2, G
 Gh marks). `Libs/` is gitignored and pulled by the packager.
 
 **`~/GloomsBars`** — `main`. Hard-deps the Hub; local toolkit and standalone window deleted; mounts
-the **Bars** tab; `/gb` → `ToggleWindow("bars")`. At **`v1.1.1`**.
+the **Bars** tab; `/gb` → `ToggleWindow("bars")`. At **`v1.1.2`**.
 
 **`~/GloomsAuras`** — `main`. Hard-deps the Hub; mounts the **Auras** tab, fully reworked 2026-07-25
 (rail + full-width editor; splash, name banner and four drawers gone); `SKIN_NEEDS = 4`.
