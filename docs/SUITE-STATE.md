@@ -81,6 +81,11 @@ Full QA evidence for every phase is in [ARCHIVE.md](ARCHIVE.md). Do not redo any
   **GB is the UI reference for the suite, not GA.** When a pattern exists in both, copy Bars.
 - **No self-arming "click twice" confirms** (2026-07-24). Destructive actions use `UI.confirm`,
   which has a Cancel and an ESC.
+- **One colour picker for the whole suite** (2026-07-26) — `UI.colorPicker`, MINOR 6. **The last
+  native Blizzard frame anywhere in the suite is gone**; `ColorPickerFrame` appears nowhere in any
+  of the four repos. ★ **It is deliberately NOT modal** — it changes an element while it is open, so
+  it takes no scrim and IS draggable. Do not "fix" that to match `nameDialog`/`confirm`.
+  Its palette holds **the user's own element colours**, never the suite's design tokens.
 - **StoneTweaks is fully retired**; its media half is the Hub's Media tab. The
   `StoneTweaks_ResolveAssetPath` compat shim in `Core.lua` is **KEPT PERMANENTLY** (CONTRACTS §3) —
   do not "clean it up."
@@ -95,7 +100,8 @@ Full QA evidence for every phase is in [ARCHIVE.md](ARCHIVE.md). Do not redo any
 
 **`~/GloomsHub`** — symlinked into AddOns. `Core.lua` (namespace, `GloomsHubDB`, ST copy-migration,
 the permanent compat shim, `/gh` probe) · `Skin.lua` (**the body of `LibGloomSkin-1.0`**, LibStub-
-registered, **MINOR 5** — tokens, toolkit, `WarmFonts`/`RegisterWarmPairs`; `GloomsHub.COLOR/.FONT/
+registered, **MINOR 6** — tokens, toolkit, `WarmFonts`/`RegisterWarmPairs`, **the suite's own colour
+picker + its "in use" palette**; `GloomsHub.COLOR/.FONT/
 .UI/.MEDIA` are aliases) · `Shell.lua` (the Suite window: `RegisterTab`/`Open`/`FocusTab`/
 `ToggleWindow` + `/gloom`) · `Media.lua` (LSM registration, `ResolveAssetPath`, `ListMedia`, the
 Media tab) · `MinimapButton.lua` (**the ONE suite launcher** — never one per tool).
@@ -111,7 +117,8 @@ the **Bars** tab; `/gb` → `ToggleWindow("bars")`. `SKIN_NEEDS = 5` (its font p
 `UI.setFont`'s return value).
 
 **`~/GloomsAuras`** — `main`. Hard-deps the Hub; mounts the **Auras** tab, fully reworked 2026-07-25
-(rail + full-width editor; splash, name banner and four drawers gone); `SKIN_NEEDS = 4`.
+(rail + full-width editor; splash, name banner and four drawers gone); `SKIN_NEEDS = 6` (its
+`MakeColor` drives `UI.colorPicker`; its private ColorPickerFrame flow is gone).
 
 **`~/GloomsOverlays`** — `master`. Hard-deps the Hub; mounts the **Overlays** tab; frame pooling and
 in-place layout apply; all nine stratas plus a numeric Level.

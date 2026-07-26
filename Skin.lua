@@ -9,7 +9,7 @@
 -- change it THERE and every consumer in the same session.
 -- ============================================================
 
-local MAJOR, MINOR = "LibGloomSkin-1.0", 5   -- MINOR 5 (2026-07-26): setFont/WarmFonts/RegisterWarmPairs now RETURN whether the face loaded
+local MAJOR, MINOR = "LibGloomSkin-1.0", 6   -- MINOR 6 (2026-07-26): UI.colorPicker — the suite's own color picker; colorSwatch drives it instead of ColorPickerFrame
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if lib then
@@ -261,34 +261,38 @@ function UI.sliderRow(parent, yTop, labelText, minV, maxV, step, get, set, fmt, 
   return row
 end
 
--- Color swatch — a solid button that opens the game ColorPickerFrame (modern
--- SetupColorPickerAndShow API, with a fallback). get() → {r,g,b[,a]} array;
--- set(c) writes it. Returns { swatch, refresh }. Lifted verbatim from GB.
-function UI.colorSwatch(parent, get, set, withAlpha)
+-- Color swatch — a solid button opening the suite's own UI.colorPicker (MINOR 6;
+-- it drove Blizzard's ColorPickerFrame before that, the last piece of native
+-- chrome anywhere in the suite). get() → {r,g,b[,a]} array; set(c) writes it.
+-- `withAlpha` adds the Opacity row to the picker and a 4th component to `c`.
+-- `label` (MINOR 6) names the element this controls — "Bars › Border color" —
+-- and is what the palette's tooltip lists as WHERE a color is in use. Optional:
+-- an unlabelled swatch still works, it just never shows up in that list.
+-- Returns { swatch, refresh }.
+function UI.colorSwatch(parent, get, set, withAlpha, label)
   local sw = CreateFrame("Button", nil, parent); sw:SetSize(28, 20)
   local tex = sw:CreateTexture(nil, "ARTWORK"); tex:SetAllPoints()
   UI.addEdges(sw, COLOR.rim, 1)
   -- The swatch shows the hue at full opacity (its alpha lives on the target, e.g.
   -- the border) so a near-transparent colour stays visible/clickable here.
-  local function update() local c = get() or { 1, 1, 1 }; tex:SetColorTexture(c[1] or 1, c[2] or 1, c[3] or 1, 1) end
+  -- Every refresh also tells the palette this color is live on an element. This
+  -- is the whole harvest: no tool had to be taught anything.
+  local function update()
+    local c = get()
+    UI.NoteColor(c)
+    c = c or { 1, 1, 1 }
+    tex:SetColorTexture(c[1] or 1, c[2] or 1, c[3] or 1, 1)
+  end
   sw:SetScript("OnClick", function()
-    local c = get() or { 1, 1, 1 }
-    local function apply()
-      local r, g, b = ColorPickerFrame:GetColorRGB()
-      if withAlpha then
-        local a = ColorPickerFrame.GetColorAlpha and ColorPickerFrame:GetColorAlpha() or 1
-        set({ r, g, b, a })
-      else
-        set({ r, g, b })
-      end
-      update()
-    end
-    local info = { hasOpacity = withAlpha or false, opacity = withAlpha and (c[4] or 1) or nil,
-      r = c[1], g = c[2], b = c[3], swatchFunc = apply, opacityFunc = apply }
-    if ColorPickerFrame.SetupColorPickerAndShow then ColorPickerFrame:SetupColorPickerAndShow(info)
-    else ColorPickerFrame.func = apply; ColorPickerFrame:SetColorRGB(c[1], c[2], c[3]); ColorPickerFrame:Show() end
+    UI.colorPicker({
+      color = get() or { 1, 1, 1 },
+      hasAlpha = withAlpha,
+      owner = sw,
+      onChange = function(c) set(c); update() end,
+    })
   end)
   update()
+  UI.RegisterColorSource(sw, get, label)
   local row = { swatch = sw }
   function row:refresh() update() end
   return row
@@ -493,7 +497,7 @@ end
 -- between clients). GB and GA each hand-maintained a near-identical copy of the
 -- name dialog before this; there is now exactly one.
 -- ------------------------------------------------------------
-local nameDlg, confirmDlg
+local nameDlg, confirmDlg, pickerDlg
 
 -- The scrim behind them (the owner, 2026-07-25). Both dialogs are plates in the
 -- same near-black navy as the panel they open over, so without this they read as
@@ -596,6 +600,621 @@ function UI.confirm(bodyText, onYes, acceptLabel, titleText)
   confirmDlg.yes.text:SetText(acceptLabel or "Delete")
   confirmDlg:Show(); confirmDlg:Raise(); scrimShow(confirmDlg)
   return confirmDlg
+end
+
+-- ------------------------------------------------------------
+-- UI.colorPicker (MINOR 6) — the suite's ONE color picker.
+--
+-- Everything else in the suite had been reskinned; this was the last native
+-- Blizzard frame a user could still be shown (the owner, 2026-07-26). Family
+-- plate and OK/Cancel, carrying an HSV field, a hue strip, a hex box, the suite
+-- palette, and an OPACITY slider (the shared UI.sliderRow, so it is the same
+-- control as every other opacity in the suite) when the caller asks for one.
+--
+-- ★★ It is NOT a modal, and that is deliberate (the owner, 2026-07-26): unlike
+-- nameDialog and confirm it CHANGES SOMETHING ON SCREEN WHILE IT IS OPEN, so
+-- dimming the rest of the screen would hide the very thing you are judging.
+-- Two consequences, and the second is not optional:
+--   · it takes NO scrim, so you can see (and reach) what it is tinting; and
+--   · it is DRAGGABLE by its plate, because a fixed centre-screen panel will
+--     always end up sitting on top of whatever you are trying to look at.
+-- The scrim was also what separated these dialogs from the tab underneath —
+-- they are the same near-black navy as the panel they open over. A PURPLE RIM
+-- does that job here instead, without dimming anything.
+--
+--   opts.color     { r, g, b [, a] }   the starting color (defaults white)
+--   opts.hasAlpha  show the Opacity row and return a 4th component
+--   opts.title     dialog title (defaults "COLOR")
+--   opts.onChange(c)  LIVE, on every change — same contract as Blizzard's
+--                     swatchFunc, so consumers keep their live previews
+--   opts.onAccept(c)  OK only
+--   opts.onCancel()   after the original has been restored via onChange
+--   opts.owner        the frame the picker belongs to (the swatch). When that
+--                     goes away — tab switch, Suite window closed — the picker
+--                     closes and CANCELS, rather than floating there editing a
+--                     control nobody can see. Being non-modal is what makes
+--                     that reachable; UI.colorSwatch passes it for you.
+--
+-- ★ It applies LIVE and restores on cancel. Every close path that is not an
+-- explicit OK — Cancel, ESC, the frame being hidden underneath it — puts
+-- opts.color back through onChange. Blizzard's picker only did that if you
+-- passed a cancelFunc, and NOTHING in the suite did, so cancelling used to
+-- leave the last color you dragged over applied.
+-- ------------------------------------------------------------
+
+-- SetGradient needs a real TEXTURE under it, not a SetColorTexture fill — this
+-- is the pairing that is demonstrably live in this client (12.0.7).
+local WHITE8X8 = "Interface\\BUTTONS\\WHITE8X8"
+
+local function hsv2rgb(h, s, v)
+  if s <= 0 then return v, v, v end
+  h = (h % 1) * 6
+  local i = math.floor(h)
+  local f = h - i
+  local p, q, t = v * (1 - s), v * (1 - s * f), v * (1 - s * (1 - f))
+  if     i == 0 then return v, t, p
+  elseif i == 1 then return q, v, p
+  elseif i == 2 then return p, v, t
+  elseif i == 3 then return p, q, v
+  elseif i == 4 then return t, p, v
+  else                return v, p, q end
+end
+
+local function rgb2hsv(r, g, b)
+  local mx, mn = math.max(r, g, b), math.min(r, g, b)
+  local d, h = mx - mn, 0
+  if d > 0 then
+    if mx == r then h = ((g - b) / d) % 6
+    elseif mx == g then h = (b - r) / d + 2
+    else h = (r - g) / d + 4 end
+    h = h / 6
+  end
+  return h, (mx > 0 and d / mx or 0), mx
+end
+
+-- "#RRGGBB" / "RRGGBB" / "#RRGGBBAA" → r,g,b[,a]; nil on anything else.
+local function hex2rgb(str)
+  str = strtrim(str or ""):gsub("^#", "")
+  if (#str ~= 6 and #str ~= 8) or str:match("%X") then return nil end
+  local a = #str == 8 and tonumber(str:sub(7, 8), 16) / 255 or nil
+  return tonumber(str:sub(1, 2), 16) / 255,
+         tonumber(str:sub(3, 4), 16) / 255,
+         tonumber(str:sub(5, 6), 16) / 255, a
+end
+
+local function byte255(x) return math.floor((x or 0) * 255 + 0.5) end
+
+-- Two-tone backdrop behind the preview, so a part-transparent color reads as
+-- TRANSPARENT rather than as a darker color. Four blocks is plenty at this size.
+local function checkerboard(parent, w, h)
+  for i = 0, 1 do
+    for j = 0, 1 do
+      local t = parent:CreateTexture(nil, "BACKGROUND")
+      local s = ((i + j) % 2 == 0) and 0.20 or 0.11
+      t:SetColorTexture(s, s, s + 0.02, 1)
+      t:SetSize(w / 2, h / 2)
+      t:SetPoint("TOPLEFT", (w / 2) * i, -(h / 2) * j)
+    end
+  end
+end
+
+-- ------------------------------------------------------------
+-- The palette row — the colors that are on the USER'S OWN elements.
+--
+-- ★ Not the suite's design tokens. The first cut of this row WAS the token set,
+-- and that was the wrong basis (the owner, 2026-07-26): "Gloom Suite is a lot of
+-- purple and orange, and those colors shouldn't necessarily be in the palette if
+-- the end user isn't using them on live elements in their own UI." What belongs
+-- here is what they have put on their bars, auras and overlays.
+--
+-- ★ No tool needed a single edit for this. EVERY color control in the suite
+-- already goes through UI.colorSwatch or UI.colorPicker, and every one of them
+-- drives a user-facing element — the chrome's own colors are hardcoded tokens
+-- that never pass through here. So the lib already sees exactly the right set,
+-- and only the lib had to change.
+--
+-- Two tiers, because they answer different questions:
+--   APPLIED — the user picked it on purpose. Bumped to newest on every pick,
+--             and evicted only once every SEEN entry is gone.
+--   SEEN    — it is merely what an element wears right now, including a default
+--             they never touched. Fills free slots; never evicts anything.
+--
+-- Storage is GloomsHubDB.palette = { { hex, n, applied }, … }. The lib may reach
+-- for the Hub's SavedVariable because there is exactly one of each: the Hub is a
+-- HARD dependency of all three tools, and per-tool embedding of this lib was
+-- DROPPED (see ARCHIVE). Without a Hub the row degrades to empty, never errors.
+-- ------------------------------------------------------------
+local PALETTE_MAX = 12
+
+local function paletteList()
+  if type(GloomsHubDB) ~= "table" then return nil end
+  if type(GloomsHubDB.palette) ~= "table" then GloomsHubDB.palette = {} end
+  return GloomsHubDB.palette
+end
+
+-- Colors the user has right-clicked away. This has to be REMEMBERED, not just
+-- removed: a color that is still live on an element would otherwise be
+-- re-harvested by the very next swatch refresh and reappear a second later.
+local function paletteHidden()
+  if type(GloomsHubDB) ~= "table" then return nil end
+  if type(GloomsHubDB.paletteHidden) ~= "table" then GloomsHubDB.paletteHidden = {} end
+  return GloomsHubDB.paletteHidden
+end
+
+local function hexOf(c) return ("%02x%02x%02x"):format(byte255(c[1]), byte255(c[2]), byte255(c[3])) end
+
+-- Right-click removal. Not routed through UI.confirm despite the destructive-
+-- action rule: nothing is lost, the row is a convenience view, and picking the
+-- color again un-hides it. A modal to drop one swatch would be worse than the
+-- mistake it prevents.
+function UI.ForgetColor(hex)
+  local list = paletteList()
+  if not (list and hex) then return end
+  for i, rec in ipairs(list) do
+    if rec.hex == hex then table.remove(list, i); break end
+  end
+  local hidden = paletteHidden()
+  if hidden then hidden[hex] = true end
+end
+
+-- Record a color as in use. `applied` means the user just PICKED it, as opposed
+-- to it merely being what some element already wears.
+function UI.NoteColor(c, applied)
+  local list = paletteList()
+  if not (list and c and c[1]) then return end
+  -- ★ Nothing is harvested while the picker is open. Consumers refresh their
+  -- swatch on every live change, so a single drag across the field would
+  -- otherwise pour ~60 intermediate colors a second into the row and bury every
+  -- real one. What the drag SETTLES on is recorded by OK, which is the point.
+  if not applied and pickerDlg and pickerDlg:IsShown() then return end
+  local key = hexOf(c)
+  local hidden = paletteHidden()
+  if hidden and hidden[key] then
+    -- Stays gone while it is merely SEEN. Deliberately picking it again is an
+    -- unambiguous "I want this after all", so that lifts the removal.
+    if not applied then return end
+    hidden[key] = nil
+  end
+  for _, rec in ipairs(list) do
+    if rec.hex == key then
+      if applied then
+        rec.applied = true
+        GloomsHubDB.paletteSeq = (GloomsHubDB.paletteSeq or 0) + 1
+        rec.n = GloomsHubDB.paletteSeq
+      end
+      return
+    end
+  end
+  -- A passive sighting takes a free slot or nothing at all: an element's
+  -- untouched default must never push out a color the user chose.
+  if not applied and #list >= PALETTE_MAX then return end
+  GloomsHubDB.paletteSeq = (GloomsHubDB.paletteSeq or 0) + 1
+  list[#list + 1] = { hex = key, n = GloomsHubDB.paletteSeq, applied = applied or nil }
+  while #list > PALETTE_MAX do
+    local vi = 1
+    for i = 2, #list do
+      local rec, best = list[i], list[vi]
+      -- most evictable first: unchosen before chosen, then oldest
+      if (not rec.applied and best.applied)
+         or ((not rec.applied) == (not best.applied) and rec.n < best.n) then
+        vi = i
+      end
+    end
+    table.remove(list, vi)
+  end
+end
+
+-- ------------------------------------------------------------
+-- Provenance — WHERE each palette color is being used.
+--
+-- ★ Deliberately NOT stored. The obvious implementation records a label next to
+-- the hex as it is harvested, and it lies: harvesting only ever reports what a
+-- swatch IS, never what it stopped being, so a color you moved away from keeps
+-- claiming its old element forever. Instead every colorSwatch registers its
+-- `get`, and this walks them on each open and asks. Derived, so it cannot go
+-- stale — the price is a table walk per open, which is ~23 closure calls.
+--
+-- ⚠ HONEST LIMIT, and the tooltip has to say so: tabs build LAZILY, so a tool
+-- whose tab you have not opened this session has registered nothing and can
+-- never be listed. "Not seen" here does NOT mean "not used".
+-- ------------------------------------------------------------
+local colorSources = {}   -- swatch frame → { get, label }
+
+-- Keyed BY FRAME, so a rebuilt row overwrites its own entry rather than
+-- stacking. A genuinely new frame for the same control still leaves a twin, but
+-- twins carry identical label text and collapse in the dedup below.
+function UI.RegisterColorSource(frame, get, label)
+  if not (frame and get and label) then return end
+  colorSources[frame] = { get = get, label = label }
+end
+
+-- ★ A tool that owns MANY elements of the same kind — every aura, every overlay
+-- — registers a PROVIDER instead of relying on its swatches. Its editor has ONE
+-- Recolor control that re-points at whatever is selected, so a per-control
+-- getter can only ever report the SELECTION: recolor forty auras and the tooltip
+-- still names one (the owner, 2026-07-26, on the case that exposed it). A
+-- provider walks the tool's own config and reports every element BY NAME. Only
+-- the tool knows how to make that walk, which is why it lives there.
+--   fn() → { { color = {r,g,b}, label = "Auras › Recolor (Kill Shot)" }, … }
+-- GB needs none: its colors are one-per-PROFILE (GB.db.styleData), not per-bar.
+local colorProviders = {}
+
+function UI.RegisterColorProvider(key, fn)
+  if not (key and fn) then return end
+  colorProviders[key] = fn      -- keyed, so a re-register replaces rather than stacks
+end
+
+local function walkProviders(cb)
+  for _, fn in pairs(colorProviders) do
+    local ok, out = pcall(fn)   -- a tool's walk must never take the picker down
+    if ok and type(out) == "table" then
+      for _, e in ipairs(out) do
+        if type(e) == "table" and type(e.color) == "table" and e.color[1] and e.label then cb(e) end
+      end
+    end
+  end
+end
+
+local PROV_MAX = 8   -- past this the tooltip is a wall of text; the rest are counted
+
+local function provenance()
+  local map = {}
+  local function add(key, label)
+    local at = map[key]
+    if not at then at = {}; map[key] = at end
+    for _, l in ipairs(at) do if l == label then return end end
+    at[#at + 1] = label
+  end
+  walkProviders(function(e) add(hexOf(e.color), e.label) end)
+  for _, src in pairs(colorSources) do
+    -- pcall: a closure left behind by a rebuilt row can reference a bar or aura
+    -- that no longer exists. A dead source must not take the tooltip down.
+    local ok, c = pcall(src.get)
+    if ok and type(c) == "table" and c[1] then add(hexOf(c), src.label) end
+  end
+  for _, at in pairs(map) do table.sort(at) end
+  return map
+end
+
+-- What the row draws: everything known, ordered by HUE. Recency decides what
+-- SURVIVES, never where it sits — a row that reshuffles every time you pick a
+-- color is a row you can never build any muscle memory on.
+local function paletteShown()
+  local out = {}
+  for _, rec in ipairs(paletteList() or {}) do
+    local r = tonumber(rec.hex:sub(1, 2), 16) / 255
+    local g = tonumber(rec.hex:sub(3, 4), 16) / 255
+    local b = tonumber(rec.hex:sub(5, 6), 16) / 255
+    local h, s, v = rgb2hsv(r, g, b)
+    out[#out + 1] = { r = r, g = g, b = b, hex = rec.hex, h = h, s = s, v = v }
+  end
+  local function grey(e) return e.s < 0.08 end
+  table.sort(out, function(a, b)
+    if grey(a) ~= grey(b) then return grey(b) end      -- greys have no hue: park them last
+    if grey(a) then return a.v < b.v end
+    if math.abs(a.h - b.h) > 1e-4 then return a.h < b.h end
+    return a.v < b.v
+  end)
+  return out
+end
+
+local PICK_W, SV_W, SV_H = 330, 186, 140
+local PICK_X, HUE_X, PRV_X, PRV_W = 22, 216, 246, 62
+local PICK_H_PLAIN, PICK_H_ALPHA = 328, 380
+
+function UI.colorPicker(opts)
+  opts = opts or {}
+
+  if not pickerDlg then
+    local f = CreateFrame("Frame", "GloomSkinColorPicker", UIParent)
+    f:SetSize(PICK_W, PICK_H_PLAIN); f:SetPoint("CENTER")
+    f:SetFrameStrata("FULLSCREEN_DIALOG"); f:EnableMouse(true)
+    UI.skinPlate(f)
+    -- Standing in for the scrim: with nothing dimmed behind it, this rim is the
+    -- only thing telling the panel apart from the tab it floats over.
+    UI.addEdges(f, { r = COLOR.purple.r, g = COLOR.purple.g, b = COLOR.purple.b, a = 0.55 }, 1)
+
+    -- Drag it by the plate. Every control on it eats its own clicks, so the
+    -- empty chrome — the title strip, the margins — is what moves the panel.
+    f:SetMovable(true); f:SetClampedToScreen(true)
+    f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart", f.StartMoving)
+    f:SetScript("OnDragStop", function(self)
+      self:StopMovingOrSizing()
+      -- Re-anchor from the TOP-left: the panel changes height when the Opacity
+      -- row comes and goes, and centred anchoring would make it grow upward
+      -- into the cursor. Anchored this way it always grows downward.
+      local x, y = self:GetLeft(), self:GetTop()
+      self:ClearAllPoints()
+      self:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y)
+    end)
+
+    f.title = UI.newText(f, FONT.title, 17, COLOR.purple, "CENTER")
+    f.title:SetPoint("TOP", 0, -14)
+
+    -- ---- saturation / value field --------------------------------------
+    -- Solid hue underneath, white→clear left-to-right for SATURATION, then
+    -- clear→black top-to-bottom for VALUE. (WoW's "VERTICAL" gradient runs
+    -- min at the BOTTOM, max at the top.)
+    local sv = CreateFrame("Frame", nil, f)
+    sv:SetSize(SV_W, SV_H); sv:SetPoint("TOPLEFT", PICK_X, -46); sv:EnableMouse(true)
+    local hueFill = sv:CreateTexture(nil, "BACKGROUND")
+    hueFill:SetAllPoints(); hueFill:SetColorTexture(1, 0, 0, 1)
+    local satTex = sv:CreateTexture(nil, "BORDER")
+    satTex:SetAllPoints(); satTex:SetTexture(WHITE8X8)
+    satTex:SetGradient("HORIZONTAL", CreateColor(1, 1, 1, 1), CreateColor(1, 1, 1, 0))
+    local valTex = sv:CreateTexture(nil, "ARTWORK")
+    valTex:SetAllPoints(); valTex:SetTexture(WHITE8X8)
+    valTex:SetGradient("VERTICAL", CreateColor(0, 0, 0, 1), CreateColor(0, 0, 0, 0))
+    UI.addEdges(sv, COLOR.rim, 1)
+
+    -- A white square inside a black one: the only marker that stays legible
+    -- over BOTH ends of the field. It is a Frame so it draws above the
+    -- gradients regardless of texture layer.
+    local mark = CreateFrame("Frame", nil, sv)
+    mark:SetSize(12, 12); mark:SetFrameLevel(sv:GetFrameLevel() + 2)
+    UI.addEdges(mark, { r = 0, g = 0, b = 0, a = 0.85 }, 1)
+    local markIn = CreateFrame("Frame", nil, mark)
+    markIn:SetPoint("TOPLEFT", 1, -1); markIn:SetPoint("BOTTOMRIGHT", -1, 1)
+    UI.addEdges(markIn, { r = 1, g = 1, b = 1, a = 1 }, 1)
+
+    -- ---- hue strip ------------------------------------------------------
+    local hue = CreateFrame("Frame", nil, f)
+    hue:SetSize(18, SV_H); hue:SetPoint("TOPLEFT", HUE_X, -46); hue:EnableMouse(true)
+    local STOPS = { {1,0,0}, {1,1,0}, {0,1,0}, {0,1,1}, {0,0,1}, {1,0,1}, {1,0,0} }
+    local segH = SV_H / 6
+    for i = 1, 6 do
+      local seg = hue:CreateTexture(nil, "ARTWORK")
+      seg:SetSize(18, segH); seg:SetPoint("TOPLEFT", 0, -(i - 1) * segH)
+      seg:SetTexture(WHITE8X8)
+      local hi, lo = STOPS[i], STOPS[i + 1]
+      seg:SetGradient("VERTICAL", CreateColor(lo[1], lo[2], lo[3], 1),
+                                  CreateColor(hi[1], hi[2], hi[3], 1))
+    end
+    UI.addEdges(hue, COLOR.rim, 1)
+    local hueMark = hue:CreateTexture(nil, "OVERLAY", nil, 2)
+    hueMark:SetColorTexture(1, 1, 1, 1); hueMark:SetSize(24, 3)   -- overhangs, so it reads
+
+    -- ---- preview: new on top, original below (click it to go back) ------
+    local prv = CreateFrame("Frame", nil, f)
+    prv:SetSize(PRV_W, SV_H); prv:SetPoint("TOPLEFT", PRV_X, -46)
+    checkerboard(prv, PRV_W, SV_H)
+    UI.addEdges(prv, COLOR.rim, 1)
+    local newSw = prv:CreateTexture(nil, "ARTWORK")
+    newSw:SetPoint("TOPLEFT"); newSw:SetPoint("TOPRIGHT"); newSw:SetHeight(SV_H / 2)
+    local oldB = CreateFrame("Button", nil, prv)
+    oldB:SetPoint("BOTTOMLEFT"); oldB:SetPoint("BOTTOMRIGHT"); oldB:SetHeight(SV_H / 2)
+    f.oldSw = oldB:CreateTexture(nil, "ARTWORK"); f.oldSw:SetAllPoints()
+    local seam = prv:CreateTexture(nil, "OVERLAY", nil, 2)
+    seam:SetColorTexture(COLOR.rim.r, COLOR.rim.g, COLOR.rim.b, 0.35)
+    seam:SetHeight(1); seam:SetPoint("LEFT"); seam:SetPoint("RIGHT")
+    UI.attachTip(oldB, "Original", "The color you started with. Click to go back to it.")
+
+    -- ---- hex --------------------------------------------------------------
+    local hexLab = UI.newText(f, FONT.head, 12, COLOR.mute, "LEFT")
+    hexLab:SetPoint("TOPLEFT", PICK_X, -198); hexLab:SetText("HEX")
+    f.hex = UI.flatEditBox(f, 96, 22)
+    f.hex:SetPoint("TOPLEFT", PICK_X + 36, -194)
+    f.hex:SetMaxLetters(9)
+
+    -- ---- palette ----------------------------------------------------------
+    -- A fixed pool, repainted on every open — its contents change as the user's
+    -- own UI does, so it cannot be built once like the rest of the dialog.
+    f.palLab = UI.newText(f, FONT.head, 12, COLOR.mute, "LEFT")
+    f.palLab:SetPoint("TOPLEFT", PICK_X, -230); f.palLab:SetText("IN USE")
+    f.palBtns = {}
+    for i = 1, PALETTE_MAX do
+      local b = CreateFrame("Button", nil, f)
+      b:SetSize(20, 20); b:SetPoint("TOPLEFT", PICK_X + (i - 1) * 24, -250)
+      b.tex = b:CreateTexture(nil, "ARTWORK"); b.tex:SetAllPoints()
+      UI.addEdges(b, COLOR.rim, 1)
+      b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+      b:SetScript("OnClick", function(self, button)
+        if button == "RightButton" then
+          UI.ForgetColor(self.hex)
+          f:RefreshPalette()
+        else
+          f:SetRGB(self.r, self.g, self.b)
+        end
+      end)
+      -- Function tips: the swatch under the cursor changes between opens.
+      UI.attachTip(b, "In use", function()
+        local at = f.prov and f.prov[b.hex]
+        local where
+        if at and at[1] then
+          local list = {}
+          for i = 1, math.min(#at, PROV_MAX) do list[i] = "· " .. at[i] end
+          if #at > PROV_MAX then list[#list + 1] = ("· +%d more"):format(#at - PROV_MAX) end
+          where = table.concat(list, "\n")
+        else
+          -- Says "haven't looked", not "isn't there" — see the provenance note.
+          where = "· not on anything in the tabs you've\n  opened this session"
+        end
+        return "#" .. (b.hex or ""):upper() .. "\n\n" .. where
+            .. "\n\nClick to use it.\nRight-click to remove it."
+      end)
+      b:Hide()
+      f.palBtns[i] = b
+    end
+
+    function f:RefreshPalette()
+      -- Harvest from the providers first. Swatch harvesting only ever sees the
+      -- SELECTED element, so without this an aura you recolored months ago would
+      -- never reach the row unless you happened to click it again. Runs before
+      -- Show(), which is what keeps it out of NoteColor's open-picker guard.
+      walkProviders(function(e) UI.NoteColor(e.color) end)
+      local shown = paletteShown()
+      self.prov = provenance()   -- recomputed per open, never remembered
+      for i, b in ipairs(self.palBtns) do
+        local e = shown[i]
+        if e then
+          b.r, b.g, b.b, b.hex = e.r, e.g, e.b, e.hex
+          b.tex:SetColorTexture(e.r, e.g, e.b, 1)
+        end
+        b:SetShown(e ~= nil)
+      end
+      self.palLab:SetShown(shown[1] ~= nil)
+    end
+
+    -- ---- opacity ----------------------------------------------------------
+    -- Its own sub-frame because UI.sliderRow always spans its PARENT (insetting
+    -- 18 a side) — laying out a frame is the family way to size a slider.
+    f.alphaBlock = CreateFrame("Frame", nil, f)
+    f.alphaBlock:SetPoint("TOPLEFT", 4, -282); f.alphaBlock:SetSize(PICK_W - 8, 44)
+    f.alphaRow = UI.sliderRow(f.alphaBlock, 0, "Opacity", 0, 100, 1,
+      function() return math.floor((f.a or 1) * 100 + 0.5) end,
+      function(v) f.a = math.floor(v + 0.5) / 100; f:Emit() end,
+      function(v) return string.format("%d%%", math.floor(v + 0.5)) end)
+
+    -- ---- buttons ----------------------------------------------------------
+    f.ok = UI.flatButton(f, 124, 26, COLOR.purple, "OK", 13)
+    f.ok:SetPoint("BOTTOMLEFT", 26, 16)
+    f.cancel = UI.flatButton(f, 124, 26, COLOR.heroic, "Cancel", 13)
+    f.cancel:SetPoint("BOTTOMRIGHT", -26, 16)
+
+    -- ---- state ------------------------------------------------------------
+    function f:Color()
+      if self.hasAlpha then return { self.r, self.g, self.b, self.a } end
+      return { self.r, self.g, self.b }
+    end
+
+    -- Repaint everything from (h, s, v, a), then push the color out live.
+    function f:Emit()
+      local r, g, b = hsv2rgb(self.h, self.s, self.v)
+      self.r, self.g, self.b = r, g, b
+      hueFill:SetColorTexture(hsv2rgb(self.h, 1, 1))
+      mark:ClearAllPoints()
+      mark:SetPoint("CENTER", sv, "BOTTOMLEFT", self.s * SV_W, self.v * SV_H)
+      hueMark:ClearAllPoints()
+      hueMark:SetPoint("CENTER", hue, "TOP", 0, -self.h * SV_H)
+      newSw:SetColorTexture(r, g, b, self.hasAlpha and self.a or 1)
+      if not self.hex:HasFocus() then
+        self.hex:SetText(("#%02X%02X%02X"):format(byte255(r), byte255(g), byte255(b)))
+      end
+      if self.onChange and not self.silent then self.onChange(self:Color()) end
+    end
+
+    function f:SetRGB(r, g, b, a)
+      self.h, self.s, self.v = rgb2hsv(r, g, b)
+      if a then self.a = a end
+      self:Emit()
+      self.alphaRow:refresh()
+    end
+
+    -- ---- dragging ---------------------------------------------------------
+    local function trackSV(self)
+      local left, bottom = self:GetLeft(), self:GetBottom()
+      if not (left and bottom) then return end
+      local scale = self:GetEffectiveScale()
+      local mx, my = GetCursorPosition()
+      f.s = math.max(0, math.min(1, (mx / scale - left) / SV_W))
+      f.v = math.max(0, math.min(1, (my / scale - bottom) / SV_H))
+      f:Emit()
+    end
+    local function trackHue(self)
+      local top = self:GetTop()
+      if not top then return end
+      local scale = self:GetEffectiveScale()
+      local _, my = GetCursorPosition()
+      f.h = math.max(0, math.min(1, (top - my / scale) / SV_H))
+      f:Emit()
+    end
+    -- Drag-anywhere, same shape as UI.sliderRow's seek: press and hold keeps
+    -- tracking until the button comes up, wherever the cursor goes.
+    local function draggable(frame, track)
+      frame:SetScript("OnMouseDown", function(self) self._drag = true; track(self) end)
+      frame:SetScript("OnMouseUp", function(self) self._drag = false end)
+      frame:SetScript("OnUpdate", function(self)
+        if self._drag then
+          if IsMouseButtonDown("LeftButton") then track(self) else self._drag = false end
+        end
+      end)
+    end
+    draggable(sv, trackSV)
+    draggable(hue, trackHue)
+
+    oldB:SetScript("OnClick", function()
+      local o = f.orig
+      if o then f:SetRGB(o[1], o[2], o[3], o[4]) end
+    end)
+
+    -- ---- hex entry --------------------------------------------------------
+    -- Commit on focus LOSS, so Enter, Tab and clicking OK all land the same
+    -- way. HookScript, because flatEditBox owns OnEditFocusLost for its fill.
+    f.hex:HookScript("OnEditFocusLost", function(self)
+      local r, g, b, a = hex2rgb(self:GetText())
+      if r then f:SetRGB(r, g, b, f.hasAlpha and a or nil) end
+      f:Emit()   -- rewrites the text canonically, or restores it after a typo
+    end)
+    f.hex:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+    f.hex:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+
+    -- ---- close paths ------------------------------------------------------
+    f.ok:SetScript("OnClick", function()
+      f.accepted = true
+      local cb, c = f.onAccept, f:Color()
+      UI.NoteColor(c, true)   -- OK, and only OK, counts as a deliberate pick
+      f:Hide()
+      if cb then cb(c) end
+    end)
+    f.cancel:SetScript("OnClick", function() f:Hide() end)
+
+    -- Every close path lands here — OK, Cancel, and the UISpecialFrames ESC
+    -- that never runs our own handlers. Anything that is not an explicit OK
+    -- puts the original color back, because this picker applies LIVE.
+    f:HookScript("OnHide", function()
+      local cancelled, restore, onCancel = not f.accepted, f.onChange, f.onCancel
+      f.onChange, f.onAccept, f.onCancel, f.accepted = nil, nil, nil, false
+      if cancelled then
+        if restore and f.orig then restore(f.orig) end
+        if onCancel then onCancel() end
+      end
+    end)
+
+    tinsert(UISpecialFrames, "GloomSkinColorPicker")   -- ESC cancels
+    f:Hide()
+    pickerDlg = f
+  end
+
+  local f = pickerDlg
+  -- Now that nothing is dimmed, clicking a SECOND swatch while the picker is
+  -- open is reachable. Close the first session properly first, so its consumer
+  -- gets the cancel-restore it is owed instead of silently keeping whatever was
+  -- dragged over it. (The scrim used to make this case impossible.)
+  if f:IsShown() then f:Hide() end
+
+  -- Hook each owner once (the UI.dropdown _flyHooked pattern), then let the
+  -- handler check whether it is still the LIVE session's owner before closing.
+  f.owner = opts.owner
+  if opts.owner and not opts.owner._gsPickerHooked then
+    opts.owner._gsPickerHooked = true
+    opts.owner:HookScript("OnHide", function(self)
+      if pickerDlg and pickerDlg:IsShown() and pickerDlg.owner == self then pickerDlg:Hide() end
+    end)
+  end
+
+  local c = opts.color or { 1, 1, 1 }
+  f.hasAlpha = opts.hasAlpha and true or false
+  f.orig = { c[1] or 1, c[2] or 1, c[3] or 1, f.hasAlpha and (c[4] or 1) or nil }
+  f.a = f.hasAlpha and (c[4] or 1) or 1
+  f.onChange, f.onAccept, f.onCancel = opts.onChange, opts.onAccept, opts.onCancel
+  f.accepted = false
+  f.title:SetText(opts.title or "COLOR")
+  f.oldSw:SetColorTexture(f.orig[1], f.orig[2], f.orig[3], f.hasAlpha and f.a or 1)
+  f.alphaBlock:SetShown(f.hasAlpha)
+  f:SetHeight(f.hasAlpha and PICK_H_ALPHA or PICK_H_PLAIN)
+  f:RefreshPalette()
+
+  -- Seed the widgets WITHOUT firing onChange: opening a picker must not count
+  -- as an edit (it would kick every consumer's live-preview work for nothing).
+  f.silent = true
+  f:SetRGB(f.orig[1], f.orig[2], f.orig[3])
+  f.silent = false
+
+  -- No scrimShow: see the header. Raise still matters — it has to sit above the
+  -- Suite window it was opened from.
+  f:Show(); f:Raise()
+  return f
 end
 
 -- ------------------------------------------------------------
@@ -755,6 +1374,9 @@ local WARM = {   -- the Hub's own pairs (Shell + Media tab + the lib's own widge
   { "head",  { 12, 16 } },          -- 12: profileBlock header (MINOR 3)
   { "body",  { 10.5, 11, 12, 13 } },
   { "bodyM", { 11, 12, 13 } },
+  { "label", { 11 } },              -- sliderRow's value text — a LIB widget, so the
+                                    -- base list owes it (MINOR 6, when colorPicker's
+                                    -- Opacity row made the lib draw one itself).
 }
 local warmer, warmRan
 local pendingPairs = {}   -- registered before the PEW batch
@@ -837,8 +1459,14 @@ local function showTip(owner, title, body)
   tipFrame:SetSize(240, 34 + tipBody:GetStringHeight())
   tipFrame:Show()
 end
+-- title/body may be FUNCTIONS, resolved at hover time — for a widget whose
+-- content changes under a tip that can only be hooked once (colorPicker's
+-- palette pool). Plain strings behave exactly as before.
 function UI.attachTip(f, title, body)
-  f:HookScript("OnEnter", function() showTip(f, title, body) end)
+  f:HookScript("OnEnter", function()
+    showTip(f, type(title) == "function" and title() or title,
+               type(body)  == "function" and body()  or body)
+  end)
   f:HookScript("OnLeave", function() if tipFrame then tipFrame:Hide() end end)
 end
 

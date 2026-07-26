@@ -1120,3 +1120,19 @@ splash. ~~Overlays profile picker~~ — CLOSED: the shared `UI.profileBlock`.)
   kept — full record in to-do item 2 above.
 - **★ GB is the UI reference for the suite, not GA (the owner, 2026-07-24).** When a pattern
   exists in both, copy Gloom's Bars. The two backlog items above are why.
+
+---
+
+## Font redistribution terms — CLOSED by the owner, 2026-07-26
+
+Backlog item 4 asked whether the **Fontshare** licence permits shipping the General Sans `.ttf`
+files inside the addon zip, as distinct from *using* the typeface. It was never answered:
+`https://fontshare.com/terms` is JS-rendered and no tool available in-session could retrieve it.
+
+**The owner closed it without that answer.** What ships stays as it is — **Khand** under SIL OFL 1.1
+with `Media/fonts/OFL.txt` beside it (which is what the OFL requires), and **General Sans** with the
+credit its own `name` table asks for, carried in `Media/fonts/FONT-LICENSES.md`.
+
+Recorded plainly so nobody re-opens it as diligence: the terms were **not read**, and the decision
+was to proceed anyway. Both fonts are distributed free by their foundries. Re-raise only if a
+foundry actually objects.

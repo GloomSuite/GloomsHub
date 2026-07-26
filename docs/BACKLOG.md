@@ -6,7 +6,7 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-07-26 (evening — after the PII scrub and the SetFont fix)
+**Last updated:** 2026-07-26 (evening — the suite's own colour picker shipped; font-licence closed)
 
 ---
 
@@ -56,20 +56,20 @@ Three gaps remain from the PTR pass:
 
 ---
 
-### 4 · General Sans's redistribution terms were never verified
-**Repo:** all four that ship fonts · **Size:** ~15 minutes, reading · **Evidence:** `UNTESTED`
+### 4 · Three colour-picker paths were never exercised in-client
+**Repo:** `~/GloomsHub` (+ GA) · **Size:** ~10 minutes clicking · **Evidence:** `UNTESTED`
 
-The suite bundles **Khand** (SIL OFL 1.1 — `Media/fonts/OFL.txt` now ships alongside it, which is
-what the OFL requires) and **General Sans** (Indian Type Foundry / Fontshare). The credit
-requirement embedded in the General Sans files is satisfied by `Media/fonts/FONT-LICENSES.md`.
+Owner-QA'd 2026-07-26 on the main paths (gradient drag, panel drag, right-click removal surviving
+`/reload`, drag-then-OK, re-picking a removed colour, per-aura provenance). **Three were built and
+never clicked** — not suspected-broken, just unwitnessed, and a clean BugSack won't tell you:
 
-**What is NOT established: whether the Fontshare licence permits redistributing the .ttf files
-inside a product zip at all**, as opposed to using the typeface. `https://fontshare.com/terms` is
-JS-rendered and could not be retrieved by any tool available in-session, so nobody has read it.
-Both fonts are free and this is very likely fine — but "likely" is not "read it."
+- **The Opacity row** (GB's *Border color* / *Shadow color*) — the row, live alpha on the preview,
+  and the panel growing DOWNWARD when it appears after a plain picker.
+- **GA's unset-tint cancel** — `MakeColor` seeds white on an unset colour, so cancel must restore
+  *unset*. Written for this case, never run.
+- **Closing the Suite window with the picker open** — should close it AND revert.
 
-**Read first:** `~/GloomsHub/Media/fonts/FONT-LICENSES.md` · the embedded terms are recoverable
-from any bundled `.ttf` via its `name` table (IDs 13 and 14).
+**Read first:** [CONTRACTS.md](CONTRACTS.md) §4 (`UI.colorPicker`) · `~/GloomsHub/Skin.lua`
 
 ---
 
@@ -88,3 +88,11 @@ from any bundled `.ttf` via its `name` table (IDs 13 and 14).
   `Graphics/` are gitignored and purged from history. **Never re-track them** (`.pkgmeta` says why).
 - **v1.2.0 release cut** — DONE, all four published, Hub zip verified clean. **A packaging failure
   on `repos.wowace.com` is an outage — re-run, don't debug.**
+- **General Sans's redistribution terms** — **CLOSED by the owner 2026-07-26 without verifying
+  the Fontshare terms.** The attribution the fonts themselves ask for ships in
+  `Media/fonts/FONT-LICENSES.md`; that is where it rests. Do not re-raise it as a task.
+- **The colour picker's palette holding the suite's own tokens** — **REJECTED by the owner
+  2026-07-26.** It shipped that way first and was wrong: the row holds the colours the USER put on
+  their own elements, never purple/orange/plate. Don't "helpfully" seed it with the design language.
+- **Making the colour picker modal** to match the other dialogs — **NO.** It edits a live element;
+  see SUITE-STATE's locked decisions.

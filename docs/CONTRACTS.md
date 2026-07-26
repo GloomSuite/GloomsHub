@@ -109,8 +109,92 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
   - `UI.flatEditBox(parent, w, h)` → EditBox (faint purple fill, brighter on focus)
   - `UI.sliderRow(parent, yTop, label, min, max, step, get, set, fmt?, sub?)` →
     `{ refresh, setEnabled, SetShown }` (44px row; ~15px taller with `sub`)
-  - `UI.colorSwatch(parent, get, set, withAlpha?)` → `{ swatch, refresh }` — get/set use
-    `{r,g,b[,a]}` ARRAYS (ColorPickerFrame flow)
+  - `UI.colorSwatch(parent, get, set, withAlpha?, label?)` → `{ swatch, refresh }` — get/set
+    use `{r,g,b[,a]}` ARRAYS. Since MINOR 6 it opens `UI.colorPicker`, not Blizzard's frame.
+    `label` (also MINOR 6) names the element — `"Bars › Border color"` — and is what the
+    palette tooltip lists as WHERE a color is in use. Optional and additive: an older Hub
+    ignores it, so **passing it needs no gate bump**.
+  - `UI.colorPicker(opts)` → **the suite's ONE color picker** (MINOR 6). Family plate and
+    OK/Cancel: HSV field + hue strip, a hex box, the **IN USE palette row** (below), and an
+    **Opacity row — the shared `UI.sliderRow`**, so opacity is the same control here as
+    everywhere else.
+    `opts = { color = {r,g,b[,a]}, hasAlpha?, title?, owner?, onChange(c), onAccept(c)?, onCancel()? }`
+    ★★ **It is NOT a modal, unlike `nameDialog` and `confirm` — do not "fix" that**
+    (the owner, 2026-07-26). It **changes something on screen while it is open**, so a
+    scrim would dim the very thing you are judging. Therefore:
+    · **no scrim** — a **purple 1px rim** separates it from the tab instead, which is the
+      job the scrim was doing for the other two (same near-black navy on both);
+    · **draggable by its plate** (`SetMovable` + `SetClampedToScreen`), because a fixed
+      centre-screen panel always lands on top of what you are looking at. On drop it
+      re-anchors TOPLEFT so the Opacity row appearing grows it DOWNWARD, and it keeps
+      that position for the rest of the session;
+    · **`opts.owner`** (the swatch) closes + cancels the picker when its tab or the Suite
+      window hides — non-modal is what makes an orphaned picker reachable at all; and
+    · opening it while already open **cancels the first session first**, so the previous
+      consumer still gets its restore.
+  - `UI.NoteColor(c, applied?)` / `UI.ForgetColor(hex)` — the **IN USE palette row**
+    (MINOR 6). ★ **It holds colors from the USER'S OWN elements — bars, auras, overlays —
+    NOT the suite's design tokens.** The first cut of the row was the token set and that
+    was rejected (the owner, 2026-07-26): "Gloom Suite is a lot of purple and orange, and
+    those colors shouldn't necessarily be in the palette if the end user isn't using them
+    on live elements in their own UI."
+    **No tool needs wiring:** every color control in the suite already runs through
+    `colorSwatch`/`colorPicker` and every one drives a user-facing element (chrome colors
+    are hardcoded tokens and never pass through), so the lib sees exactly the right set.
+    `colorSwatch` notes passively on each refresh; the picker's **OK** notes `applied`.
+    GA's `MakeColor` calls `UI.NoteColor` itself, being the one swatch not built by the lib.
+    · **Two tiers:** *picked* (OK'd) outranks *seen* (merely on an element). A seen color
+      takes a free slot or none — it can never evict something the user chose. **This is
+      not just recency:** GB refreshes 22 swatches at once, so a single Bars-tab visit
+      would otherwise flush every deliberate pick.
+    · **Ordered by HUE, not recency** — recency decides what survives, never where it sits.
+    · ★ **Passive notes are suppressed while the picker is open.** Consumers refresh their
+      swatch on every live change, so one drag across the field would otherwise pour ~60
+      intermediate colors a second into the row and bury every real one. Found before it
+      ever ran; the drag's RESULT is recorded by OK, which is the whole point.
+    · **Right-click removes**, and the removal is REMEMBERED in `paletteHidden` — a color
+      still live on an element would otherwise be re-harvested seconds later. Picking it
+      again lifts the removal. Deliberately NOT routed through `UI.confirm`: nothing is
+      lost and it is trivially reversible.
+    · **Provenance — the tooltip's "where is this used" list — is DERIVED, never stored**
+      (`UI.RegisterColorSource(frame, get, label)`, walked on each open). ★ Storing a label
+      beside the hex as it is harvested **produces a tooltip that lies**: harvesting reports
+      what a swatch IS, never what it stopped being, so a color you moved away from would
+      keep claiming its old element forever. Computed fresh, it cannot go stale.
+      ⚠ **Its honest limit, which the tooltip states:** tabs build LAZILY, so a tool whose
+      tab you have not opened this session has registered nothing and can never be listed.
+      **"Not seen" is not "not used"** — do not reword the tip into a claim it can't back.
+      Registry is keyed BY FRAME so a rebuilt row overwrites itself; `get` is `pcall`ed
+      because a closure left by a rebuilt row can reference a bar or aura that is gone.
+      Labels: GB wraps `colorSwatch` locally to prefix `"Bars › "` once instead of at 20
+      call sites.
+    · ★ **`UI.RegisterColorProvider(key, fn)` — for a tool that owns MANY elements of the
+      same kind.** A tool's editor has ONE Recolor control that re-points at whatever is
+      selected, so a per-control getter can only ever report **the selection** — recolor
+      forty auras and the tooltip still names one (the owner, 2026-07-26). A provider walks
+      the tool's own config and reports every element **by name**; only the tool knows how.
+      `fn()` → `{ { color = {r,g,b}, label = "Auras › Recolor (Kill Shot)" }, … }`
+      **Providers also feed the palette itself** (walked on open, before `Show`, so the
+      open-picker guard doesn't eat it) — otherwise an aura recolored months ago never
+      reaches the row unless you happen to click it again.
+      | tool | how | why |
+      |---|---|---|
+      | **GA** | provider, all displays | recolor/text/glow are **per aura** |
+      | **Overlays** | provider, all overlays | tint is **per overlay**; plain white skipped, since untinted overlays store white and would bury the row |
+      | **GB** | per-swatch labels, no provider | ★ its colors are **one per PROFILE** (`GB.db.styleData`), NOT per bar — verified 2026-07-26 |
+      ⚠ Both providers are called through `if UI.RegisterColorProvider then`, so
+      **Overlays' gate stays at MINOR 4 deliberately** — losing tint provenance on an old
+      Hub is cosmetic, while declaring 6 would disable its whole editor. Drop the guard and
+      the gate must go to 6 in the same commit.
+    · Storage: `GloomsHubDB.palette` / `.paletteSeq` / `.paletteHidden`, cap **12**.
+      ★ **The lib may reach for the Hub's SavedVariable** because there is exactly one of
+      each — the Hub is a hard dependency and per-tool embedding was DROPPED (ARCHIVE).
+      Without a Hub the row degrades to empty and never errors.
+    ★ **It applies LIVE via `onChange` and RESTORES on every non-OK close** — Cancel, ESC,
+    or the frame being hidden underneath it. Blizzard's picker only restored if you passed
+    a `cancelFunc` and **nothing in the suite ever did**, so cancelling used to leave the
+    last color you dragged over applied. That bug is fixed everywhere at once.
+    `onChange` does NOT fire on open — seeding the widgets is not an edit.
   - `UI.dirRow(parent, yTop, label, get, set)` → `{ refresh, setEnabled }` — "up"|"down"|"left"|"right"
   - `UI.makeScrollbar(parent, scrollFrame, place)` → thin orange-thumb bar with `:Sync()`
   - `UI.attachTip(frame, title, body)` — the family hover tooltip (HookScript, coexists)
@@ -170,9 +254,11 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
 - **Warm-list contract (QA-proven Phase B):** WoW draws a cold (font file, size) pair BLANK the
   first time it's drawn each client session (a /reload heals it; the next cold start re-breaks
   it). The Hub's base list covers the shell + Media tab + **the lib's own widgets**
-  (`title 17/21 · head 12/16 · body 10.5/11/12/13 · bodyM 11/12/13`) + each catalog font at
+  (`title 17/21 · head 12/16 · body 10.5/11/12/13 · bodyM 11/12/13 · label 11`) + each catalog font at
   11/13/14 (picker sizes). `title 17` (nameDialog/confirm) and `head 12` (profileBlock) joined
-  the base list at MINOR 3 — the lib draws them itself now, in every tool. **Every
+  the base list at MINOR 3 — the lib draws them itself now, in every tool. **`label 11` joined
+  at MINOR 6**: `UI.sliderRow`'s value text is a LIB widget's, and `colorPicker`'s Opacity row
+  is the lib drawing one on its own account — the base list owes every pair the lib itself draws. **Every
   (font, size) pair ANY suite tab draws beyond that must go through `RegisterWarmPairs`** —
   when a tool migrates, enumerate its sizes (`grep -ohE 'FONT\.\w+, [0-9.]+' *.lua |
   sort -u`) and register the ones the base list misses. GB registers: `title 17/18 · head
@@ -264,7 +350,7 @@ end
 | Consumer | needs |
 |---|---|
 | `GloomsBars/Config.lua` | MINOR **5** — branches on `UI.setFont`'s return (font picker) |
-| `GloomsAuras/Config.lua` | MINOR **4** — calls `UI.tabHeader` (adopted in its 2026-07-25 layout rework) |
+| `GloomsAuras/Config.lua` | MINOR **6** — calls `UI.colorPicker` directly (its `MakeColor` swatch) |
 | `GloomsOverlays/GloomsOverlays_Editor.lua` | MINOR **4** — calls `UI.tabHeader` |
 | `GloomsOverlays/GloomsOverlays_Preview.lua` | MINOR **3** — the drawer needs nothing newer |
 
@@ -274,7 +360,12 @@ added and the two files that call it were bumped **in the same commit**. GA foll
 same discipline on 2026-07-25 when its layout rework adopted `UI.tabHeader` — gate bumped
 in the commit that first called it, which is the only maintenance this gate ever needs.
 
-Hub currently ships **MINOR 5** (`Skin.lua`).
+Hub currently ships **MINOR 6** (`Skin.lua`).
+
+★ **GB and Overlays did NOT need a bump for the color picker** — they reach it through
+`UI.colorSwatch`, whose signature is unchanged, so an older Hub simply gives them the old
+Blizzard picker rather than a nil call. GA needed one because its `MakeColor` (checkbox +
+swatch, with an unset state `colorSwatch` can't express) calls `UI.colorPicker` itself.
 
 **Why this exists at all (the owner, 2026-07-25):** he asked whether letting the four addons'
 versions drift was a problem he wasn't aware of. It was — this was the problem, and it was live:

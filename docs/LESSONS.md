@@ -115,6 +115,16 @@ directly.** Four separate incidents, all the same shape:
   session. `Skin.lua`'s `UI.WarmFonts` pre-warmer fixes it — **extend its pair list whenever a new
   UI font size appears.**
 - **`/fstack`'s `<N>` prefix IS the frame level** — that's how you find the number to beat.
+- **`SetGradient` needs a real TEXTURE under it.** The pairing proven live in this client (12.0.7)
+  is `SetTexture("Interface\\BUTTONS\\WHITE8X8")` **then** `SetGradient(dir, CreateColor(…),
+  CreateColor(…))` — alpha in the colours is honoured, and `"VERTICAL"` runs **min at the BOTTOM**.
+  ⚠ `SetColorTexture` + `SetGradient` was **NOT tested** — it was written that way first and swapped
+  for the pattern other installed addons demonstrably use, rather than assuming. If you ever need to
+  know, test it; don't infer it from this line.
+- **Finding the proven pattern is a grep away.** `grep -rn "SetGradient(" --include="*.lua"` over
+  `_retail_/Interface/AddOns` answered "what is this API's real signature on THIS client" in one
+  command. **Other people's installed addons are a live reference for current API shapes** — better
+  than memory, and current by definition.
 
 ---
 
@@ -191,8 +201,34 @@ directly.** Four separate incidents, all the same shape:
 - **Adding a slider is a NEW performance surface.** A typed box applies once on Enter; a slider
   applies ~60×/second while dragged. **Look at what a control's setter does per change before
   converting it.**
+  ⚠ **The same trap bites anything hooked to a REFRESH, not just to a setter.** The palette
+  harvested colours from `colorSwatch`'s refresh — and consumers refresh their swatch on every live
+  change, so one drag across the picker would have poured ~60 intermediate colours a second into a
+  12-slot list and buried every real one inside a fifth of a second. **Before recording, counting or
+  PERSISTING anything from a refresh path, ask what fires it during a drag.**
+- **★ Provenance must be DERIVED, not stored.** "Where is this colour used?" looked like a field to
+  save next to the value. It isn't: a harvest only ever learns what something IS, never what it
+  stopped being, so a colour you moved away from keeps claiming its old element forever. Recomputing
+  from live getters on demand cannot go stale. **Generally: if a fact is a VIEW of current state,
+  compute it — the moment you cache it you own an invalidation problem nobody will remember.**
+- **★ A getter bound to an editor control reports only the SELECTION.** One Recolor swatch that
+  re-points at the selected aura can never describe the other thirty-nine. A tool owning many
+  elements of one kind must expose an **enumerator over its own config**, which only it can write.
+  Ask "is there one of these, or one per element?" before wiring a per-control getter — the answer
+  differed between GA/Overlays (per element) and GB (per PROFILE, `GB.db.styleData`), and guessing
+  it wrong sent a whole explanation the wrong way this session.
 - **No self-arming "click twice" confirms.** Destructive actions use `UI.confirm`, which has a
   Cancel and an ESC.
+- **★ A control that CHANGES THE SCREEN while it is open must not be modal.** The colour picker was
+  first built like `nameDialog`/`confirm` — scrim, centred, fixed. The owner rejected it on sight
+  (2026-07-26): dimming hides the very thing you are judging, and a fixed centre panel lands on top
+  of it. **Three things follow, and they are a package:** no scrim · draggable · and it must close
+  when its owner does, because non-modal is what makes an orphaned panel reachable at all.
+  ⚠ **The scrim was also doing a SECOND job** — separating the panel from the tab beneath it, both
+  being the same near-black navy. Remove it and you owe that job to something else (a rim).
+- **★ Not every destructive action earns `UI.confirm`.** Right-click-to-remove on a palette swatch
+  loses nothing and is undone by picking the colour again. A modal there would be worse than the
+  mistake it prevents. The rule is for actions that **destroy work**, not for every removal.
 - **Modals hide via `HookScript("OnHide")`, never from the button handlers** — that is the only path
   that catches the `UISpecialFrames` ESC close, which never runs our own code.
 - **Bump `SKIN_NEEDS` in the SAME commit that first calls a newer LibGloomSkin widget.** Forgetting
