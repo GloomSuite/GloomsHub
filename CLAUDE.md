@@ -47,8 +47,27 @@ commit and push every repo touched · then tell him in plain language what chang
 **He should never have to know which documents exist or what needs updating. That is your job.**
 
 **You may also propose it.** If he swerves to something unrelated mid-session, say so plainly —
-*"that's a different job; let's do the handoff ritual and start fresh"* — so the instruction always
+*"that's a different job; let's do the handoff ritual and start fresh"* — so the suggestion always
 comes from you and he never has to sense when a session is full.
+
+### ★★★ PROPOSING IT IS NOT PERMISSION TO RUN IT. WAIT FOR HIM TO SAY IT.
+
+**Propose, then STOP and wait for an actual answer.** Only an explicit "do the handoff ritual" — or
+an unmistakable equivalent — starts the checklist. **Silence is not agreement. Him continuing to
+answer your questions is not agreement. Him not objecting to your plan is not agreement.** Do not
+pre-commit to running it later ("after this step, we'll do the handoff") and then treat your own
+announcement as the go-ahead.
+
+⚠ **This rule exists because it was broken on 2026-07-26.** A session said "after this step,
+whatever it says, we do the handoff ritual", got no objection, and ran all eight steps — **including
+committing and pushing three public repos** — on inferred consent. The owner had not agreed and did
+not want the session closed. Public commits are not cleanly undoable, and unwinding them means a
+force-push, which the privacy section explains does not truly purge anything.
+
+**The same goes for anything that closes or publishes on his behalf: commits, pushes, tags,
+releases.** Editing docs mid-session is fine and often required — *committing* them is not, absent
+the ritual or a direct ask. **Deciding the work is finished is his call, not a step you can
+schedule.**
 
 ---
 
