@@ -1136,3 +1136,30 @@ credit its own `name` table asks for, carried in `Media/fonts/FONT-LICENSES.md`.
 Recorded plainly so nobody re-opens it as diligence: the terms were **not read**, and the decision
 was to proceed anyway. Both fonts are distributed free by their foundries. Re-raise only if a
 foundry actually objects.
+
+---
+
+## The suite's own colour picker — SHIPPED and fully QA'd, 2026-07-26
+
+`UI.colorPicker` (LibGloomSkin MINOR 6) replaced Blizzard's `ColorPickerFrame`, **the last native
+frame anywhere in the suite**. Full contract in [CONTRACTS.md](CONTRACTS.md) §4; the locked design
+decisions are in [SUITE-STATE.md](SUITE-STATE.md). Recorded here only as the QA record.
+
+**Owner-QA'd in-client the same day, every path:**
+- Gradient drag applying live · dragging the panel · nothing dimmed behind it.
+- Right-click removal, surviving `/reload`, on a colour still live on an element.
+- Drag-then-OK adding exactly ONE colour — the fix for the ~60-intermediate-colours-a-second flood.
+- Re-picking a removed colour bringing it back.
+- Per-aura provenance naming each aura.
+- **The Opacity row**, live alpha on the element, and the panel growing DOWNWARD when it appears
+  after a plain picker at the same dragged position.
+- **GA's cancel-back-to-UNSET** — the case where the picker seeds white on a nil colour and a plain
+  restore would have applied white to a control that was never set.
+- **Closing the Suite window with the picker open** — picker closes AND the colour reverts.
+
+**Two claims made and corrected mid-session, kept so they are not re-derived:**
+- ~~"Roughly half of GB's swatches are selection-scoped, reading the selected bar."~~ **WRONG.**
+  GB's colours are one per PROFILE (`GB.db.styleData`, `GB.db.triggers`), which is why GB needs no
+  enumerator while GA and Overlays do.
+- ~~"GA is the only selection-scoped tool."~~ **Overlays was too** — its Tint reads the selected
+  overlay. Both got providers.

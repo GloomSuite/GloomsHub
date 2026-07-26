@@ -81,7 +81,8 @@ Full QA evidence for every phase is in [ARCHIVE.md](ARCHIVE.md). Do not redo any
   **GB is the UI reference for the suite, not GA.** When a pattern exists in both, copy Bars.
 - **No self-arming "click twice" confirms** (2026-07-24). Destructive actions use `UI.confirm`,
   which has a Cancel and an ESC.
-- **One colour picker for the whole suite** (2026-07-26) — `UI.colorPicker`, MINOR 6. **The last
+- **One colour picker for the whole suite** (2026-07-26, **fully owner-QA'd the same day**) —
+  `UI.colorPicker`, MINOR 6. **The last
   native Blizzard frame anywhere in the suite is gone**; `ColorPickerFrame` appears nowhere in any
   of the four repos. ★ **It is deliberately NOT modal** — it changes an element while it is open, so
   it takes no scrim and IS draggable. Do not "fix" that to match `nameDialog`/`confirm`.

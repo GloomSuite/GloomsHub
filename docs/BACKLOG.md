@@ -6,7 +6,7 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-07-26 (evening — the suite's own colour picker shipped; font-licence closed)
+**Last updated:** 2026-07-26 (evening — colour picker shipped AND fully QA'd; font-licence closed)
 
 ---
 
@@ -56,23 +56,6 @@ Three gaps remain from the PTR pass:
 
 ---
 
-### 4 · Three colour-picker paths were never exercised in-client
-**Repo:** `~/GloomsHub` (+ GA) · **Size:** ~10 minutes clicking · **Evidence:** `UNTESTED`
-
-Owner-QA'd 2026-07-26 on the main paths (gradient drag, panel drag, right-click removal surviving
-`/reload`, drag-then-OK, re-picking a removed colour, per-aura provenance). **Three were built and
-never clicked** — not suspected-broken, just unwitnessed, and a clean BugSack won't tell you:
-
-- **The Opacity row** (GB's *Border color* / *Shadow color*) — the row, live alpha on the preview,
-  and the panel growing DOWNWARD when it appears after a plain picker.
-- **GA's unset-tint cancel** — `MakeColor` seeds white on an unset colour, so cancel must restore
-  *unset*. Written for this case, never run.
-- **Closing the Suite window with the picker open** — should close it AND revert.
-
-**Read first:** [CONTRACTS.md](CONTRACTS.md) §4 (`UI.colorPicker`) · `~/GloomsHub/Skin.lua`
-
----
-
 ## Not open — recorded so nobody re-raises them
 
 > Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
@@ -96,3 +79,6 @@ never clicked** — not suspected-broken, just unwitnessed, and a clean BugSack 
   their own elements, never purple/orange/plate. Don't "helpfully" seed it with the design language.
 - **Making the colour picker modal** to match the other dialogs — **NO.** It edits a live element;
   see SUITE-STATE's locked decisions.
+- **The colour picker** — **FULLY owner-QA'd 2026-07-26, every path.** Opacity row, the panel
+  growing downward, GA's cancel-back-to-unset, and closing the Suite window out from under it all
+  passed. Nothing about it is outstanding.
