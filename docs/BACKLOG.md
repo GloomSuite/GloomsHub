@@ -77,9 +77,9 @@ every CAPTURE click (`CDM.lua:1567`), and `spec=?` in every header (`CDM.lua:145
   the owner authoring his own icons end to end. Deliberately NOT built: a config UI in the Bars tab
   (slash + manifest is enough), and the optional folder watcher, which is written
   (`tools/install-icon-watcher.sh`) but **not installed** — the owner's call, not a task.
-  **One real gap, only raise it if he does:** `Find Icon.command` resolves **spells** only; item
-  icons (healthstones, trinkets) must still be found by hand. `/gb icon key` cannot substitute —
-  the client has no filename for packed assets. See `~/GloomsBars/docs/HANDOFF.md`.
+  **Do not build tooling to find original icon art.** A spellID→file script was written and DELETED
+  the same day — he looks the spell up on Wowhead, whose results list the icon name, and that is
+  faster. `/gb icon key` cannot substitute: the client has no filename for packed assets.
 - **GB's icon zoom applying to every preset** — **FIXED and owner-QA'd 2026-07-26.** Per-bar preset
   context was missing from three loops. **The rule and the audit that catches a repeat are in
   `~/GloomsBars/docs/HANDOFF.md` — this class has bitten twice.** Not a task; do not re-raise.
