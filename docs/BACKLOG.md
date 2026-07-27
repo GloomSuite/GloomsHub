@@ -6,8 +6,8 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-07-26 (late — Quick Keybind CLOSED as not-a-GB-bug; the gold square it
-exposed FIXED; per-action icon overrides SHIPPED)
+**Last updated:** 2026-07-26 (session end — Quick Keybind CLOSED as not-a-GB-bug; the gold square it
+exposed FIXED; per-action icon overrides SHIPPED; icon zoom now resolves per preset)
 
 ---
 
@@ -83,21 +83,16 @@ every CAPTURE click (`CDM.lua:1567`), and `spec=?` in every header (`CDM.lua:145
 - **GB's icon zoom applying to every preset** — **FIXED and owner-QA'd 2026-07-26.** Per-bar preset
   context was missing from three loops. **The rule and the audit that catches a repeat are in
   `~/GloomsBars/docs/HANDOFF.md` — this class has bitten twice.** Not a task; do not re-raise.
-- **GA's "hide Blizzard CDM icons" toggle failing on the PTR** — **NOT OUR BUG.** It was
-  `EllesmereUICooldownManager` re-lighting the viewers; disabling that module fixed it, owner-
-  confirmed 2026-07-26. GA's hide works correctly on 12.1. See FINDINGS §4's `KILLED` list.
-- **MM Hunter auras on 12.1** — **TESTED and SAFE**, 2026-07-26 (FINDINGS §7). Do not re-test.
+- **GA's "hide Blizzard CDM icons" on the PTR** — **NOT OUR BUG**; it was
+  `EllesmereUICooldownManager`. GA's hide works on 12.1 (FINDINGS §4 `KILLED`).
+- **MM Hunter auras on 12.1** — **TESTED and SAFE** (FINDINGS §7). Do not re-test.
 - **GB's modifier symbols (⌘⇧⌃⌥) take no outline** — **DROPPED by the owner**; do not re-propose.
 - **The public repos expose `CLAUDE.md` + `docs/`** — **ACCEPTED**; do not re-flag.
 - **Distribution to friends/guild** — not ready; the owner will say when. Don't push it.
-- **The false `SetFont` guard** — FIXED, owner-QA'd 2026-07-26. It was NOT a tidy-up: FINDINGS §5's
-  `KILLED` list has why that reasoning was wrong.
-- **`ForceTaint_Strong` on a dead font path** — CLOSED, no action (FINDINGS §6). **Do not re-raise
-  without a real symptom.**
-- **The user's own media shipping in the addon** — FIXED 2026-07-26; `Fonts/`, `Textures/`,
-  `Graphics/` are gitignored and purged from history. **Never re-track them** (`.pkgmeta` says why).
-- **General Sans's redistribution terms** — **CLOSED by the owner 2026-07-26** without the Fontshare
-  terms being read; the attribution ships in `Media/fonts/FONT-LICENSES.md`. Not a task.
-- **The colour picker** — **FULLY owner-QA'd 2026-07-26; nothing outstanding.** Two settled decisions
-  not to re-propose: the IN USE palette holds the USER's colours, never the suite's design tokens,
-  and it is deliberately **not modal**. Full record in [ARCHIVE.md](ARCHIVE.md).
+- **The false `SetFont` guard** — FIXED. NOT a tidy-up; FINDINGS §5's `KILLED` list says why.
+- **`ForceTaint_Strong` on a dead font path** — CLOSED (FINDINGS §6). No action without a symptom.
+- **The user's own media shipping in the addon** — FIXED; `Fonts/`, `Textures/`, `Graphics/` are
+  gitignored and purged from history. **Never re-track them** (`.pkgmeta` says why).
+- **General Sans's redistribution terms** — **CLOSED by the owner**; attribution ships. Not a task.
+- **The colour picker** — **FULLY owner-QA'd; nothing outstanding.** Don't re-propose either settled
+  decision: the IN USE palette holds the USER's colours, never design tokens, and it is **not modal**.
