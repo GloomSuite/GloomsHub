@@ -74,9 +74,15 @@ every CAPTURE click (`CDM.lua:1567`), and `spec=?` in every header (`CDM.lua:145
   evidence that named GB was a **misreading** and is struck. **Do not re-raise without a fresh,
   reproducible symptom** — and if one appears, measure with `GetMouseFoci()`, never `/fstack`.
 - **GB's per-action icon overrides (`GB.Icons`)** — **SHIPPED and owner-QA'd 2026-07-26**, including
-  the owner authoring his own icon end to end. Two things deliberately NOT built: a config UI in the
-  Bars tab (slash + manifest is enough), and the optional folder watcher, which is written
-  (`tools/install-icon-watcher.sh`) but **not installed** — that is the owner's call, not a task.
+  the owner authoring his own icons end to end. Deliberately NOT built: a config UI in the Bars tab
+  (slash + manifest is enough), and the optional folder watcher, which is written
+  (`tools/install-icon-watcher.sh`) but **not installed** — the owner's call, not a task.
+  **One real gap, only raise it if he does:** `Find Icon.command` resolves **spells** only; item
+  icons (healthstones, trinkets) must still be found by hand. `/gb icon key` cannot substitute —
+  the client has no filename for packed assets. See `~/GloomsBars/docs/HANDOFF.md`.
+- **GB's icon zoom applying to every preset** — **FIXED and owner-QA'd 2026-07-26.** Per-bar preset
+  context was missing from three loops. **The rule and the audit that catches a repeat are in
+  `~/GloomsBars/docs/HANDOFF.md` — this class has bitten twice.** Not a task; do not re-raise.
 - **GA's "hide Blizzard CDM icons" toggle failing on the PTR** — **NOT OUR BUG.** It was
   `EllesmereUICooldownManager` re-lighting the viewers; disabling that module fixed it, owner-
   confirmed 2026-07-26. GA's hide works correctly on 12.1. See FINDINGS §4's `KILLED` list.

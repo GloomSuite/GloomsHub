@@ -1242,3 +1242,34 @@ silently ignoring it. `Rebuild Icons.command` makes it a Finder double-click; an
 watcher is written but **not installed** — the owner's call.
 
 ⚠ **`IconsHD/` is gitignored and is the ONLY copy of his art** — see SUITE-STATE's standing hazards.
+
+---
+
+## GB's icon zoom applied to every preset — FIXED, owner-QA'd 2026-07-26
+
+Reported as "the Icon Zoom slider is modifying ALL presets, rather than just the one being edited".
+Two distinct things were tangled together, and the first diagnosis was wrong.
+
+**Not corruption.** Every preset kept its own distinct zoom value throughout — that is what showed
+this was a *resolution* bug, not saved data being overwritten. Worth remembering as a discriminator:
+if the stored values still differ, the save path is fine and the fault is in how they are read.
+
+**The cause.** GB resolves per-bar preset values through `presetCtx`, which is set from a *button*.
+`applyTexCoord(icon)` takes the icon, so it can never be wrapped by `withPresetCtx` and depends
+entirely on its caller's context. Three top-level loops supplied none — `Skin:SetZoom`,
+`Skin:SetIconFill`, and `refreshIconGeometry` — so every bar re-cropped at `GB.db.zoom`, the working
+copy, regardless of which preset it wore.
+
+**The first diagnosis was incomplete.** Only the drag path was found, which predicted a `/reload`
+would restore correct crops. It did not — because `refreshIconGeometry` is reached by `RefreshAll` →
+`SetSizeScale`, which is exactly what a *preset switch* runs. The owner's follow-up observation —
+that switching the editor to another preset re-cropped every bar — is what exposed the second path.
+**The prediction failing was the useful part; asserting the fix at that point would have shipped a
+half fix.**
+
+**Also corrected in the same exchange:** the report was answered twice with "not from today's
+changes". The owner: *"you're the only one coding, so it's ultimately your responsibility, so don't
+be defensive."* Recorded in [LESSONS.md](LESSONS.md).
+
+Rule, audit method and the earlier round of the same bug (icon *size*, `Skin.lua:1408`) are in
+`~/GloomsBars/docs/HANDOFF.md`.

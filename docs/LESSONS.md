@@ -93,6 +93,19 @@ directly.** Four separate incidents, all the same shape:
   happen to remember it is not doing its job.
 - **macOS `sed` has no `\b`.** Verify identifier renames with a token count, and `luac -p` every
   touched file.
+- **macOS ships bash 3.2, so `mapfile`/`readarray` do not exist.** A `.command` script using them
+  dies with `command not found` the moment the owner double-clicks it. Read-loop into an array
+  instead, and `bash -n` is not enough to catch it — run the thing.
+- **★ A helper that takes a SUB-OBJECT cannot carry its owner's context.** GB resolves per-bar preset
+  values through a `presetCtx` that is set from a *button*. `applyTexCoord(icon)` takes the icon, so
+  it can never be wrapped by `withPresetCtx` and depends **entirely** on whatever context its caller
+  happens to have. Three top-level loops had none, and every bar silently re-cropped at the working
+  copy's zoom instead of its own preset's — the owner saw one slider move every bar on screen.
+  **This class has now bitten twice in the same file**: `Skin.lua:1408`'s comment records the earlier
+  round, where icon *size* did the same thing. **When a live setter or refresh path loops over
+  buttons, enter the per-button context — do not assume the helper can fetch it.** The audit worth
+  repeating: list every `ForEachButton` loop and check each one supplies context. Ten loops, eight
+  already correct, two wrong.
 - **zsh does NOT word-split unquoted variables.** `for f in $files` passes the entire newline-
   separated list to the command as ONE filename — and prints a cheerful success line for every file
   while changing nothing. Use `while IFS= read -r f`. **Never trust a loop's own success echo;
@@ -235,6 +248,13 @@ directly.** Four separate incidents, all the same shape:
 
 ## Design & working with the owner
 
+- **★ Never frame a bug by WHICH SESSION introduced it.** On 2026-07-26 a regression report was
+  answered twice with "not from today's changes, here's the diff". The owner's reply: *"I don't care
+  if it happened today or in a previous session — you're the only one coding, so it's ultimately your
+  responsibility, so don't be defensive. This is ALL your project."* He has one codebase and one
+  coder; provenance is a distinction that serves the assistant, not him. **Establishing that a change
+  is unrelated is useful once, to narrow the search — as a framing for the answer it reads as excuse
+  making.** Say what is broken, say what fixes it, fix it.
 - **Group controls by what they DO to the thing, not by which engine function they call.** GB's icon
   tint first shipped beside the availability tints it shares an engine funnel with; the owner
   rejected it on sight — *"this belongs in Decoration Layers."* **Grouping by shared plumbing is the
