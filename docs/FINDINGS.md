@@ -385,35 +385,76 @@ unit resolution entirely and `CDM.lua:417`'s workaround is not load-bearing here
 
 ---
 
-## §8 — Quick Keybind Mode cannot bind over a button's centre
+## §8 — Quick Keybind Mode cannot bind over a button's centre ✅ CLOSED — not a GB bug
 
-**Repo:** `~/GloomsBars` · **Status: `TESTED` cause on PTR 12.1.0.68914, `UNTESTED` on live** —
-2026-07-26.
+**Repo:** `~/GloomsBars` · **Status (2026-07-26): NON-REPRODUCIBLE on both clients · the recorded
+mechanism is `KILLED` · cause UNKNOWN · GB exonerated of blocking the binding.**
 
-**Symptom.** In Quick Keybind Mode the owner sees Blizzard's faint gold highlight on every button
-and cannot assign a binding while the pointer is over one. Moving the pointer to the button's edge
-binds normally.
+**★ But the investigation found a DIFFERENT, real GB bug — the gold square itself — and it is
+FIXED.** See "the gold overlay is NOT innocent" below. The owner spotted it; three replies in a row
+had dismissed it as cosmetic noise.
 
-**`TESTED` — the caller was NAMED by `/fstack`, not inferred.** Hovering a failing spot puts mouse
-focus on `ActionButton10.TextOverlayContainer` at **frame level 56**, above `ActionButton10` itself
-at 52. `GetMouseFoci()` on a working spot returns the button (`ActionButton12 CheckButton MEDIUM
-52`). Quick Keybind listens on the *button*, so the hover never arrives.
+**Symptom (was real, is gone).** In Quick Keybind Mode the owner saw Blizzard's faint gold highlight
+on every button and could not assign a binding while the pointer was over one; the button's edge
+bound normally. Seen on PTR 12.1.0.68914 with `/fstack` readings recorded.
 
-**Mechanism.** `Skin.lua:1378` raises `TextOverlayContainer` to `btn:GetFrameLevel() + 4`
-deliberately, so hotkey and count text clear GB's own skin layers (plate `+1`, decor `+2`, glow
-`+3`); the intent is documented at `Skin.lua:790`. The side effect is that a mouse-enabled container
-now outranks the button for focus.
+### `TESTED` 2026-07-26 — it stopped reproducing on the PTR too, mid-investigation
+Same client, same GB code, Quick Keybind Mode entered, gold overlays visible as before — and the
+binding **assigns through the centre**. The owner is confident the original symptom was real, and
+the recorded readings support that; what is gone is any way to observe it.
 
-**The gold overlay is innocent** — it is Blizzard's `QuickKeybindHighlightTexture`, sitting at the
-button's own level 52. It merely happens to mark the region the text container covers, which is why
-it read as the culprit.
+### `TESTED` 2026-07-26 — it does NOT reproduce on live, and that disproves the cause
+Owner ran `/fstack` on **live**, Quick Keybind Mode ON, pointer on the centre of `ActionButton4`.
+The marked frame is `ActionButton4.TextOverlayContainer` at **56**, the button at **52**, gold
+`QuickKeybindHighlightTexture` present at 52 — **the exact stack the PTR session blamed** — and
+**the binding assigns normally**. So the raised container cannot by itself be what blocks binding.
 
-**`SUSPECTED` fix, not yet written or QA'd:** `EnableMouse(false)` on the container alongside the
-level raise — text stays above the skin, mouse falls through to the button.
+### `KILLED` — "`/fstack` named the caller"
+The PTR session read `/fstack`'s `-->` arrow as *mouse focus*. It is not; it is the **topmost frame
+under the cursor**, mouse-enabled or not. Proof from the same live pass: on the button's EDGE the
+arrow marks `ActionButton2.88c996040` at level 54 — GB's own decor frame, created at
+`Skin.lua:1290`. **`Skin.lua` contains no `EnableMouse` call at all** (grepped whole repo,
+2026-07-26) and frames are mouse-disabled by default, so that frame cannot be a mouse focus.
 
-### ⚠ The question that decides everything, and it is open
-**Does this reproduce on LIVE?** GB is symlinked into both clients, so this code already runs on
-retail. §3 had exactly this shape and turned out to be a latent live bug the PTR merely exposed, not
-a 12.1 regression. **Answer this before writing the fix** — §4's standing rule is that a
-PTR-exposed live bug gets fixed now rather than after launch, and the answer also decides whether
-this belongs to the 12.1 sweep at all.
+Everything built on that reading falls with it: we have **no evidence `TextOverlayContainer` is even
+mouse-enabled**, and none that Quick Keybind's hover is being intercepted.
+
+**Still true and still deliberate.** `Skin.lua:1378` raises `TextOverlayContainer` to
+`btn:GetFrameLevel() + 4` so hotkey and count text clear GB's skin layers (plate `+1`, decor `+2`,
+glow `+3`); intent documented at `Skin.lua:790`. **Do not lower it** — see `~/GloomsBars/docs/HANDOFF.md`.
+
+### ~~The gold overlay is innocent~~ `KILLED` 2026-07-26 — it was a real bug, now FIXED
+`QuickKeybindHighlightTexture` is innocent of *blocking the binding* — it sits at the button's own
+level 52. **That is not the same as being fine, and it was recorded as if it were.** It was the ONE
+button-state texture GB's skin never adopted: not retextured, not masked, not fitted, so it drew
+Blizzard's square art at Blizzard's size, standing proud of a shaped icon.
+
+**Fixed 2026-07-26, owner-QA'd.** Hand shape → suppressed, with a shaped inner-only gold glow
+carrying the state (`Glows.lua`, `keybind` trigger); SDF fallback → Blizzard's art, anchored to the
+icon like its three siblings. Full record in [ARCHIVE.md](ARCHIVE.md); GB-side reasoning in
+`~/GloomsBars/docs/HANDOFF.md`.
+
+⚠ **The lesson is the dismissal, not the bug.** "It is not the culprit" was restated three times as
+though it settled the question. The owner had to raise the gold square a fourth time, saying *"you
+don't say anything about it"*, before anyone looked at it. **Ruling something out as a CAUSE does
+not rule it out as a DEFECT.**
+
+**`EnableMouse(false)` on the container was the `SUSPECTED` fix. It was never written and must not
+be** — its premise is the dead reading above, and there is no longer a symptom for it to fix.
+
+### What the cause probably is — `SUSPECTED`, and deliberately not chased
+The PTR carries a full competing UI suite (§4), which has already manufactured one convincing false
+12.1 bug. The owner disabled several of its modules between the original observation and the
+re-test, which fits the timing. **But its action-bars module was already disabled when the symptom
+first appeared**, so no specific module is implicated and the cause is genuinely unknown.
+
+**Not chased on purpose.** Reproducing it would mean re-enabling modules one at a time across a
+20+ module suite, to chase a PTR-only annoyance with a working sidestep (bind from the edge, or from
+the Keybindings list). The owner's time is better spent elsewhere. **If it returns, start here —
+with `GetMouseFoci()`, not `/fstack`.**
+
+### The durable lesson
+`/fstack` answers *"what is drawn on top here?"* — **never** *"what has mouse focus?"* Two sessions'
+worth of diagnosis, a named mechanism, a table of frame levels and a proposed one-line fix all rested
+on that one substitution, and GB was very nearly changed to fix a bug it never had. Mouse focus is
+`GetMouseFoci()` and nothing else.

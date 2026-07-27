@@ -1182,3 +1182,63 @@ in [FINDINGS.md](FINDINGS.md) §7.
 that silently truncates a `/run` one-liner, and the discovery that secret values propagate through
 string formatting and then vanish from SavedVariables without an error — which made 14 saved
 captures look like 8 and produced a confident, wrong "your data didn't save."
+
+---
+
+## Quick Keybind Mode "blocked by GB's skin" — CLOSED as NOT-A-GB-BUG, 2026-07-26
+
+Backlog item 2, opened 2026-07-26 with a `TESTED` cause and a one-line fix ready to write. **Both
+were wrong.** Closed the same day without any code changing on account of it.
+
+The claim was that GB's skin raises `TextOverlayContainer` above the button, and that the
+mouse-enabled container steals the focus Quick Keybind listens for — "named by `/fstack`, not
+inferred". The live test killed it: the identical frame stack is present on retail, gold highlight
+and all, and the binding assigns normally. Then the symptom stopped reproducing on the PTR too,
+mid-investigation, with the same GB code loaded.
+
+**The evidence itself was misread.** `/fstack`'s `-->` arrow marks the topmost frame under the
+cursor, not the mouse focus — proven from the owner's own screenshot, where the arrow sat on a GB
+decor frame that `grep` showed was never `EnableMouse`d. Cause of the original symptom is genuinely
+unknown; the competing UI suite on the PTR is suspected but its action-bars module was already off
+at the time. **Deliberately not chased** — reproducing it means re-enabling 20+ modules one at a
+time for a PTR-only annoyance with a working sidestep. Full `KILLED` record in
+[FINDINGS.md](FINDINGS.md) §8.
+
+## GB's Quick Keybind gold square — a REAL bug, found by the owner and FIXED, 2026-07-26
+
+The one genuine defect the above investigation produced, and it was nearly lost: three replies
+dismissed the gold square as "innocent" because it was not the *cause*. The owner raised it a fourth
+time with a screenshot.
+
+`QuickKeybindHighlightTexture` was the only button-state texture GB's skin never adopted — its
+siblings (`HighlightTexture`, `CheckedTexture`, `Flash`) are all retextured and anchored — so it drew
+Blizzard's square art at Blizzard's size, standing proud of every shaped icon, on both clients.
+
+**Fixed the way GB already handles the other three:** hand shape suppresses Blizzard's texture and a
+shaped, inner-only gold glow carries the state (a built-in `keybind` trigger in `Glows.lua`, top
+priority while the mode is open, deliberately non-pulsing and kept out of the user-facing trigger
+lists because it is a mode indicator, not a combat state); the SDF fallback keeps Blizzard's art but
+anchors it like its siblings. Two QA rounds — the first suppressed nothing (the texture does not
+exist at skin time, so the guard never fired) and glowed far too hard at full opacity on both layers.
+
+## GB per-action icon overrides (`GB.Icons`) — SHIPPED and owner-QA'd, 2026-07-26
+
+Grew out of a question about upscaling custom icons for non-square buttons. A pack in
+`Interface/ICONS` is **global** — the same `.tga` feeds bags, spellbook, tooltips and the Cooldown
+Manager — so re-framing an icon to survive a wide button's crop re-frames it everywhere. This is the
+GB-only alternative: art nothing else in the game sees, so it can be padded to exactly the margin the
+bar's aspect needs.
+
+**Keyed by spellID/itemID, not art filename**, because `GetActionTexture` returns a fileDataID in
+modern retail and keying by name would need a ~32k mapping table in the addon. The owner's tooltips
+already show spellIDs, so the key is readable off the screen.
+
+Two ways in, explicit override winning: `/gb icon` for one-offs (acting on the last button hovered,
+since you cannot hover and type at once), and a generated manifest for volume — files named
+`class_spec_name_<spellID>.tga` in `IconsHD/`, indexed by `tools/build-icon-manifest.sh`.
+**WoW exposes no filesystem API**, so the addon can never discover the art itself; the manifest is
+the only way it can know what exists, and the scanner reports every file it skips rather than
+silently ignoring it. `Rebuild Icons.command` makes it a Finder double-click; an optional LaunchAgent
+watcher is written but **not installed** — the owner's call.
+
+⚠ **`IconsHD/` is gitignored and is the ONLY copy of his art** — see SUITE-STATE's standing hazards.

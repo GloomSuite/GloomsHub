@@ -56,6 +56,14 @@ directly.** Four separate incidents, all the same shape:
   it existed were silent on it and the renderer fell back to the working copy. The read path was
   right; the migration it implied was missing — and "it works for free" reached a handoff, a commit
   message and a release untested.
+- **★ Ruling something out as the CAUSE does not rule it out as a DEFECT.** On 2026-07-26 the gold
+  Quick Keybind square was correctly shown not to block the binding — and then written into FINDINGS
+  as *"the gold overlay is innocent"* and waved off three times running. It was in fact the one
+  button-state texture GB's skin had never adopted, drawing unmasked and oversized on every shaped
+  icon. **The owner had to raise it a fourth time** — *"I've mentioned it several times, and you
+  don't say anything about it"* — before anyone looked. It was the only real bug the whole session
+  produced. **When he keeps returning to the same detail, that is data. Go and look at the thing
+  instead of re-explaining why it isn't the culprit.**
 
 ---
 
@@ -78,6 +86,11 @@ directly.** Four separate incidents, all the same shape:
   that looks like YOUR bug, not a length limit. The tell is the `msg=` local in the error: it shows
   the string cut off mid-token. **Keep in-client one-liners well under 255**, and when a diagnostic
   genuinely needs more, write a throwaway addon instead of golfing the line down.
+  ⚠ **This was already written here — twice — and it happened AGAIN on 2026-07-26**: a 268-character
+  probe went to the owner and failed on his first paste. Knowing the rule did not stop it, so the
+  rule needs a mechanical step, not more prose: **before sending any `/run` line, count it**
+  (`printf '%s' '<line>' | wc -c`) and shorten until it fits. A lesson that only fires when you
+  happen to remember it is not doing its job.
 - **macOS `sed` has no `\b`.** Verify identifier renames with a token count, and `luac -p` every
   touched file.
 - **zsh does NOT word-split unquoted variables.** `for f in $files` passes the entire newline-
@@ -148,6 +161,18 @@ directly.** Four separate incidents, all the same shape:
   `_retail_/Interface/AddOns` answered "what is this API's real signature on THIS client" in one
   command. **Other people's installed addons are a live reference for current API shapes** — better
   than memory, and current by definition.
+- **★ `/fstack` answers "what is DRAWN on top here?", never "what has MOUSE FOCUS?"** Its `-->` arrow
+  marks the topmost frame under the cursor whether or not that frame is mouse-enabled. On 2026-07-26
+  two sessions' worth of diagnosis — a named culprit, a table of frame levels, a proposed one-line
+  fix — rested on reading that arrow as focus, and GB was one step from being changed to fix a bug it
+  never had. The tell was in the same screenshot: the arrow marked a GB decor frame that `grep`
+  proved was never `EnableMouse`d. **Mouse focus is `GetMouseFoci()` and nothing else.**
+- **A button's optional textures may not EXIST yet when you skin it.** Blizzard creates
+  `QuickKeybindHighlightTexture` only when Quick Keybind Mode first opens, so
+  `if btn.QuickKeybindHighlightTexture then …` inside the skin's one-time setup was never true. It
+  raised nothing, logged nothing, and read as handled. **A nil-guard around a lazily-created widget
+  is a silent no-op** — do the work where the thing is guaranteed to exist (an event, a mode opening,
+  a hook that fires after Blizzard built it), not where it is convenient.
 
 ---
 

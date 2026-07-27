@@ -153,6 +153,11 @@ Both were identity-scanned and are clean.
   follow a symlink into live source.
 - **All four addons point at their normal repos on BOTH the retail and PTR clients**, so an edit is
   live on both. Remember that before editing during PTR work.
+- **★ `~/GloomsBars/IconsHD/` is the ONLY copy of the owner's hand-authored action-bar icons.** It is
+  gitignored by design (his art must never enter a public repo), so git holds nothing and deleting
+  the folder destroys the work permanently. `IconsManifest.lua` IS tracked, but it is only an index
+  of filenames — it cannot rebuild the art. **Never clean, reset or `git clean -x` that folder**, and
+  if he ever mentions backups, this is the thing that needs one.
 
 ---
 
