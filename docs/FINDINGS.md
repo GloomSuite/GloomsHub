@@ -22,11 +22,68 @@
 > **When a claim is disproved, strike it through and move it to the KILLED list under its finding.
 > Never delete it** — a silently removed theory gets re-derived by the next session.
 
-**Last updated:** 2026-07-26
+**Last updated:** 2026-07-30
 
 ---
 
 ## §1 — GA cannot read ANY aura detail in combat on 12.1 ★
+
+### ▶ UPDATE 2026-07-30 — Blizzard's own 12.1 notes CONFIRM this, and REFRAME the size
+Source: <https://warcraft.wiki.gg/wiki/Patch_12.1.0/API_changes> — read the aura and secret-value
+sections before working this item.
+
+**`TESTED` by Blizzard's documentation, not just by us.** APIs reaching aura data "via index, slot,
+or instance ID will Lua error when called by addons while auras are secret". That is exactly the
+call GA makes. Three things are WORSE than this finding originally recorded:
+
+- Secrecy covers **combat, encounters, M+ and PvP matches** — not just "in combat".
+- **`UNIT_AURA` now delivers a fully secret payload**; AuraData structs are "always fully secret".
+- **Many healer auras lost never-secret status** — Rejuvenation, Power Word: Shield, Beacon of Light
+  and numerous spec auras were removed from that list.
+
+**★ But the blocker is NARROWER than "a migration", and that changes the estimate.** GA already owns
+the sanctioned pass-through route and uses it today: `Displays.lua:298` hands a duration OBJECT
+straight to `f.bar:SetTimerDuration`, and `CDM.lua:573` records that `SetCooldownFromDurationObject`
+does not throw for one. **GA never needs to READ the number.** The single blocker is that
+`GetAuraDurationObject` (`CDM.lua:38`) gates on two instance-ID calls before it can get the object.
+This is the same principle GB already ships for cooldowns (its hidden proxy `Cooldown` widget).
+
+**★ THE REMAINING QUESTION — narrow, and NOT as open as it first looks.** ⚠ Read the `TESTED` escape-
+route table further down THIS finding before getting excited: **`GetAuraDataBySpellName`,
+`GetUnitAuraBySpellID` and `GetCooldownAuraBySpellID` were all tested on 2026-07-25 and all return
+`nil` for secret auras.** The spell-ID channel is open but declines to hand anything back — so there
+is usually no object to pass through in the first place.
+
+What is genuinely untested is one sibling: **`C_UnitAuras.GetPlayerAuraBySpellID`** (player-only,
+never probed — the 2026-07-25 run used `GetUnitAuraBySpellID`, a different function). If it returns
+an AuraData whose secret `duration`/`expirationTime` can be **fed to a widget** rather than read,
+item 1 collapses to a patch.
+
+**Honest prior: low.** Three sibling spell-ID channels already return `nil`. Test it because it is
+cheap and it settles the item, not because it is likely.
+
+⚠ **Do not settle this from the wiki either way.** That page states the `GetPlayerAuraBySpellID`
+spellID parameter "requires non-secret aura access", which appears to contradict its own general
+statement that spell-ID APIs still work. **Resolve it in-client on the PTR.**
+
+### ⚠ 2026-07-30 — option 1 in "Three options" below may now be DEAD
+The option list further down offers **`AuraContainer` / `AuraButton`** as "Blizzard's sanctioned
+path". Blizzard's 12.1 notes undercut it:
+
+- **"AuraButtons are now forbidden … APIs called on them via tainted code will Lua error … whenever
+  auras are secret."** Addon code is tainted code. That is the whole styling surface.
+- **"Addons are no longer allowed to reparent aura buttons"**, and child components "can no longer be
+  re-parented once configured".
+- Aura containers showing aura groups "will no longer receive OnSizeChanged updates".
+
+`SUSPECTED`, not tested — but **price option 1 again before choosing it.** It was recorded as the
+supported road, and the road may have been closed since.
+
+**Possibly relevant, `UNTESTED`:** 12.1 adds `C_UnitAuras.GetHiddenGroupBuffs` /
+`SetHiddenGroupBuffs` and `C_CooldownViewer.GetGroupBuffItems`. GA hides Blizzard's CDM icons by its
+own means today; these may be the sanctioned replacement.
+
+---
 
 **Repo:** `~/GloomsAuras` · **Status: `TESTED`** — 2026-07-25 on PTR 12.1.0.68914, via GA's own
 `/ga capture` → `/ga probe`, on a Warlock with Agony / Corruption / Unstable Affliction / Haunt on a
@@ -458,3 +515,41 @@ with `GetMouseFoci()`, not `/fstack`.**
 worth of diagnosis, a named mechanism, a table of frame levels and a proposed one-line fix all rested
 on that one substitution, and GB was very nearly changed to fix a bug it never had. Mouse focus is
 `GetMouseFoci()` and nothing else.
+
+---
+
+## §9 — Blizzard's damage meter breaks under ANY addon taint ✅ CLOSED — not our bug
+
+**Repo:** none of ours · **Status: `TESTED` 2026-07-30 on LIVE 12.0.7 build 68887**, by the owner's
+own addon bisect. **Nothing to do. Do not re-diagnose.**
+
+**Symptom.** In combat, `Blizzard_DamageMeter` throws hundreds of errors per refresh, and the meter
+displays **wrong player names and class icons** — the owner saw them mismatched across rows after a
+dungeon. Not cosmetic: the first failure aborts `UpdateName`, and because `ScrollBoxListView`
+recycles row frames, rows keep the previous occupant's name and class.
+
+**Cause — Blizzard's.** Their code compares secret values directly at two sites:
+`DamageMeterEntry.lua:87` (`sourceDisplayType`) and `DamageMeterSessionWindow.lua:930`
+(`durationSeconds`). Those comparisons are only legal on an untainted path. **Any loaded addon
+taints paths** — that is what addons do — so the meter is broken for essentially every addon user.
+
+**`TESTED` — three unrelated addons, each as the ONLY non-Blizzard addon loaded besides BugSack:**
+LiteMount (a mount manager), Plumber (a UI utility), TextureAtlasViewer (a texture browser). None of
+them interact with the damage meter. With them disabled, no errors and correct display.
+
+**★ ALL FOUR GLOOM ADDONS were loaded throughout the entire bisect and produced nothing.**
+
+### ⚠ SECRET VALUES ARE LIVE ON 12.0.7 — our docs framed them as a 12.1 concern
+This is the correction that matters beyond the bug. Backlog item 2 is still titled "the 12.1
+exposure sweep", and §1 reads as a future problem. **Part of that exposure is already shipping on the
+live client the owner plays every day.** Weigh that when planning the sweep.
+
+### `KILLED` — "addons that use Blizzard's shared ScrollBox machinery are the ones that taint it"
+A scan showed LiteMount (26 uses), Plumber (7) and, as a negative control, EllesmereUI (0, and it did
+NOT trigger the bug) — five-for-five, presented as a mechanism. **TextureAtlasViewer then triggered
+it with a score of zero**, using only the old `ScrollFrameTemplate`. The correlation was an artifact
+of a tiny sample. **There is no known code pattern that predicts which addons trigger this**, which
+is itself consistent with the plain reading: almost anything taints.
+
+**Owner is filing it with Blizzard** — the repro is unusually clean (single addon + error catcher,
+exact file and line), so it has a real chance of a hotfix.

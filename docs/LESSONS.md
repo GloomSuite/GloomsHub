@@ -56,6 +56,18 @@ directly.** Four separate incidents, all the same shape:
   it existed were silent on it and the renderer fell back to the working copy. The read path was
   right; the migration it implied was missing — and "it works for free" reached a handoff, a commit
   message and a release untested.
+- **★ N-for-N on a handful of samples is a coincidence, not a mechanism.** Chasing a taint bug on
+  2026-07-30, a scan showed the three addons that triggered it all used Blizzard's shared ScrollBox
+  API and the one that didn't scored zero — five for five, including a negative control. It was
+  presented as the explanation, complete with a table. The owner's next test produced a trigger
+  scoring **zero**. **Before publishing a rule from a correlation, go looking for the counterexample
+  yourself** — and if the sample is under about ten, say "consistent with" rather than "the cause".
+- **★ Before declaring a question OPEN, read the existing `TESTED` table in the finding you are
+  updating.** On 2026-07-30 a 12.1 API digest produced an exciting "the whole item hinges on this
+  untested question" — and FINDINGS §1 already contained a table showing three of the four channels
+  had been probed a week earlier and all returned nil. The genuinely untested piece was one sibling
+  function, with a low prior. **A doc system only stops confidence laundering if you read the part
+  that contradicts you before you write.**
 - **★ Ruling something out as the CAUSE does not rule it out as a DEFECT.** On 2026-07-26 the gold
   Quick Keybind square was correctly shown not to block the binding — and then written into FINDINGS
   as *"the gold overlay is innocent"* and waved off three times running. It was in fact the one

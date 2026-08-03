@@ -6,32 +6,39 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-07-26 (session end — Quick Keybind CLOSED as not-a-GB-bug; the gold square it
-exposed FIXED; per-action icon overrides SHIPPED; icon zoom now resolves per preset)
+**Last updated:** 2026-07-30 (Blizzard's 12.1 API notes digested — item 1 REFRAMED and now hinges on
+one PTR test; the damage-meter taint storm traced and closed as Blizzard's bug)
 
 ---
 
 ## Open items
 
-### 1 · GA loses all aura detail in combat on 12.1 ★ the big one
-**Repo:** `~/GloomsAuras` · **Size:** a migration, not a patch · **Evidence:** `TESTED` (2026-07-25)
+### 1 · GA loses all aura detail in combat on 12.1 ★ the big one — SIZE IS NOW UNKNOWN
+**Repo:** `~/GloomsAuras` · **Size:** ONE TEST decides between a patch and a migration
+**Evidence:** `TESTED` (2026-07-25) · **confirmed by Blizzard's own 12.1 notes** (2026-07-30)
 
-In combat 12.1 returns aura instance IDs as SECRET, and every read call throws. GA keeps aura
-*presence* but loses duration, stacks and expiry. Fails silently — BugSack stays clean while
-nothing renders. Three escape routes were tested and all are closed.
+Aura APIs reached **by index, slot or instance ID Lua error** while auras are secret. GA keeps aura
+*presence* but loses duration, stacks and expiry, and fails **silently** — BugSack stays clean while
+nothing renders.
 
-**Deferred by the owner (2026-07-25): wait for 12.1 launch, then triage.** He is switching to
-Hunter for Season 2 and the cooldown path is unaffected, so this does not block him. Do not
-re-litigate the timing.
+**★ NEXT SESSION STARTS HERE — one PTR test sizes the whole item.** Can a duration object, or a
+secret `duration`/`expirationTime`, be obtained **without any index/slot/instance-ID API** and still
+be fed to a widget? The only untested channel is `C_UnitAuras.GetPlayerAuraBySpellID`.
 
-**★ The pressure is OFF, and this is `TESTED` (2026-07-26) — see [FINDINGS.md](FINDINGS.md) §7.**
-His own MM Hunter profile is **unaffected**: every display in it triggers on aura *presence*, which
-survives. This is still a real defect for duration/stack displays — the Warlock profile is genuinely
-broken — but it no longer threatens the spec he is playing into Season 2.
+**Patch if yes** (GA already owns the pass-through machinery); **migration if no**, and the options
+then need re-pricing because 12.1 may have closed the one recorded as "Blizzard's sanctioned path".
+
+⚠ **Read FINDINGS §1 before running anything** — it holds the full reasoning, the 2026-07-25
+escape-route table showing three sibling channels already return `nil`, an **honest prior of LOW**,
+and what 12.1 changed. Do not re-derive any of it here.
+
+**Deferred by the owner (2026-07-25): wait for 12.1 launch, then triage.** Do not re-litigate the
+timing. **Pressure is OFF** — his MM Hunter profile is `TESTED` unaffected (§7). The Warlock profile
+is genuinely broken.
 
 **Read first:** [FINDINGS.md](FINDINGS.md) §1 · `~/GloomsAuras/CLAUDE.md` ·
-`~/GloomsAuras/docs/API-NOTES.md`
-**Shape:** deep design work inside one tool — the one case that genuinely earns a session of its own.
+`~/GloomsAuras/docs/API-NOTES.md` · **Blizzard's 12.1 API changes:**
+<https://warcraft.wiki.gg/wiki/Patch_12.1.0/API_changes> (the aura + "secret value" sections)
 
 ---
 
@@ -69,6 +76,12 @@ every CAPTURE click (`CDM.lua:1567`), and `spec=?` in every header (`CDM.lua:145
 
 > Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
 
+- **The damage-meter Lua error storm (2026-07-30)** — **NOT OUR BUG, nothing to do.** Blizzard's
+  built-in damage meter compares secret values on paths any addon taints; rows then show wrong names
+  and class icons. `TESTED`: reproduced with LiteMount, Plumber and TextureAtlasViewer each as the
+  only non-Blizzard addon loaded. **All four Gloom addons were loaded throughout and produced
+  nothing.** Owner is filing it with Blizzard. Full record + the `KILLED` theory in
+  [FINDINGS.md](FINDINGS.md) §9. **Do not re-diagnose this.**
 - **Quick Keybind Mode "blocked by GB's skin"** — **CLOSED, not a GB bug** (FINDINGS §8). It does
   not reproduce on live, and it stopped reproducing on the PTR mid-investigation. The `/fstack`
   evidence that named GB was a **misreading** and is struck. **Do not re-raise without a fresh,
