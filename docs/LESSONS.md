@@ -32,6 +32,58 @@ directly.** Four separate incidents, all the same shape:
 
 ---
 
+## ★★ "Impossible" is a claim about your search, not about the world
+
+**2026-08-03 cost most of a session to this, in front of the owner, repeatedly.** The shape:
+
+> A sweep tested one *family* of things exhaustively, concluded a capability was impossible, and
+> stated it flatly. A competing addon was visibly doing the thing on the same client at the time.
+
+Concretely: every sink in the `Cooldown` widget family was tested against a secret value, with a
+proper plain-number control, and all refused. That produced *"aura timers are impossible on 12.1."*
+**`StatusBar:SetValue` had never been tried. It accepts secrets, and it is the whole answer.**
+
+**The rules that follow, in order of how much they would have saved:**
+
+1. **If something demonstrably works elsewhere, your impossibility proof is wrong. Full stop.** The
+   owner said "ArcUI does this." That is a counter-example, and a counter-example beats any amount
+   of reasoning. **Go find the actual API call in its code — not the first plausible mechanism.**
+2. **Read to the CALL, not to a candidate.** Three separate wrong theories about ArcUI were produced
+   by grepping, finding *a* mechanism that could explain the behaviour, and stopping: a
+   `customDuration` stopwatch (the owner had **zero** configured), a `barFrame.Bar` mirror (his
+   Tracked Bars was **empty**), and a `GetAuraDurationRemaining` read (the function **doesn't exist**
+   on this build). Each was checkable in one command and none was checked before being asserted.
+3. **Check the addon's own SavedVariables before theorising about its behaviour.** `grep -c` on its
+   config would have killed theories 1 and 2 in seconds.
+4. **Prefer the target's own diagnostic.** ArcUI ships `/arcsec`, which reports whether it reads
+   aura data at all. One command; it was available from the first minute and used near the last.
+5. **A table that tests one axis reads as exhaustive and is not.** FINDINGS §1's escape-route table
+   asked "can we READ it?" for five channels. Nobody noticed for a week that "will a SINK take it?"
+   was never asked. **When you write a table like that, name the axis in the heading.**
+
+## ★★ Label inference and measurement differently, in every sentence
+
+Same session, same root cause as the near-miss this whole evidence-tag system exists for — except
+in conversation rather than in a document, where no tag was there to force the distinction.
+
+Wrong calls stated in the same flat voice as measured results, in one evening: that the owner's
+displays would appear (**his group was switched off**); that he should disable `EnhanceQoL` (**it
+owns media files GA points at**); that he could stand out of combat with a DoT ticking (**he can't**);
+that a sticky-value bug would appear (**it didn't**); that timers were impossible (**they aren't**);
+that Tracked Bars was required (**it isn't**).
+
+**The fix that worked, once adopted:** state the basis before the claim — *"grounded in measurement:
+X"* / *"inference only: Y"* — and, for anything predictive, **write the prediction down before the
+test and let the result stand against it.** The owner explicitly asked for this. It is cheap, it
+makes being wrong harmless, and it is the difference between a session that converges and one that
+burns an evening. **When he says he doesn't remember it that way, treat that as data, not as a
+memory lapse to correct** — on 2026-08-03 he was right about the record being overstated, twice.
+
+**And do not suggest asking an addon author for help.** They are unpaid and it is not their addon's
+problem. Read the code.
+
+---
+
 ## Verification & evidence
 
 - **Check what a tag POINTS AT, not just that it exists.** GB's published `v0.2.0` looked current

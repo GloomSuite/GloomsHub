@@ -22,13 +22,79 @@
 > **When a claim is disproved, strike it through and move it to the KILLED list under its finding.
 > Never delete it** — a silently removed theory gets re-derived by the next session.
 
-**Last updated:** 2026-07-30
+**Last updated:** 2026-08-03 (§1 ANSWERED — `AuraContainer` is the route; large `KILLED` list added.
+New §10 on the CDM alert events. §4's Ellesmere paragraph corrected.)
 
 ---
 
-## §1 — GA cannot read ANY aura detail in combat on 12.1 ★
+## §1 — GA cannot READ aura duration/stacks on 12.1 — but CAN display them via `AuraContainer` ★
 
-### ▶ UPDATE 2026-07-30 — Blizzard's own 12.1 notes CONFIRM this, and REFRAME the size
+### ▶▶ ANSWERED 2026-08-03 — read THIS block before anything below it
+**The route is `AuraContainer`. Everything under "Three options" is settled and the option list is
+struck. The 2026-07-30 framing below ("one PTR test decides patch vs migration") is spent — that
+test was run and came back negative, and the answer arrived from somewhere else entirely.**
+
+`TESTED` 2026-08-03, PTR 12.1.0.68914, Warlock (Gloomwick, Affliction), training dummy, owner at
+the keyboard. Two independent instruments: GA's own `/ga probe` (extended this session) and direct
+on-screen observation.
+
+**1 · The data path is dead, and that part of the old record holds.** Every instance-ID call
+(`GetAuraDataByAuraInstanceID`, `GetAuraDuration`, stacks) `THREW` for all four DoTs and for
+Nightfall. Re-confirmed today, not assumed.
+
+**2 · The DISPLAY path is alive, and nobody had tested it.** The old escape-route table only ever
+asked *"can we READ this value?"*. It never asked *"will a SINK accept it?"* — which is the question
+that decides the item. Measured, with a plain-number control through the identical call:
+
+| Sink | plain number | SECRET number |
+|---|---|---|
+| `Cooldown:SetCooldownDuration` | **ok** | **refused** |
+| `Cooldown:SetCooldown` / `SetCooldownFromExpirationTime` / `…FromDurationObject` | refused¹ | **refused** |
+| **`StatusBar:SetValue`** | **ok** | **★ ok** |
+| **`StatusBar:SetMinMaxValues`** | **ok** | **★ ok** |
+
+¹ those three want a different shape (object / timestamp), so their "no" is uninformative — see the
+`KILLED` list for why that mattered.
+
+**3 · The widgets hold the value.** A CDM item frame's `GetCooldownFrame()` returns a Cooldown
+widget whose `GetCooldownDuration` / `GetCooldownTimes` / `GetCooldownDisplayDuration` all hand back
+`SECRET(number)` **without throwing** and without touching any index/slot/instance-ID API.
+⚠ **But all three are the TOTAL, not the remaining** — `TESTED` twice by mirroring each to a live
+bar: it pins full and never drains. **The icon frame cannot drive a countdown.**
+
+**4 · A Tracked-Bar item frame's `.Bar` CAN.** `GetValue()` → `SECRET(number)`,
+`GetMinMaxValues()` → `SECRET/SECRET`, and mirroring both into GA's own StatusBar produced a
+correct, accurate, right-to-left draining bar — owner-observed. **Cost: the aura must be in
+Blizzard's "Tracked Bars" list**, which is a per-user config step and takes the aura *out* of
+Tracked Buffs. This works but is the inferior route; see 5.
+
+**5 · ★ THE ANSWER — `AuraContainer`, read out of ArcUI's working implementation.**
+ArcUI shows accurate DoT timers on this exact client with **`rawReads=0`** (its own `/arcsec`
+diagnostic) — it reads no aura data at all. Mechanism, from `ArcUI/Bars/ArcUI_BarDuration.lua` +
+`.xml`:
+
+- `CreateFrame("AuraContainer", name, UIParent, "CustomAuraContainerTemplate")`, one per unit.
+  **Out of combat ONLY** — in-combat creation is a hard Lua error. Then `SetUnit`, `SetEnabled(true)`,
+  `Show()`; it must be shown and enabled to self-register `UNIT_AURA`.
+- `container:AddAuraSlot(key, filter, { candidateFilters = { includeSpellIDs = {…} },
+  templateNames = {…}, initializeFrame = fn })`, then `container:UpdateAllAuras()` so
+  already-active auras are picked up immediately rather than on the next `UNIT_AURA`.
+- **Inside `initializeFrame` and nowhere else** — the only window in which the button is not a
+  forbidden object — call `button:SetDurationBar(<region>, {interpolation, direction})` and
+  `button:SetDurationText(<region>, {formatter})`, then anchor the button over your own frame.
+  **After that window, ANY API call on the button Lua-errors while auras are secret.**
+- ★ **The regions must be owned BY THE BUTTON**, declared in an XML template
+  (`<StatusBar parentKey="…"/>`, `<FontString parentKey="…"/>`). **An addon-created frame is
+  rejected.** GA ships no XML today, so this route requires adding one.
+- The engine renders the drain and the countdown text into those regions. The addon never obtains a
+  duration, which is exactly why it survives secrecy — and why it follows target swaps correctly,
+  since the container is per-unit and Blizzard does the tracking.
+
+**What this costs GA:** an XML template, container lifecycle (out-of-combat creation, per-unit),
+one slot per tracked spell, and strict `initializeFrame` discipline. Bounded work with a complete
+reference implementation to copy from. **No Tracked Bars, no CDM dependency, no combat log.**
+
+### ▶ SUPERSEDED 2026-07-30 — Blizzard's own 12.1 notes CONFIRM this, and REFRAME the size
 Source: <https://warcraft.wiki.gg/wiki/Patch_12.1.0/API_changes> — read the aura and secret-value
 sections before working this item.
 
@@ -54,21 +120,31 @@ route table further down THIS finding before getting excited: **`GetAuraDataBySp
 `nil` for secret auras.** The spell-ID channel is open but declines to hand anything back — so there
 is usually no object to pass through in the first place.
 
-What is genuinely untested is one sibling: **`C_UnitAuras.GetPlayerAuraBySpellID`** (player-only,
-never probed — the 2026-07-25 run used `GetUnitAuraBySpellID`, a different function). If it returns
-an AuraData whose secret `duration`/`expirationTime` can be **fed to a widget** rather than read,
-item 1 collapses to a patch.
+~~What is genuinely untested is one sibling: **`C_UnitAuras.GetPlayerAuraBySpellID`**…~~
+**`TESTED` 2026-08-03 — it returns `nil`.** Probed against a LIVE, active player aura (Nightfall,
+`IsActive=true`, `present=true`, secret instance ID) in combat: `playerAura: nil` on every capture.
+It does not throw; it declines, exactly like its three siblings. **The low prior was right.**
 
-**Honest prior: low.** Three sibling spell-ID channels already return `nil`. Test it because it is
-cheap and it settles the item, not because it is likely.
+⚠ **And this test could never have sized the item anyway** — `GetPlayerAuraBySpellID` is
+**player-only**, while the broken case was always *target* DoTs. Calling it "the one test that
+decides patch vs migration" was wrong on its own terms. The answer came from `AuraContainer`.
+
+**Also `TESTED` 2026-08-03 and worth recording:** `C_UnitAuras.GetAuraDurationRemaining` — a
+*different* function from `GetAuraDuration`, and the one ArcUI's code calls — **does not exist on
+this build** (`absent` on every probe). ArcUI guards it with an existence check, so it never runs.
 
 ⚠ **Do not settle this from the wiki either way.** That page states the `GetPlayerAuraBySpellID`
 spellID parameter "requires non-secret aura access", which appears to contradict its own general
 statement that spell-ID APIs still work. **Resolve it in-client on the PTR.**
 
-### ⚠ 2026-07-30 — option 1 in "Three options" below may now be DEAD
-The option list further down offers **`AuraContainer` / `AuraButton`** as "Blizzard's sanctioned
-path". Blizzard's 12.1 notes undercut it:
+### ~~⚠ 2026-07-30 — option 1 in "Three options" below may now be DEAD~~ `KILLED` 2026-08-03
+**FALSE, and it was the single most expensive wrong belief in this finding.** It was `SUSPECTED`
+from reading patch notes, and it steered two sessions away from the one route that works. ArcUI
+uses `AuraContainer` + `AuraButton:SetDurationBar` **successfully on PTR 12.1.0.68914** — the same
+client this was written on. The patch-note lines quoted below are real, but they describe the
+*discipline the API requires* (all button access confined to `initializeFrame`; regions owned by
+the button; no reparenting) — **not a closure.** Read the ANSWERED block at the top of §1.
+Original reasoning kept below so nobody re-derives it:
 
 - **"AuraButtons are now forbidden … APIs called on them via tainted code will Lua error … whenever
   auras are secret."** Addon code is tainted code. That is the whole styling surface.
@@ -111,7 +187,10 @@ duration, stacks or expiry. That is Blizzard's stated intent.
 clean while every DoT display failed to light up.** Do not treat a clean sack as a pass anywhere in
 this work.
 
-### `TESTED` — all three escape routes are closed
+### `TESTED` — all three escape routes are closed ⚠ **for READING only — see the caveat**
+⚠ **2026-08-03: this table is true and it is NOT the whole question.** Every row asks *"can we read
+the value?"*. None asks *"will a sink accept it?"* — and the answer to the second question is YES
+for `StatusBar:SetValue`. A table like this reads as exhaustive and is not; it tests one family.
 Via `SecretScan`, a small local diagnostic addon in the retail AddOns folder (extended 2026-07-25
 with `byname`, `api` and `newapi` modes). **It is not in any repo.** Blizzard's exact wording names
 the real gate: **`Auras cannot be accessed when secret while tainted by '<addon>'`** — the gate is
@@ -136,16 +215,40 @@ clean), and presence-only displays.
 See **§7**. This bounds §1: the broken thing is the *data* path, and a profile that never asks for
 duration or stacks is untouched. The owner's MM profile is one of those; his Warlock profile is not.
 
-### Three options, none costed
-1. **`AuraContainer` / `AuraButton`** — Blizzard's sanctioned path. The container gathers auras
-   untainted; GA styles buttons and never touches data. Biggest rework, the supported road.
-2. **Combat-log tracking** — derive DoT timers from `COMBAT_LOG_EVENT_UNFILTERED` plus known base
-   durations, as addons did before instance IDs existed. `SUSPECTED` viable: CLEU is not on any 12.1
-   restriction list, but that has not been verified, and pandemic refresh + haste scaling are real
-   work. Would keep GA's current look exactly.
-3. **Presence-only degradation** — keep the icon, drop the timer. Cheapest, and a real loss.
+### ~~Three options, none costed~~ — RESOLVED 2026-08-03, the list is closed
+1. **`AuraContainer` / `AuraButton`** — ★ **THIS IS THE ANSWER.** Proven working on 12.1 by a
+   reference implementation on the owner's own client. Details in the ANSWERED block at the top.
+2. ~~**Combat-log tracking**~~ — **not needed, and don't build it.** It was the fallback for a wall
+   that turned out not to exist. It would also be strictly worse: a self-timed bar cannot know about
+   pandemic refreshes or haste scaling, so it drifts from the real remaining time. ArcUI ships this
+   shape as a separate "timer bar" feature (user-supplied `customDuration`); it is **not** what
+   drives its DoT bars.
+3. ~~**Presence-only degradation**~~ — moot. Presence already works and now so can duration.
 
-**Decide this in a GA session.** See [BACKLOG.md](BACKLOG.md) item 1.
+**A fourth route exists and is `TESTED` working, but is inferior:** mirror a Tracked-Bar frame's
+`.Bar` via `GetValue`/`SetValue` (point 4 above). Keep it only as a fallback — it costs the user a
+Blizzard-side config step per aura and steals the aura out of Tracked Buffs.
+
+### `KILLED` 2026-08-03 — do not revive any of these
+Struck by name. All were stated confidently in earlier sessions or in this one; all are false.
+
+- ~~*"GA loses ALL aura detail in combat on 12.1."*~~ **FALSE at the headline.** Presence is intact
+  and the owner's Warlock displays work end to end in combat — icons light on application, follow
+  target swaps, and clear on expiry. `TESTED` on screen 2026-08-03.
+- ~~*"His Warlock profile is genuinely broken."*~~ **FALSE.** It was repeated in both this file and
+  GA's own HANDOFF. Every display in that profile triggers on presence; the profile works.
+- ~~*"The residual risk is `CDM.lua:550` — if `IsActive` returns a secret, an expired buff stays lit
+  forever."*~~ **Did not occur.** `TESTED` on the Warlock's target debuffs (the structurally harder
+  case than §7's player buffs): displays cleared correctly on expiry and on target swap.
+- ~~*"Aura timers are impossible on 12.1."*~~ **FALSE** — asserted mid-session on the strength of an
+  exhaustive-looking sink sweep that had never tried `StatusBar:SetValue`. See LESSONS.
+- ~~*"ArcUI must be self-timing its bars from a configured duration."*~~ **FALSE.** ArcUI's timer-bar
+  feature does work that way, but the owner has **zero** of them configured (`timerBarConfigs`
+  absent from its SavedVariables). Finding *a* mechanism in an addon is not finding *the* one in use.
+- ~~*"The aura must be in Blizzard's Tracked Bars for GA to show a duration."*~~ **FALSE as a general
+  claim.** True only of the mirror route. `AuraContainer` needs no CDM configuration at all.
+- ~~*"`C_UnitAuras.GetAuraDurationRemaining` may work where `GetAuraDuration` throws."*~~ **Moot —
+  the function does not exist on 12.1.0.68914.**
 
 ---
 
@@ -260,12 +363,25 @@ references by path (`ArcUI`, `NiceDamage`, `EnhanceQoL` + its 15 modules — wit
 404s and trips §2). Live SavedVariables were copied across. TOCs deliberately left at `120007` —
 "Load out of date AddOns" is enough.
 
-**★★ `TESTED` 2026-07-26 — the client no longer matches the paragraph above, and it produced a
-convincing false 12.1 bug.** Also installed: **`EllesmereUI`** (a full UI-replacement suite —
-`ActionBars`, `UnitFrames`, `Nameplates`, `CooldownManager`, `BlizzardSkin`, `Basics`, ~20 modules)
-and `CopyThat`. **The owner keeps most Ellesmere modules OFF on retail; the fresh PTR install turned
-them ALL ON.** `EllesmereUICooldownManager` was fighting GA over the same four Cooldown Manager
-viewers, and `EllesmereUIActionBars` sits alongside GB (that one he had already disabled).
+~~**★★ `TESTED` 2026-07-26 — the client no longer matches the paragraph above…** The owner keeps most
+Ellesmere modules OFF on retail; the fresh PTR install turned them ALL ON.~~
+**★ CORRECTED 2026-08-03 — this is now stale and misleading. Do not act on it.**
+
+**`EllesmereUI` IS the owner's UI.** He has since replaced **EnhanceQoL and Leatrix Plus** with
+Ellesmere modules; EQoL is retired. A PTR client with Ellesmere loaded is therefore **representative,
+not contaminated** — do not try to get to a "clean" client by switching it off, and never propose
+disabling the suite wholesale.
+
+**Only ONE module ever collided with GA: `EllesmereUI Cooldown Manager`** (it re-lit the four CDM
+viewers — see the `KILLED` entry below). **He disabled it in July and it is still off**, verified
+2026-08-03 from his own addon list. `ActionBars`, `ResourceBars` and `QoL` merely *read* cooldown
+info for their own display and do not own the viewer frames, so they cannot skew a measurement.
+
+⚠ **Do NOT tell him to disable `EnhanceQoL`, `ArcUI` or `NiceDamage` either.** GA's saved variables
+point at media files inside all three (`NiceDamage\fonts\pepsi_modern.ttf` is his Hunter display
+font; `ArcUI\Sounds\*.ogg` and `EnhanceQoL\Sounds\...\Bell.ogg` are display sounds). WoW resolves
+those paths off disk, so *disabling* is harmless — but **deleting the folders is not**, and a
+missing font takes the whole display down (§2).
 
 **Read the addon list BEFORE attributing anything to 12.1 on this client.** Two of three symptoms in
 the 2026-07-26 session had a competing addon sitting in the folder as a simpler explanation.
@@ -423,9 +539,13 @@ signal-only.
 
 **The `RepollBuffPresence` fallback is what carries it.** `CDM.lua:541` calls
 `GetAuraDataByAuraInstanceID` inside a `pcall`; in combat that throws, `present` goes false, and
-line 549 falls back to `frame:IsActive()`. ⚠ **The residual risk is line 550:** if `IsActive` ever
-returns a *secret*, the code keeps the previous value and an expired buff stays lit forever. It
-never did across 14 probes — but that is the failure mode to check first if this ever regresses.
+line 549 falls back to `frame:IsActive()`. ~~⚠ **The residual risk is line 550:** if `IsActive` ever
+returns a *secret*, the code keeps the previous value and an expired buff stays lit forever.~~
+**`TESTED` 2026-08-03 — it does not happen, and this was checked on the HARDER case.** The Warlock's
+four *target debuffs* (structurally worse than this section's player buffs) were watched on screen
+through application, target swap and natural expiry: every display cleared correctly, every time.
+The risk was `SUSPECTED` and was predicted out loud again on 2026-08-03 before the test; it did not
+occur. Keep it only as the first thing to check if presence ever does go sticky.
 
 **Blizzard mislabels Spotter's Mark** — `selfAura=true` / `expUnit=player` for an aura the tooltip
 puts on the target. Moot in combat: both `player[]` and `target[]` throw, so the fallback bypasses
@@ -553,3 +673,43 @@ is itself consistent with the plain reading: almost anything taints.
 
 **Owner is filing it with Blizzard** — the repro is unusually clean (single addon + error catcher,
 exact file and line), so it has a real chance of a hotfix.
+
+---
+
+## §10 — The CDM alert events are 12.1's secret-safe timing signal ✅ `TESTED`
+
+**Repo:** `~/GloomsAuras` · **Status: `TESTED`** — 2026-08-03, PTR 12.1.0.68914, Warlock, ~30s at a
+training dummy, captured with the new `/ga alertlog` diagnostic (records every event as it ARRIVES,
+before any of GA's own filters, so a missing sound can be told apart from a missing event).
+
+Blizzard's Cooldown Manager fires `TriggerAlertEvent` on each item frame with a **plain, readable
+enum** computed in its secure context. `CDM.lua:848` hooks it. In 27 arrivals:
+
+| Event | Count |
+|---|---|
+| `PandemicTime` | 20 |
+| `OnAuraApplied` | 16 |
+| `OnAuraRemoved` | 12 |
+| `Available` | 4 |
+| `OnCooldown` | 2 |
+
+**All of them fire in combat, on secret auras, readable.** This is the only timing signal GA gets on
+12.1 that is not a widget, and it is what any trigger/sound work should be built on.
+
+**`TESTED` — the 15 `drop:frameKind` entries are NOT a bug.** Every event arrives **twice** because
+a spell in two viewers has two hooked frames; `CDM.lua:854` keeps the primary copy and discards the
+other. Working exactly as its comment describes. **Do not "fix" this.**
+
+### Two real consequences for the owner's own config
+- **`TESTED` — Unstable Affliction emits no `PandemicTime`.** 44s of uptime, zero pandemic events,
+  while Agony and Haunt both produced them. **The owner's explanation: UA stacks, so it has no
+  pandemic refresh window to alert on.** His UA display has a sound set to `pandemic`, so **that
+  sound can never fire.** Not a bug — a trigger wired to an event the spell does not emit.
+- **`OBSERVED` — a spurious `PandemicTime` arrives at the same timestamp as `OnAuraRemoved`** (Agony,
+  twice). Anything keyed on pandemic must tolerate one at expiry or it will flash.
+
+### The polish this suggests, not yet built
+`CDM.lua:1268`'s `alertsFor()` already reads `C_CooldownViewer.GetValidAlertTypes(cooldownID)`, so GA
+**knows** which alerts a spell offers. The Auras tab could grey out or flag a sound trigger the spell
+can never produce, instead of letting it be set and silently never fire. Small job; it would have
+caught the UA case without a probe.

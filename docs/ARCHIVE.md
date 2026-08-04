@@ -1273,3 +1273,56 @@ be defensive."* Recorded in [LESSONS.md](LESSONS.md).
 
 Rule, audit method and the earlier round of the same bug (icon *size*, `Skin.lua:1408`) are in
 `~/GloomsBars/docs/HANDOFF.md`.
+
+---
+
+## 2026-08-03 — the 12.1 aura investigation, closed. And how badly it was navigated.
+
+**Outcome: `AuraContainer` is the route.** The full technical record is [FINDINGS.md](FINDINGS.md)
+§1 (ANSWERED block) and §10. This entry is the narrative — kept because *how* the answer was missed
+for most of an evening is more reusable than the answer.
+
+### What the owner did that moved it
+Three interventions, each of which overturned a confident conclusion:
+
+1. **"I'm not sure that's fairly stated."** He challenged the backlog's headline claim that GA
+   "loses all aura detail" from memory, days later. He was right. The docs' own body contradicted
+   their own headline, and both FINDINGS §1 and GA's HANDOFF carried "his Warlock profile is
+   genuinely broken" — which testing then disproved in the first ten minutes.
+2. **"ArcUI is able to do it."** Delivered with a screenshot, immediately after being told aura
+   timers were impossible on 12.1. A working counter-example against a confident impossibility
+   proof. **This is what actually solved the item.**
+3. **"Are you telling me you can't look at the code and figure out what it's doing?"** After being
+   offered the suggestion of asking the addon's author. The answer was yes, it could be figured out;
+   it took one more file read. The suggestion was an evasion.
+
+### What the session got wrong, in order
+Recorded by name so the pattern is legible, not to be exhaustive about failure:
+
+| Claim | Reality |
+|---|---|
+| "Your four Warlock displays should appear" | His group `g1` was **switched off**; nothing could draw |
+| "Disable EnhanceQoL" | GA points at media **inside** it; §2 says a missing font kills the display |
+| "Out of combat, with Agony on the dummy" | A ticking DoT keeps you in combat — impossible state |
+| "The sticky-value bug at `CDM.lua:550` will bite" | It didn't, on the harder case |
+| **"Aura timers are impossible on 12.1"** | **False.** `StatusBar:SetValue` accepts secrets and was never tested |
+| "ArcUI self-times its bars from a config duration" | He had **zero** timer bars configured |
+| "The aura must be in Tracked Bars" | Only for the inferior mirror route |
+
+**The single root cause:** inference stated in the same voice as measurement — the exact failure the
+evidence-tag system in FINDINGS exists to prevent, occurring in conversation where no tag forced the
+distinction. Extracted to [LESSONS.md](LESSONS.md) as two entries: *"Impossible is a claim about
+your search"* and *"Label inference and measurement differently."*
+
+**The mitigation that worked**, once he demanded it: state the basis before the claim, and write
+predictions down before the test. Every prediction made that way afterwards was either confirmed or
+cleanly falsified, and the falsifications were cheap instead of expensive.
+
+### Also settled on the way
+- **FINDINGS §4's PTR-drift paragraph was stale** and would have cost him more time: EllesmereUI is
+  now his primary UI (EnhanceQoL and Leatrix Plus retired), and the one module that ever collided
+  with GA has been disabled since July. Corrected in place.
+- **`/ga remove` had been unable to delete any display** since displays stopped being keyed by
+  spellID — `tonumber(arg)` against string keys. Found because he tried to use it. Fixed.
+- **The CDM alert events are all alive on 12.1** (§10), which is what any future trigger or sound
+  work should be built on.
