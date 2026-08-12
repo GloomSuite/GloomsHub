@@ -6,52 +6,48 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-08-03 (item 1 ANSWERED and rewritten as an implementation job — the route is
-`AuraContainer`; item 3 half-fixed; one small item added)
+**Last updated:** 2026-08-12 (item 1 BUILT and owner-QA'd — GA has duration bars on 12.1; item 4
+closed to its evidence-backed half; 12.1 went live and all four TOCs were bumped)
 
 ---
 
 ## Open items
 
-### 1 · Give GA duration bars back on 12.1, via `AuraContainer` ★ the big one — now a BUILD job
-**Repo:** `~/GloomsAuras` · **Size:** real but bounded, with a working reference to copy
-**Evidence:** `TESTED` 2026-08-03 — the route is proven working; GA just doesn't use it yet
+### 1 · Finish GA's bar coverage — Corruption + UA, and confirm the UI route
+**Repo:** `~/GloomsAuras` · **Size:** small · **Evidence:** `UNTESTED` (code written, never run)
 
-**The investigation is OVER. Do not re-open it.** 2026-08-03 established, on screen and by probe:
-presence displays already work; the aura *data* APIs are dead; and **Blizzard's `AuraContainer` is
-the sanctioned route that makes durations work anyway** — proven by ArcUI doing exactly this on the
-owner's own client with zero aura reads.
+The duration engine is **built and owner-QA'd** — Agony and Haunt drain correctly on 12.1 with
+stack counts, and the whole Bar section exists in the Auras tab. What is left is coverage:
 
-**The job:** add an XML button template to GA (it ships none today), create one `AuraContainer` per
-unit **out of combat**, add a spell-ID-filtered slot per tracked aura, and inside `initializeFrame`
-— and nowhere else — call `SetDurationBar` / `SetDurationText` on regions the **button** owns, then
-anchor it over GA's own display.
+- **Corruption and Unstable Affliction have no bars at all.** They are texture displays.
+- **The last change of the session was never tested.** `CDM:DisplaySpellID` now resolves a
+  display's spell from its first TRIGGER when there is no `cfg.spellID`, which is the shape of
+  every display built in the Auras tab. It is wired into five call sites (`AuraDuration:Attach`,
+  `CandidateSpellIDs`, `BarSource`, `BarStackValue`, the `cd_dur` feed). **Before this, a bar
+  created in the UI could never get a duration** — `/ga bar <spellID>` was the only working route,
+  and the owner has said he will never use a command.
 
-⚠ **FINDINGS §1's ANSWERED block has the full mechanism, the exact API sequence and the traps.
-Read it first; it is the deliverable of a whole session and re-deriving it would be expensive.**
+**The test:** + New Aura → Bar Aura → set its Aura Trigger to Corruption → cast it. The bar should
+fill and drain with no slash command anywhere. Then the same for UA.
 
-**Also decide:** whether to keep the Tracked-Bar mirror built on 2026-08-03 (`CDM:BarMirrorValues`
-+ `Displays.lua` StartMirror). It **works** but needs a per-aura Blizzard config step, so it is
-strictly worse than `AuraContainer`. Keep as fallback or bin it — the owner has not been asked.
-
-**Read first:** [FINDINGS.md](FINDINGS.md) §1 (the ANSWERED block, then the `KILLED` list) ·
-[FINDINGS.md](FINDINGS.md) §10 (the alert events) · `~/GloomsAuras/CLAUDE.md` ·
-`~/GloomsAuras/docs/HANDOFF.md` · reference implementation:
-`_ptr_/Interface/AddOns/ArcUI/Bars/ArcUI_BarDuration.lua` **and its `.xml`**
+**Read first:** `~/GloomsAuras/docs/HANDOFF.md` (the 2026-08-12 block) · [FINDINGS.md](FINDINGS.md) §1
 
 ---
 
-### 2 · The rest of the 12.1 exposure sweep
+### 2 · The rest of the 12.1 exposure sweep — now on LIVE
 **Repo:** mostly `~/GloomsBars`, some Hub · **Size:** testing, then triage · **Evidence:** `UNTESTED`
 
-- **GB's skinning hooks** — the *layout* hooks are proven alive (all 40, measured 2026-07-26). The
-  skinning side is still untested by the sweep itself.
-- **Real instanced content** — dungeon / M+ / raid. All testing so far has been open-world on a
-  dummy, in both the 07-26 and 08-03 sessions.
-- **Overlays and the Hub shell** got a smoke test only (tabs open, window renders).
-- **Stacks under secrecy** — untested via `AuraContainer`; the old read path is dead like durations.
+**12.1 went live 2026-08-11.** Everything below was written against the PTR.
 
-⚠ **The old "check the PTR addon list, it has drifted" warning is RETIRED.** FINDINGS §4 now records
+- **Real instanced content** — dungeon / M+ / raid. Every test so far, across three sessions, has
+  been open-world on a training dummy. Aura secrecy covers encounters, M+ and PvP, not just combat,
+  and nobody has tested whether `AddAuraSlot` behaves the same under encounter secrecy.
+- **GB's skinning hooks** — the *layout* hooks are proven alive (all 40, measured 2026-07-26). The
+  skinning side is still untested.
+- **Overlays and the Hub shell** got a smoke test only (tabs open, window renders).
+- ~~Stacks under secrecy~~ — **SOLVED 2026-08-12.** See FINDINGS §1.
+
+⚠ **The old "check the PTR addon list, it has drifted" warning is RETIRED.** FINDINGS §4 records
 the truth: EllesmereUI **is** the owner's UI, the one colliding module has been off since July, and
 telling him to disable things is how a session wastes his evening. Read §4 before touching the client.
 
@@ -59,29 +55,30 @@ telling him to disable things is how a session wastes his evening. Read §4 befo
 
 ---
 
-### 3 · GA's `/ga probe` still leaks frames on charge spells
+### 3 · GA's `/ga probe` leaks frames on charge spells
 **Repo:** `~/GloomsAuras` · **Size:** one small fix · **Evidence:** `TESTED`
 
-Half of this item was fixed 2026-08-03: **`spec=?` in the header is done** (it now falls back to the
-spec ID when 12.1 returns an empty name). **Still open:** `CDM.lua`'s charge-spell probe creates two
-fresh `CooldownFrameTemplate` frames per capture with no `SetSize`/`SetDrawEdge`/`SetDrawBling`, so
-each click paints a screen-wide gold wedge and parks two more frames. `_ProbeShadows` already pools
-correctly — copy it. Harmless on a Warlock (no charge spells); it bites on charge classes.
+`CDM.lua`'s charge-spell probe creates two fresh `CooldownFrameTemplate` frames per capture with no
+`SetSize`/`SetDrawEdge`/`SetDrawBling`, so each click paints a screen-wide gold wedge and parks two
+more frames. `_ProbeShadows` already pools correctly — copy it.
+
+⚠ **The owner has explicitly deprioritised this** (2026-08-12): it is a dev diagnostic, it cannot
+bite a Warlock, and he does not want to hear about it unless it affects normal play. Fix it silently
+if you are in the file; do not raise it.
 
 **Read first:** `~/GloomsAuras/docs/HANDOFF.md`
 
 ---
 
-### 4 · Warn when a sound trigger can never fire
-**Repo:** `~/GloomsAuras` · **Size:** small · **Evidence:** `TESTED` (the failing case is real)
+### 4 · Why does `ApplyConfig` run so hot?
+**Repo:** `~/GloomsAuras` · **Size:** unknown, probably small · **Evidence:** `OBSERVED`
 
-The owner's Unstable Affliction display has a sound set to `pandemic`, and **UA emits no
-`PandemicTime` event at all** (it stacks, so it has no refresh window). The sound can never play and
-nothing says so. `CDM.lua:1268`'s `alertsFor()` already reads `GetValidAlertTypes`, so the Auras tab
-could grey out or flag an impossible trigger. **His UA sound is still mis-wired — his call whether
-to move it to apply/remove.**
+`AuraDuration:ApplyStyle` was seen firing **dozens of times for a single user action**, and 600
+deferrals accumulated in one short combat. A redundant-push guard now absorbs it, but the guard
+treats the symptom — the underlying question of why `ApplyConfig`/`UpdateBar` re-run that often was
+never established. Worth knowing before anything else expensive is hung off that path.
 
-**Read first:** [FINDINGS.md](FINDINGS.md) §10
+**Read first:** `~/GloomsAuras/docs/HANDOFF.md`
 
 ---
 
@@ -89,22 +86,25 @@ to move it to apply/remove.**
 
 > Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
 
-- **How ArcUI does DoT timers** — **SOLVED 2026-08-03, written up in FINDINGS §1.** It uses
-  `AuraContainer`. **Do not reverse-engineer it again**; three wrong theories were produced and
-  discarded on the way, and they are struck by name in §1's `KILLED` list.
-- **Combat-log / self-timed duration bars** — **do not build.** It was the fallback for a wall that
-  turned out not to exist, and it drifts on pandemic refreshes and haste. FINDINGS §1, option 2.
-- **"GA is broken in combat on 12.1" / "the Warlock profile is broken"** — **FALSE**, struck in
-  FINDINGS §1. Presence displays work end to end. Do not repeat it.
-- **`GetPlayerAuraBySpellID` as the deciding test** — **tested, returns `nil`**, and it is
-  player-only so it could never have served target DoTs. FINDINGS §1.
-- **The damage-meter Lua error storm** — **NOT OUR BUG** (FINDINGS §9). Blizzard's own meter under
-  any addon taint. Owner is filing it. Do not re-diagnose.
-- **Quick Keybind Mode "blocked by GB's skin"** — **CLOSED, not a GB bug** (FINDINGS §8). Don't
-  re-raise without a fresh reproducible symptom, and measure with `GetMouseFoci()`, never `/fstack`.
-- **GB's per-action icon overrides (`GB.Icons`)** — **SHIPPED and owner-QA'd.** No config UI wanted;
-  the folder watcher is written but deliberately not installed. **Do not build tooling to find icon
-  art** — Wowhead is faster, and a script for it was written and deleted the same day.
+- **GA duration bars on 12.1** — **BUILT and owner-QA'd 2026-08-12** via `AuraContainer`. Mechanism
+  and traps in FINDINGS §1 and `~/GloomsAuras/docs/HANDOFF.md`. Do not redesign it.
+- **The Tracked-Bar mirror** (`BarMirrorValues`, `StartMirror`/`StopMirror`) — **DELETED 2026-08-12.**
+  It worked but needed a per-aura Blizzard config step. **Do not rebuild it**; FINDINGS §1.
+- **A display not returning after a mid-combat `/reload`** — **CLOSED, not fixable through the
+  presence mirror.** `TESTED` over 52 passes: the CDM never binds an already-applied aura to its
+  item frame after a reload. Three fixes were attempted and all three failed. FINDINGS §1.
+- **`GetValidAlertTypes` as a general "can this trigger fire?" oracle** — **NO.** It reports Agony
+  as unable to do apply/remove, which is false. Only its *pandemic* column matches observation.
+  FINDINGS §10.
+- **How ArcUI does DoT timers** — **SOLVED**, FINDINGS §1. Do not reverse-engineer it again.
+- **Combat-log / self-timed duration bars** — **do not build.** FINDINGS §1, option 2.
+- **"GA is broken in combat on 12.1" / "the Warlock profile is broken"** — **FALSE**, FINDINGS §1.
+- **`GetPlayerAuraBySpellID` as the deciding test** — **tested, returns `nil`**; player-only.
+- **The damage-meter Lua error storm** — **NOT OUR BUG** (FINDINGS §9). Do not re-diagnose.
+- **Quick Keybind Mode "blocked by GB's skin"** — **CLOSED, not a GB bug** (FINDINGS §8).
+- **GB's per-action icon overrides (`GB.Icons`)** — **SHIPPED and owner-QA'd.** No config UI wanted.
+  **Do not build tooling to find icon art.** ⚠ `IconsHD/` is git-ignored and `IconsManifest.lua`
+  ships EMPTY — the mechanism ships, the owner's art does not. **Never commit a populated manifest.**
 - **GB's icon zoom applying to every preset** — **FIXED and owner-QA'd 2026-07-26.**
 - **MM Hunter auras on 12.1** — **TESTED and SAFE** (FINDINGS §7). Do not re-test.
 - **GB's modifier symbols (⌘⇧⌃⌥) take no outline** — **DROPPED by the owner.**

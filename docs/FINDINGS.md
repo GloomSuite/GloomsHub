@@ -29,7 +29,56 @@ New §10 on the CDM alert events. §4's Ellesmere paragraph corrected.)
 
 ## §1 — GA cannot READ aura duration/stacks on 12.1 — but CAN display them via `AuraContainer` ★
 
-### ▶▶ ANSWERED 2026-08-03 — read THIS block before anything below it
+### ▶▶▶ SHIPPED 2026-08-12 — this is BUILT and owner-QA'd. Read this block first.
+**GA has working duration bars and stack counts on 12.1.** `TESTED` on screen by the owner, live
+client, Warlock on a training dummy: Agony and Haunt fill and drain, follow target swaps, show a
+live stack count, and coexist with ArcUI loaded. Implementation is `~/GloomsAuras/AuraDuration.lua`
++ `AuraDuration.xml`; the mechanism is the ANSWERED block below and it held up in practice.
+
+**Four things this build established that the 2026-08-03 record got wrong or did not know:**
+
+1. **`TESTED` — stacks are recoverable, from a channel nobody had tried.** A CDM item frame keeps
+   `frame.auraDataCached`, a plain NON-secret table whose `.applications` is a SECRET number.
+   Reading a field off it is not an instance-ID call and does not throw, and `SetText` renders the
+   secret directly. GA's `BarStackValue` had been using the throwing instance-ID call, which is why
+   stacks looked as dead as durations. **This closes the "stacks under secrecy" line in the sweep.**
+
+2. **`TESTED` — `AuraContainer` does NOT follow target swaps by itself.** ~~The ANSWERED block below
+   claims it does, "since the container is per-unit and Blizzard does the tracking".~~ **FALSE.** A
+   target container only reacts to its own unit's `UNIT_AURA`, so a target-debuff bar goes stale
+   until the new target happens to fire one. ArcUI carries a `PLAYER_TARGET_CHANGED` →
+   `UpdateAllAuras()` workaround for exactly this, and GA now does too. This matters for every one
+   of the owner's DoTs, which are all target debuffs.
+
+3. **`TESTED` — the engine does NOT overwrite styling pushed onto its own region.** Read back with
+   `GetStatusBarTexture():GetTexture()` immediately before each overwrite: the value always returned
+   what GA last set. Styling survives; what does NOT survive is combat, because the button is a
+   forbidden object whenever auras are secret. Pushes therefore defer to `PLAYER_REGEN_ENABLED`.
+
+4. **`UNTESTED` — whether an `AuraContainer` can be CREATED in combat is still unknown.** GA now
+   attempts it under `pcall` rather than assuming (the "hard Lua error" claim came from a comment in
+   ArcUI, never from our own measurement). It has not yet been exercised: after a mid-combat
+   `/reload`, creation succeeded while `InCombatLockdown()` was still false, in the window before
+   combat re-registers. `/ga auradur` prints `containers created IN COMBAT` if it ever happens.
+
+### ▶ `TESTED` 2026-08-12 — the CDM does not recover an already-applied aura after a `/reload`
+**This is a Blizzard limitation, not a GA bug, and it is NOT fixable through the presence mirror.**
+Measured over **52 re-poll passes** after a mid-combat reload with four DoTs live on the target:
+`frame.auraInstanceID` was **never** bound for any of them, and `frame:IsActive()` returned a plain,
+non-secret `false` throughout. There is nothing to read — GA is faithfully mirroring a Cooldown
+Manager that has no record of the aura. The display recovers the instant the aura is re-applied,
+which is when the CDM finally binds it.
+
+**Three fixes were attempted in `RepollBuffPresence` and all three failed**; the code now carries a
+comment saying so. ⚠ **If this is ever worth solving, the route is NOT that function** — Blizzard's
+`AuraContainer` DOES repopulate correctly after a reload (its countdown came back when the CDM
+mirror could not), so the engine's own slot is a working presence oracle.
+
+**Related, and shipped:** the engine's button is a child of the AuraContainer, not of GA's display,
+so hiding a display used to leave a countdown drawing over empty screen. `AuraDuration:SetSlotActive`
+now parks the slot's filter when a display hides, which makes the engine release the button.
+
+### ▶▶ ANSWERED 2026-08-03 — the mechanism (still accurate, except point 2 above)
 **The route is `AuraContainer`. Everything under "Three options" is settled and the option list is
 struck. The 2026-07-30 framing below ("one PTR test decides patch vs migration") is spent — that
 test was run and came back negative, and the answer arrived from somewhere else entirely.**
@@ -228,6 +277,28 @@ duration or stacks is untouched. The owner's MM profile is one of those; his War
 **A fourth route exists and is `TESTED` working, but is inferior:** mirror a Tracked-Bar frame's
 `.Bar` via `GetValue`/`SetValue` (point 4 above). Keep it only as a fallback — it costs the user a
 Blizzard-side config step per aura and steals the aura out of Tracked Buffs.
+
+### `KILLED` 2026-08-12 — struck during the build
+- ~~*"`AuraContainer` follows target swaps by itself."*~~ **FALSE** — recorded in this very finding
+  on 2026-08-03 and disproved by the reference implementation, which carries a
+  `PLAYER_TARGET_CHANGED` workaround. See point 2 in the SHIPPED block.
+- ~~*"The engine re-asserts its own fill texture, so a custom bar texture can never survive."*~~
+  **FALSE.** Proposed to explain a texture that appeared to do nothing; disproved by reading the
+  texture back before each write — it always returned what GA last set.
+- ~~*"The texture push is being wiped because `UpdateAllAuras()` re-acquires the button."*~~
+  **FALSE.** Re-ordering the paint after the attach changed nothing.
+- ~~*"Bar styling doesn't apply."*~~ **FALSE, and it cost three theories.** It applied correctly
+  every time. The editor preview forces GA's own bar to `SetValue(0)` on attach, and out of combat
+  there is no live aura for the engine to draw — so the user was styling an invisible bar. Nudging
+  a slider "fixed" it only because `MakeSlider` fires an extra `ReapplySelected` afterwards which
+  re-fills the bar. **Three separate mechanisms were blamed before anyone checked what was on
+  screen belonged to which widget.**
+- ~~*"`buffActive == nil` is the right gate for seeding presence after a reload."*~~ **FALSE.** The
+  login pass runs before the CDM is ready and writes a confident `false`, so the gate never fired.
+  Moot anyway — see the 52-pass result above.
+- ~~*"ArcUI's `ArcUI_BarDuration.lua` header describes its current design."*~~ **FALSE.** The header
+  documents a two-slot player/target model the code abandoned; it creates one slot routed by the
+  caller. **The most authoritative-looking comment in that file is out of date.**
 
 ### `KILLED` 2026-08-03 — do not revive any of these
 Struck by name. All were stated confidently in earlier sessions or in this one; all are false.
@@ -708,8 +779,33 @@ other. Working exactly as its comment describes. **Do not "fix" this.**
 - **`OBSERVED` — a spurious `PandemicTime` arrives at the same timestamp as `OnAuraRemoved`** (Agony,
   twice). Anything keyed on pandemic must tolerate one at expiry or it will flash.
 
-### The polish this suggests, not yet built
-`CDM.lua:1268`'s `alertsFor()` already reads `C_CooldownViewer.GetValidAlertTypes(cooldownID)`, so GA
-**knows** which alerts a spell offers. The Auras tab could grey out or flag a sound trigger the spell
-can never produce, instead of letting it be set and silently never fire. Small job; it would have
-caught the UA case without a probe.
+### ▶ SHIPPED 2026-08-12 — but only the pandemic half, and here is why
+The Auras tab now greys out "Pandemic window" and refuses the pick on a spell that cannot emit it,
+plus a red warning when a display is ALREADY set to an impossible timing. Owner-QA'd: dimmed on
+Unstable Affliction, all three available on Agony.
+
+⚠ **`TESTED` — `GetValidAlertTypes` is NOT a general oracle for "can this trigger fire?"** Measured
+per display with a temporary `/ga alerts` dump:
+
+| Display | API says | Reality |
+|---|---|---|
+| Agony | `[PANDEMIC]` only | apply and wear-off sounds work fine |
+| Haunt | `[ready, PANDEMIC, oncd]` | — |
+| Corruption | `[PANDEMIC]` | — |
+| Unstable Affliction | `[]` (empty) | matches: no pandemic |
+
+**Trusting the apply/remove columns would have greyed out working options on Agony** — silently
+removing function, which is worse than offering a control that does nothing. The *pandemic* column,
+however, matches this section's observed events exactly across all four DoTs. So the gate is
+pandemic-only, deliberately, and the broader "flag any impossible trigger" idea is **not buildable
+on this API**.
+
+⚠ **Also `OBSERVED`: `ValidAlerts` can return different answers for the same spell** depending on
+whether it resolved via a bound CDM frame or via the category registry — a spell maps to more than
+one cooldown entry and they disagree. Only pandemic agreed across both paths. Anyone extending this
+beyond pandemic has to settle which entry is authoritative first.
+
+⚠ **`TESTED` — a display built in the Auras tab has NO `cfg.spellID`.** Its spell lives in
+`trigger.conditions[1].spellID`. This silently disabled the whole feature for Unstable Affliction
+and Corruption, and it is the same root cause that stopped UI-built BARS from ever getting a
+duration. `CDM:DisplaySpellID` now resolves it; anything keyed on `cfg.spellID` must use it.

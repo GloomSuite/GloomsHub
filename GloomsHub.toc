@@ -1,4 +1,4 @@
-## Interface: 120007
+## Interface: 120100
 ## Title: Gloom's Hub
 ## Notes: Shared base for the Gloom addon suite — the tabbed Suite window, the shared design toolkit, and custom font/graphic media registration. Gloom's Auras, Bars, and Overlays plug tabs into it.
 ## Author: Gloom

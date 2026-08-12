@@ -84,6 +84,46 @@ problem. Read the code.
 
 ---
 
+## ★★ When two things draw in the same rectangle, prove WHICH one you're seeing
+
+**2026-08-12 cost three wrong theories to this.** GA's bar and the 12.1 duration engine's borrowed
+`AuraButton` occupy the identical screen space. "The texture I picked does nothing" produced, in
+order: *the engine overwrites our texture* · *the paint happens before the attach wipes it* · *the
+region is forbidden*. All three were about mechanism. The actual answer was that the visible pixels
+belonged to the **other widget** — the editor preview forces GA's bar empty, and out of combat there
+is no aura for the engine to draw, so a correctly-applied texture had nothing to appear on.
+
+Earlier the same day, the same mistake in mirror image: a working drain looked frozen because GA's
+own full bar sat underneath it **in the same colour**.
+
+**The rule: before asking why a visual is wrong, establish which widget owns those pixels.**
+
+- **Tint one of them a colour nothing else uses.** Bright green settled the frozen-drain question in
+  a single test, after a paragraph of speculation had settled nothing.
+- **Read the value back.** `GetStatusBarTexture():GetTexture()` immediately before each overwrite
+  proved our writes were sticking and killed the "engine overwrites it" theory outright.
+- **Ask what is DIFFERENT about the case that works.** "It appears if I nudge a slider" was the whole
+  answer in plain sight: the slider fires one extra refresh *after* the code that blanks the bar.
+- **Overlapping widgets need a frame-level story, not a draw-layer one.** A `FontString` can never
+  out-draw a higher frame level whatever its layer — the readouts needed their own frame.
+
+## ★★ A comment in someone else's addon is not evidence
+
+Reference implementations are for reading CODE, not for inheriting CLAIMS. Both of these were taken
+on faith from ArcUI and both were wrong or unverified:
+
+- **Its file header documents a two-slot design the code abandoned** — it creates one slot. The most
+  authoritative-looking block in the file was stale. Read the function, not the banner.
+- **"In-combat container creation is a hard Lua error"** was copied into our own FINDINGS as fact and
+  then used to justify deferring — which, after a mid-fight reload, meant no duration bars for the
+  rest of the fight. **Nobody had ever tried it.** A `pcall`'d attempt costs nothing and answers it.
+
+**If a borrowed claim is load-bearing, test it before building a limitation around it.** Related:
+FINDINGS §1 itself carried "AuraContainer follows target swaps by itself", written from reading, and
+the reference implementation's own workaround disproved it.
+
+---
+
 ## Verification & evidence
 
 - **Check what a tag POINTS AT, not just that it exists.** GB's published `v0.2.0` looked current
