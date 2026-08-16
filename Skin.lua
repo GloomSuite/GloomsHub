@@ -9,7 +9,7 @@
 -- change it THERE and every consumer in the same session.
 -- ============================================================
 
-local MAJOR, MINOR = "LibGloomSkin-1.0", 6   -- MINOR 6 (2026-07-26): UI.colorPicker — the suite's own color picker; colorSwatch drives it instead of ColorPickerFrame
+local MAJOR, MINOR = "LibGloomSkin-1.0", 7   -- MINOR 7 (2026-08-15): profileBlock gains optional `accent`; nameDialog trims the name it hands back
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if lib then
@@ -547,7 +547,9 @@ function UI.nameDialog(titleText, initial, onAccept)
     local okB = UI.flatButton(f, 100, 26, COLOR.purple, "OK", 13); okB:SetPoint("BOTTOMLEFT", 26, 16)
     local noB = UI.flatButton(f, 100, 26, COLOR.heroic, "Cancel", 13); noB:SetPoint("BOTTOMRIGHT", -26, 16)
     local function accept()
-      local name = f.box:GetText()
+      -- Trimmed here, once, for every caller: a stray leading/trailing space made
+      -- a second profile that LOOKED identical to the first in the dropdown.
+      local name = (f.box:GetText() or ""):match("^%s*(.-)%s*$")
       local cb = f.onAccept; f.onAccept = nil
       f:Hide()
       if cb then cb(name) end
@@ -1237,6 +1239,10 @@ end
 --   api.delete()      → ok, err          -- deletes the ACTIVE one
 --   api.onChange()                       -- OPTIONAL; after any success
 --   api.title     header text            -- OPTIONAL; defaults to noun:upper()
+--   api.accent    button colour token     -- OPTIONAL; defaults to COLOR.heroic.
+--                                         -- Set it when TWO blocks share one rail
+--                                         -- and must not read as the same control
+--                                         -- (GB's rail: purple profile, orange preset).
 --   api.tips      { dropdown=, new=, copy=, rename=, delete= }
 --                                        -- OPTIONAL; per-tool hover-help bodies
 -- `err` is shown verbatim in the inline note line; ok=false with no err is silent.
@@ -1285,8 +1291,9 @@ function UI.profileBlock(parent, w, api)
   dd:SetPoint("TOPLEFT", 0, -18)
   block.dropdown = dd
 
+  local accent = api.accent or COLOR.heroic
   local function btn(x, y, bw, label)
-    local b = UI.flatButton(f, bw, 20, COLOR.heroic, label, 11)
+    local b = UI.flatButton(f, bw, 20, accent, label, 11)
     b:SetBase(0.2); b:SetPoint("TOPLEFT", x, y)
     return b
   end

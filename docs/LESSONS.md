@@ -124,6 +124,39 @@ the reference implementation's own workaround disproved it.
 
 ---
 
+## ★★ Saved is not applied — find the LOAD call site, not just the SAVE
+
+GB's per-character profiles stored correctly, showed the right name in the dropdown, and survived
+reloads — and never applied. There was a `SavePreset` on logout and **no `LoadPreset` at login**, so
+every character rendered the last-played character's look and then overwrote its own saved copy with
+it. It looked like a working feature for months (FINDINGS §11).
+
+**The trap:** persistence bugs hide behind a *round trip that happens to be symmetrical*. Reloading
+on one character looked perfect, because logout saved the live look and login loaded that same
+preset back — an identity operation that proves nothing. The bug only shows when the thing you load
+should DIFFER from what you last saved.
+
+- **When state is per-something (character, profile, spec), grep for the load call site by name.**
+  Its absence is a static fact you can establish in one command — far stronger than any amount of
+  in-game poking.
+- **Design the test so the expected value differs from the current one.** "It still looks right
+  after a reload" is the persistence equivalent of a clean BugSack: consistent with working, equally
+  consistent with nothing happening at all. See "silence is not evidence" above.
+- **A shared account-wide db plus a per-character pointer is the shape that breeds this.** The
+  pointer being right is not the feature; the load is.
+
+## ★★ When the owner says a UI is confusing, read the code before agreeing OR reassuring
+
+He asked what GB's profile buttons actually did. Answering from the docs would have produced a
+confident, wrong answer twice over: the tooltip said New "starts from the current look" (true, and
+the reason it was confusing), and there is no auto-created "Default" **profile** in the code — but
+his live saved data had one, because he had made it himself.
+
+**Read the implementation, then read his actual SavedVariables.** The second one is cheap (`lua -e`
+over the file in `WTF/Account/<ACCOUNT>/SavedVariables/`), it is ground truth, and on 2026-08-15 it
+turned a UI-wording question into a real bug fix. **His confusion was a correct signal about the
+design, not a gap in his understanding** — the naming genuinely lied.
+
 ## Verification & evidence
 
 - **Check what a tag POINTS AT, not just that it exists.** GB's published `v0.2.0` looked current

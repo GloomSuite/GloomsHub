@@ -9,7 +9,7 @@
 > **Keep this file short enough to re-read.** If it passes ~180 lines, move the settled history to
 > [ARCHIVE.md](ARCHIVE.md). A document nobody re-reads is a document nobody corrects.
 
-**Last updated:** 2026-07-26 (late)
+**Last updated:** 2026-08-15 (LibGloomSkin at MINOR 7; GB's profile New/Copy semantics settled)
 
 ---
 
@@ -21,8 +21,8 @@ StoneTweaks is retired, all five repos are public under the **`GloomSuite`** org
 with `HandofDevastation`). **All four suite addons are published at `v1.2.0`** (2026-07-26, verified
 anonymously against `/releases/latest`, not copied) — a one-time squaring-up at the owner's request;
 *not* a new rule, drift is still permitted (see the locked decision below). What's left is in
-[BACKLOG.md](BACKLOG.md) — four items: finishing GA's bar coverage, the 12.1 sweep on live, a
-dev-tool leak, and one unexplained hot code path.
+[BACKLOG.md](BACKLOG.md) — five items: finishing GA's bar coverage, the 12.1 sweep on live, a
+dev-tool leak, one unexplained hot code path, and finishing the QA of GB's profile rework.
 
 **★ Patch 12.1 went LIVE on 2026-08-11, and all four suite TOCs now declare `## Interface: 120100`**
 (bumped 2026-08-12; the number was read off the installed addon set, not assumed). Nothing shipped
@@ -92,6 +92,11 @@ Full QA evidence for every phase is in [ARCHIVE.md](ARCHIVE.md). Do not redo any
   defeat the gate is to forget.
 - **One profile/preset mechanism for the whole suite** (2026-07-24) — `UI.profileBlock`, MINOR 3.
   **GB is the UI reference for the suite, not GA.** When a pattern exists in both, copy Bars.
+  ★ **New vs Copy settled 2026-08-15:** New = the FACTORY look, Copy = a full duplicate of the
+  active profile. GA and Overlays always worked this way; GB snapshotted the current look for both
+  and was the outlier. It now matches. `accent` (MINOR 7) recolours the buttons — GB's rail draws
+  PROFILE purple at the top and PRESET orange at the bottom, because two of these blocks stacked in
+  one colour read as a single control.
 - **No self-arming "click twice" confirms** (2026-07-24). Destructive actions use `UI.confirm`,
   which has a Cancel and an ESC.
 - **One colour picker for the whole suite** (2026-07-26, **fully owner-QA'd the same day**) —
@@ -114,7 +119,7 @@ Full QA evidence for every phase is in [ARCHIVE.md](ARCHIVE.md). Do not redo any
 
 **`~/GloomsHub`** — symlinked into AddOns. `Core.lua` (namespace, `GloomsHubDB`, ST copy-migration,
 the permanent compat shim, `/gh` probe) · `Skin.lua` (**the body of `LibGloomSkin-1.0`**, LibStub-
-registered, **MINOR 6** — tokens, toolkit, `WarmFonts`/`RegisterWarmPairs`, **the suite's own colour
+registered, **MINOR 7** — tokens, toolkit, `WarmFonts`/`RegisterWarmPairs`, **the suite's own colour
 picker + its "in use" palette**; `GloomsHub.COLOR/.FONT/
 .UI/.MEDIA` are aliases) · `Shell.lua` (the Suite window: `RegisterTab`/`Open`/`FocusTab`/
 `ToggleWindow` + `/gloom`) · `Media.lua` (LSM registration, `ResolveAssetPath`, `ListMedia`, the

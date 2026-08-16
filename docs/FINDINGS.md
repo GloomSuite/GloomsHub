@@ -809,3 +809,60 @@ beyond pandemic has to settle which entry is authoritative first.
 `trigger.conditions[1].spellID`. This silently disabled the whole feature for Unstable Affliction
 and Corruption, and it is the same root cause that stopped UI-built BARS from ever getting a
 duration. `CDM:DisplaySpellID` now resolves it; anything keyed on `cfg.spellID` must use it.
+
+---
+
+## §11 — GB's per-character profiles were never LOADED at login ✅ FIXED 2026-08-15
+
+### ▶ `TESTED` 2026-08-15 — the bug, and the fix, both confirmed against real saved data
+
+**`GloomsBarsDB` is ACCOUNT-wide, and `GB.db`'s visual fields ARE the live working copy.** The
+login path bound a character to its profile and then **never called `LoadPreset`** — there was no
+call site anywhere in the login sequence. So:
+
+1. The look that rendered on any character was whatever the **last character played** left behind.
+2. `PLAYER_LOGOUT` then snapshots the working copy into **this** character's edit preset — so the
+   stale look was written over that character's own saved one, every logout.
+
+Per-character profiles were therefore bookkeeping only: they stored, they never applied, and they
+quietly corrupted each other over time.
+
+**How it was proven.** The static half is certain — `grep` for `LoadPreset` returns four call sites
+(DeleteProfile fallback, SetActiveProfile, DeletePreset fallback, SwitchPreset) and **none** in the
+`PLAYER_LOGIN` branch. The behavioural half was confirmed in game: with the fix in, logging into
+**Gloomhill-Stormrage** (a character with no prior binding) produced the FACTORY look — circles.
+Before the fix it would have rendered Gloomrift's `Wides` look, because that was the working copy
+sitting in the account-wide db.
+
+**The fix:** the `PLAYER_LOGIN` branch now ends with `GB:LoadPreset(bound.edit or …)` for every
+character, newly-created or already-bound.
+
+⚠ **The damage is already in the owner's saved data and the fix does not undo it.** Presets that
+were overwritten still hold whatever look was live at that character's last logout. Each character
+will load its own stored preset from now on — which may look wrong ONCE, then stay stable. Do not
+diagnose that as a new bug.
+
+### ▶ `TESTED` 2026-08-15 — a preset builder MUST supply every field
+
+`LoadPreset` **skips `nil` fields** (`if snap[k] ~= nil`), deliberately, for forward-compat with
+presets saved before a field existed. That means any code building a preset from scratch must
+supply **all 39** `GB.PRESET_FIELDS`, or the new profile silently inherits the OLD profile's value
+for whatever it missed — and it looks like the new profile "didn't apply".
+
+Three fields are **not** in `DB_DEFAULTS` and must be supplied explicitly: `styleData` (derived from
+the chosen style template), `handShape` (derived from the legacy `shape`), `triggers` (derived from
+the glow/state fields). `GB:DefaultPreset()` handles all three; verified on Gloomhill's real
+generated profile — 8 trigger records, `styleData` present, **zero missing fields**.
+
+⚠ **Do not "fix" this by adding those three to `DB_DEFAULTS`.** The defaults-fill loop runs BEFORE
+the migration, so seeding `handShape` there would pre-empt the legacy-shape derivation and change
+what upgraders get.
+
+### ▶ `OBSERVED` 2026-08-15 — `DeleteProfile`'s fallback is arbitrary
+
+Deleting a profile reassigns every character bound to it with `next(db.profiles)` — arbitrary table
+order, not oldest or alphabetical. The owner's live data shows **four characters** (Gloomriven,
+Gloomfury, Gloombuck, Gloomthorn) bound to `Gloomrift - Stormrage` while three of them have their
+own unused profile, which is consistent with this fallback having already fired — **but he may
+simply have switched them by hand, and that was not established.** Do not treat the cause as known.
+The delete path now at least *reports* where the character landed.

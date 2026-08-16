@@ -6,8 +6,9 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-08-12 (item 1 BUILT and owner-QA'd — GA has duration bars on 12.1; item 4
-closed to its evidence-backed half; 12.1 went live and all four TOCs were bumped)
+**Last updated:** 2026-08-15 (GB's profile model reworked after the owner found it confusing — New
+now means the factory look, and a real bug was found and fixed: per-character profiles were never
+loaded at login. New item 5 holds what is still unverified.)
 
 ---
 
@@ -82,10 +83,41 @@ never established. Worth knowing before anything else expensive is hung off that
 
 ---
 
+### 5 · Finish verifying GB's profile rework
+**Repo:** `~/GloomsBars` (+ Hub's `Skin.lua`) · **Size:** ten minutes of clicking · **Evidence:** `UNTESTED`
+
+The 2026-08-15 rework is **shipped and partly owner-QA'd**. Confirmed in game: the rail layout, the
+factory look on a new character's first login, and no data loss across a reload. What was NOT
+exercised:
+
+- **The New button itself.** It calls the same `GB:DefaultPreset()` that Gloomhill's login proved
+  works, so this is likely fine — but nobody has clicked it. Expect circles.
+- **Rename with the name unchanged** — should now be a silent no-op, not "already exists".
+- **A name typed with a leading/trailing space** — should be trimmed (this is in the Hub's shared
+  `nameDialog`, so it affects GA and Overlays too).
+- **Delete** — should print which profile the character landed on.
+
+⚠ **One open DESIGN question the owner has not answered:** he said a new profile should look "like
+the default UI", and what it produces is **GB's** default — circles. Blizzard's stock buttons are
+square. Circles were kept (round icons are the addon's whole point) and it is a one-line change in
+`GB:DefaultPreset()` if he wants otherwise. **Ask; do not change it unprompted.**
+
+**Read first:** `~/GloomsBars/docs/HANDOFF.md` (the 2026-08-15 block) · [FINDINGS.md](FINDINGS.md) §11
+
+---
+
 ## Not open — recorded so nobody re-raises them
 
 > Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
 
+- **"GB's per-character profiles don't work / my alt looks wrong"** — **FIXED 2026-08-15**, FINDINGS
+  §11. Login never loaded the bound profile. ⚠ The old bug already overwrote some saved presets;
+  a character may look wrong ONCE after the fix, then stay stable. That is not a new bug.
+- **GB profile New vs Copy** — **SETTLED 2026-08-15.** New = the factory look; Copy = a full
+  duplicate of the active profile. GA and Overlays already worked this way; GB was the outlier and
+  now matches. Do not "restore" New to snapshotting the current look.
+- **GB's PRESET block being orange and at the bottom of the rail** — **the owner asked for it**
+  (2026-08-15) so the two blocks stop reading as one control. Not a mistake, not a token drift.
 - **GA duration bars on 12.1** — **BUILT and owner-QA'd 2026-08-12** via `AuraContainer`. Mechanism
   and traps in FINDINGS §1 and `~/GloomsAuras/docs/HANDOFF.md`. Do not redesign it.
 - **The Tracked-Bar mirror** (`BarMirrorValues`, `StartMirror`/`StopMirror`) — **DELETED 2026-08-12.**
@@ -106,11 +138,6 @@ never established. Worth knowing before anything else expensive is hung off that
   **Do not build tooling to find icon art.** ⚠ `IconsHD/` is git-ignored and `IconsManifest.lua`
   ships EMPTY — the mechanism ships, the owner's art does not. **Never commit a populated manifest.**
 - **GB's icon zoom applying to every preset** — **FIXED and owner-QA'd 2026-07-26.**
-- **MM Hunter auras on 12.1** — **TESTED and SAFE** (FINDINGS §7). Do not re-test.
-- **GB's modifier symbols (⌘⇧⌃⌥) take no outline** — **DROPPED by the owner.**
-- **The public repos expose `CLAUDE.md` + `docs/`** — **ACCEPTED**; do not re-flag.
 - **Distribution to friends/guild** — not ready; the owner will say when.
-- **The false `SetFont` guard** — FIXED (FINDINGS §5). **`ForceTaint_Strong`** — CLOSED (§6).
 - **The user's own media shipping in the addon** — FIXED and purged. **Never re-track them.**
-- **General Sans's redistribution terms** — **CLOSED by the owner**; attribution ships.
 - **The colour picker** — **FULLY owner-QA'd.** IN USE holds the USER's colours; it is not modal.

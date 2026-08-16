@@ -83,7 +83,7 @@ shipper — its `Skin.lua` IS the lib body (embedding a copy in each tool via `.
 externals is Phase G work). `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are Hub-side aliases of the
 same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Phase E**.
 
-**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 5) — the whole API; nothing else is public:**
+**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 7) — the whole API; nothing else is public:**
 - `Skin.COLOR` — `purple · heroic · green · red · orange` (each `{r,g,b,hex}`), `dark`, `rim`
   (both `{r,g,b,a}`), `text`, `mute` (`{r,g,b}`). The §1 literals.
 - `Skin.FONT` — `title · head · body · bodyM · label` → font files under
@@ -208,7 +208,10 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     bar while its Preset list is up.
   - `UI.nameDialog(title, initial, onAccept)` — the skinned text-entry modal (MINOR 3);
     OK/Enter accepts, Cancel/ESC drops it. Replaces StaticPopup **and** the near-identical
-    private copies GB and GA each used to carry.
+    private copies GB and GA each used to carry. ★ **Since MINOR 7 it TRIMS leading/trailing
+    whitespace** before calling back, once, for every consumer — a stray space made a second
+    profile that looked identical to the first in the dropdown. A consumer that still trims
+    its own name (GA's Core does) is harmless, just redundant.
   - `UI.confirm(body, onYes, acceptLabel?, titleText?)` — the skinned yes/no modal
     (MINOR 3). ★ **Every destructive action uses this.** A self-arming "click twice to
     confirm" button is NOT acceptable: once armed there is no way to back out
@@ -221,7 +224,13 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     buttons out 3-across (GB's preset block). Returns `{ frame, refresh, note, height }`.
     `api` = `noun · names() · active() · switch(v) · create(name) · copy(name)? ·
     rename(name) · delete()` (each mutator → `ok, err`; `err` shows in the note line)
-    `· onChange()? · title? · tips{dropdown,new,copy,rename,delete}?`
+    `· onChange()? · title? · accent? · tips{dropdown,new,copy,rename,delete}?`
+    ★ **`accent` (MINOR 7)** recolours the block's four buttons; defaults to `COLOR.heroic`.
+    It exists because GB's rail carries TWO of these blocks and, in one colour stacked
+    together, they read as the same control — the owner could not tell which scope a button
+    belonged to (2026-08-15). GB now draws PROFILE purple at the top of the rail and PRESET
+    **orange at the bottom**. An older lib ignores the key, so **passing it needs no gate
+    bump** (same rule as `colorSwatch`'s `label`) — the buttons just stay purple.
   - `UI.tabHeader(parent, opts)` → **the suite's ONE tab header** (MINOR 4): the owning
     tool's square mark beside its wordmark, with a divider under it. The owner, 2026-07-25:
     he saw it on the Overlays tab and wants it on every tab. **Overlays built it inline
