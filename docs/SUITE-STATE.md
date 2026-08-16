@@ -9,7 +9,7 @@
 > **Keep this file short enough to re-read.** If it passes ~180 lines, move the settled history to
 > [ARCHIVE.md](ARCHIVE.md). A document nobody re-reads is a document nobody corrects.
 
-**Last updated:** 2026-08-15 (LibGloomSkin at MINOR 7; GB's profile New/Copy semantics settled)
+**Last updated:** 2026-08-15 (all four released at `v1.3.0`, verified anonymously; LibGloomSkin at MINOR 7)
 
 ---
 
@@ -18,16 +18,16 @@
 **The 7-phase plan is complete and QA'd. All four addons ship and install cleanly.** GloomsHub is the
 shared base; Bars, Auras and Overlays each mount a tab in its window and hard-depend on it.
 StoneTweaks is retired, all five repos are public under the **`GloomSuite`** org (Build Barn stayed
-with `HandofDevastation`). **All four suite addons are published at `v1.2.0`** (2026-07-26, verified
-anonymously against `/releases/latest`, not copied) — a one-time squaring-up at the owner's request;
-*not* a new rule, drift is still permitted (see the locked decision below). What's left is in
+with `HandofDevastation`). **All four suite addons are published at `v1.3.0`** (2026-08-15, verified
+anonymously against `/releases/latest`, not copied). They are level because each of the four
+independently earned the same minor bump in that cut — **not** because versions are synchronized;
+drift is still permitted (see the locked decision below). What's left is in
 [BACKLOG.md](BACKLOG.md) — five items: finishing GA's bar coverage, the 12.1 sweep on live, a
 dev-tool leak, one unexplained hot code path, and finishing the QA of GB's profile rework.
 
 **★ Patch 12.1 went LIVE on 2026-08-11, and all four suite TOCs now declare `## Interface: 120100`**
-(bumped 2026-08-12; the number was read off the installed addon set, not assumed). Nothing shipped
-carries it yet — the bump is committed but unreleased, so WoWup users still have `120007` and will
-see the addons flagged out of date until the next release cut.
+(bumped 2026-08-12; the number was read off the installed addon set, not assumed). **Shipped in the
+`v1.3.0` cut on 2026-08-15** — WoWup users are no longer flagged out of date.
 
 **★ GA gained a new subsystem on 2026-08-12: the 12.1 duration engine** (`AuraDuration.lua` +
 `AuraDuration.xml`, GA's first XML file). It renders DoT timers and stack counts on 12.1 by driving
@@ -37,9 +37,13 @@ the v1.2.0 cut; corrected 2026-07-26). GB's Quick Keybind defect (FINDINGS §8) 
 and has only been observed on the PTR — **whether it also bites on live is untested**, and that
 check is the first step of BACKLOG item 2.
 
-**The shipped zip was verified, not assumed.** `GloomsHub-v1.2.0.zip` is **404 KB** (it would have
+**The shipped zips are verified, not assumed.** `GloomsHub-v1.3.0.zip` is **400 KB** (it would have
 been ~5.4 MB before the purge), contains no `Fonts/`, `Textures/` or `Graphics/`, no identifying
 filename, both font licence files, and all 21 packager-embedded library files.
+★ **`GloomsBars-v1.3.0.zip` was checked for the owner's icon art and is clean** — zero `IconsHD/`
+entries, zero `.tga` files, and `IconsManifest.lua` ships EMPTY. Re-check this every cut: the
+manifest is a tracked file that the in-game tooling WRITES, so it turns up populated in the working
+tree and must never be staged.
 ⚠ **The release cut needed three attempts** — `repos.wowace.com`, the SVN host every `.pkgmeta`
 external is fetched from, returned HTTP 500 for roughly half an hour. Overlays was unaffected because
 it is the one suite repo with no externals. **A packaging failure on wowace is an outage, not a
