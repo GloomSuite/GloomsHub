@@ -1326,3 +1326,22 @@ cleanly falsified, and the falsifications were cheap instead of expensive.
   spellID — `tonumber(arg)` against string keys. Found because he tried to use it. Fixed.
 - **The CDM alert events are all alive on 12.1** (§10), which is what any future trigger or sound
   work should be built on.
+
+---
+
+## Phase status table — moved out of SUITE-STATE 2026-08-24
+
+Verbatim, for the record. All seven complete; nothing here has changed since it was written.
+
+
+| Phase | What | Status |
+|---|---|---|
+| **A** | Stand up GloomsHub, media only | ✅ QA'd 2026-07-24 |
+| **B** | Tabbed shell + Media tab + `/gloom` | ✅ QA'd 2026-07-24 |
+| **C** | Migrate Gloom's Bars; toolkit → `LibGloomSkin` | ✅ QA'd 2026-07-24 |
+| **D** | Migrate Gloom's Auras | ✅ QA'd 2026-07-24 |
+| **E** | VibeOverlay → Gloom's Overlays; mount + reskin | ✅ QA'd 2026-07-24 (two gates) |
+| **F** | Retire StoneTweaks | ✅ QA'd 2026-07-24 |
+| **G** | Packaging / release / WoWup | ✅ QA'd 2026-07-25 (install **and** update paths) |
+
+Full QA evidence for every phase is in [ARCHIVE.md](ARCHIVE.md). Do not redo any of it.

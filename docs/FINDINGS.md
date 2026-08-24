@@ -866,3 +866,163 @@ Gloomfury, Gloombuck, Gloomthorn) bound to `Gloomrift - Stormrage` while three o
 own unused profile, which is consistent with this fallback having already fired — **but he may
 simply have switched them by hand, and that was not established.** Do not treat the cause as known.
 The delete path now at least *reports* where the character landed.
+
+---
+
+## §12 — Cooldown "ready" is not one signal, and three of its sources lie ✅ `TESTED` 2026-08-24
+
+Everything below was measured on **live 12.1** via `/ga alertlog`, which the owner ran four times
+across two talent builds. Timestamps are quoted from those logs; they are the evidence, not
+illustration.
+
+### ▶ `TESTED` — `C_Spell.IsSpellUsable` is a trap ALONE, and the only proc oracle we have
+
+API-NOTES has banned it since 2026-07-08: *"ignores cooldown AND charges … NOT a valid availability
+signal; do not use it."* **That ban is correct and it stays.** But it was being read as "never
+touch this", and that is too strong.
+
+**What it DOES see is everything `cd_ready` cannot** — resource cost, target requirements, and the
+procs that waive them. Shadowburn is the case: it is usable only below 20% target health *unless a
+proc lifts that*, so its cooldown mirror reads ready for the whole of combat while the spell cannot
+be cast. Owner's two traces, dummy above 20%, `cd_ready = true` in both samples:
+
+| | `cd_ready` | `IsSpellUsable` |
+|---|---|---|
+| no proc | `true` | **`false`** |
+| proc up | `true` | **`true`** |
+
+**The proc is visible through that call.** So GA's new `cd_castable` trigger state is
+`cd_ready AND IsSpellUsable`: the trap's failure mode is being *over*-permissive about cooldowns,
+and ANDing can only ever NARROW a cooldown answer GA already trusts. Using it alone is still wrong.
+
+⚠ **It does NOT check whether the player knows the spell.** An untalented Soul Fire returns
+`usable = true` — see the silent-yes finding below.
+
+### ▶ `TESTED` — Blizzard links Malevolence's CDM entry to Summon Infernal
+
+`InfoMatchesSpell` deliberately accepts `overrideSpellID` and `linkedSpellIDs`, which is what makes
+hero-talent replacements work. Malevolence's cooldown entry links Summon Infernal, so Infernal bound
+to **Malevolence's** cooldown widget and mirrored its 60s cooldown instead of its own ~120s. The log
+shows both spells' `avail` flipping on the *identical* timestamp, three cycles running
+(`30038.77`, `30101.12`, …), and Infernal's ready-sound firing on Malevolence's timer.
+
+**Fixed by preferring an EXACT `info.spellID` match**: a spell that has its own entry binds to that
+entry; the loose match remains the fallback for spells that only ever appear via an override.
+Confirmed gone — `31956.78` Infernal and `31960.28` Malevolence, 3.5s apart, separate sounds.
+
+### ▶ `TESTED` — Blizzard emits a SPURIOUS `PandemicTime` adjacent to `OnAuraRemoved`, and the order is NOT stable
+
+A display set to "Pandemic window" also announced the DoT *falling off*. The cause is a second
+`PandemicTime` alert landing within ~0.15s of the removal — **on either side of it**:
+
+```
+run 1:  removed 30002.80 -> pandemic 30002.87    (0.07s AFTER)
+run 2:  pandemic 30417.33 -> removed 30417.47    (0.14s BEFORE)
+        pandemic 30466.35 -> removed 30466.36    (0.01s BEFORE)
+```
+
+⚠ **A one-sided guard catches only one of those, and the first attempt at this fix did exactly
+that.** The genuine pandemic arrives many seconds clear of any removal, so both sides can be guarded
+safely: an after-check on a timestamp, and a before-check by deferring the sound 0.3s so an imminent
+removal can cancel it.
+
+### ▶ `TESTED` — `CooldownFrame_Clear` is NOT reliably fired; the polled reconciler is sometimes the only witness
+
+This one cost two failed fixes, and the lesson generalises well beyond sounds.
+
+`CDM.available` has two kinds of writer: **events** (`CooldownFrame_Set`/`Clear`, the charge
+shadow's `OnShow`/`OnHide`) and **reconcilers** (`SyncCooldowns`, which reads
+`frame.isOnActualCooldown` off the 0.2s visibility poll; `SeedAvailability`; Discover's re-seeds).
+
+- Letting **every** writer fire a sound double-fired: the poll and the hooks disagree by a second or
+  two around a cooldown ending.
+- The obvious correction — **"only real events may speak"** — was **WRONG**. Malevolence cast at
+  `30805.80` came off cooldown at `30866.45`, exactly 60.65s later, and the **only** witness was the
+  reconciler. `CooldownFrame_Clear` never fired at all. Silencing reconcilers silenced a real
+  completion, and the owner heard nothing.
+
+**★ The durable rule: judge the TRANSITION, not the source.** A cooldown that lasted 60s is real
+whoever noticed it; one that "ended" 0.0s after it started is a cast-time flicker whatever fired it.
+GA now requires ≥2s on cooldown before a completion can be announced. Casting Malevolence produced
+`true → false → true` in a single timestamp, settling to `false` only ~0.9s later — that flicker is
+what a duration test rejects and a source test cannot.
+
+⚠ **A settle/debounce timer was tried and REMOVED.** It swallowed real sounds: Infernal came up at
+`30929.64` and was cast 0.22s later, so the window closed on `false` and said nothing.
+`CDM:PlaySound`'s own 1s per-display throttle already absorbs duplicates.
+
+### ▶ `TESTED` — an UNTRACKED or UNTALENTED spell answers `cd_ready = true` ("the silent yes")
+
+`EvalCondition`'s documented default is *unknown ⇒ assume READY*, which is reasonable for a tracked
+spell sitting idle. For a spell the CDM never bound — or one the player has not talented — it turns
+"show when ready" into "show always", silently. Soul Fire is the live example: not talented,
+`avail = nil`, `usable = true`, trigger permanently true, aura fires at every pull.
+
+**Workaround that works today:** the display's `SPELL / TALENT KNOWN` visibility field
+(`IsSpellKnown` / `IsPlayerSpell` — both *do* respect talents).
+
+⚠ **The engine fix is NOT safe to write blind.** Hero talents *replace* spells (the owner's own
+"Immolate/Wither" display is one), and if `IsPlayerSpell` reports `false` for a base spell that was
+overridden rather than removed, an automatic known-check would silently hide auras that currently
+work. That needs a trace before anything is built on it. Backlog item 6.
+
+### ▶ `UNTESTED` — player power is readable, but GA's power gate has never been run
+
+Nothing in the 12.1 notes, API-NOTES or this file restricts `UnitPower`; secrecy is aura-side
+(`UNIT_AURA` payloads, AuraData, aura instance IDs, AuraButtons). `EllesmereUIResourceBars` reads
+`UnitPower("player", SOUL_SHARDS)` live on the owner's client. GA's new PLAYER POWER load condition
+was built on that and **guarded with `issecretvalue` per this repo's standing rule** — but the
+owner never exercised it in game. **Do not record it as working.** Backlog item 7.
+
+### `KILLED` — do not revive these
+
+- ~~"GA's `/ga debug` and `/ga trace` agree, so either can diagnose a display"~~ — **FALSE.**
+  `debug` keys off `cfg.spellID`, which is `nil` for **every** display built in the Auras tab, so it
+  prints `NOT FOUND` for all of them. It sent a session down the wrong path on 2026-08-24. Use
+  `trace`. Backlog item 8.
+- ~~"An untracked spell is why Shadowburn's aura was always visible"~~ — **DISPROVED by the trace**:
+  `avail = true`, bound, no `<not bound>` marker. The real cause was that `cd_ready` means the
+  cooldown, and Shadowburn's gate is execute range, not its cooldown.
+- ~~"Shadowburn is only usable below 20% target health"~~ — **the owner corrected this**; a proc
+  waives it. Do not model a spell's castability from its tooltip when he plays the class.
+
+---
+
+## §13 — GB: Blizzard re-shows button containers in combat, where GB is gagged ✅ `TESTED` 2026-08-24
+
+**Symptom (owner):** with a bar set to hide its empty buttons, hovering the bars *in combat* brought
+the empty buttons back — dimmed, and they stayed for the rest of the fight.
+
+**Mechanism.** Two features were fighting. The per-bar collapse (`c.showEmpty == false`) hid the
+*container* with `cont:SetShown(false)`; the global Empty-slots treatment sets the *button's* alpha.
+Blizzard's `ActionBarMixin:UpdateShownButtons` re-shows the container of every in-range slot
+regardless of whether it holds an action:
+
+```lua
+local showButtonContainer = showButton or (not self.noSpacers and i <= self.numButtonsShowable);
+actionButton.container:SetShown(showButtonContainer);
+```
+
+…revealing the button underneath at the global dim alpha. And `Layout:ApplyAll()` is a **hard no-op
+in combat** (`if InCombatLockdown() then pending = true; return end`), so nothing could put it back
+until the fight ended.
+
+**Confirmed by prediction:** the owner was asked whether the buttons vanish on leaving combat
+without touching anything. They do — `pending` flushes on `PLAYER_REGEN_ENABLED`.
+
+**★ This was the FOURTH instance of one pattern**, and the first three are recorded as comments in
+`Layout.lua`'s event watcher: a timewalking dungeon un-hid three "Hidden" bars mid-run; Hidden bars
+reappeared after Edit Mode; 12.1 stopped firing `EDIT_MODE_LAYOUTS_UPDATED` on exit. **Each was
+fixed by registering one more event, and that could not work here** — in combat the geometry wall
+gags us no matter which event fires.
+
+**Fix: the collapse is an ALPHA treatment now**, answered in `Skin.lua`'s `applyEmptyAlpha` and no
+longer by hiding the container. Alpha is not geometry, is not combat-restricted, and rides the
+per-button Update post-hook that already runs mid-fight — so it re-asserts itself. This is the
+"pure-skin wall" doctrine `Skin.lua` was built on: `SetAlpha(0)`, never `Hide()`.
+
+⚠ **Do not reinstate the container hide.** Comments at both ends say so.
+⚠ Two knock-ons, both accepted: an invisible empty button is still **clickable** (identical to the
+long-shipped global `Hidden` mode, so consistent rather than new), and the collapse now respects the
+master layout switch — turning GB's layout off releases it, so a stale `showEmpty` cannot strand
+buttons invisible with no way back.

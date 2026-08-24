@@ -107,6 +107,45 @@ own full bar sat underneath it **in the same colour**.
 - **Overlapping widgets need a frame-level story, not a draw-layer one.** A `FontString` can never
   out-draw a higher frame level whatever its layer — the readouts needed their own frame.
 
+## ★★ A state mirror is not an event bus — judge the transition, not the source
+
+**2026-08-24, GA. Two consecutive fixes failed on this.** `CDM.available` had always been a *state*
+mirror: several writers keep it current, and a brief disagreement between them just re-settles. That
+is fine — and it is exactly why it was NOT safe to hang sounds off every write to it.
+
+- Making every writer sound-eligible **double-fired**: a polled reconciler and an event hook
+  disagree by a second or two around a cooldown ending.
+- The obvious correction, **"only real events may speak," was WRONG** and shipped a worse bug: the
+  polled reconciler turned out to be the *only* witness to a genuine 60s cooldown completion, because
+  `CooldownFrame_Clear` is not reliably fired. Silencing reconcilers silenced a real event.
+
+**★ The rule: when converting a state variable into an event source, do not classify by WHO wrote
+it. Judge the transition on its own merits.** A cooldown that lasted 60s is real whoever noticed; one
+that "ended" 0.0s after it started is a flicker whatever fired it. A duration test is source-agnostic
+and survives an unreliable signal; a source test hard-codes an assumption about which signal is
+trustworthy, and that assumption is what breaks.
+
+⚠ **Related, same session: a debounce is not free.** A 0.35s settle timer added to collapse the
+double-fire went on to swallow real sounds — a spell came up and was cast 0.22s later, so the window
+closed on the wrong value and said nothing. Prefer a test on the data over a timer on the clock.
+
+---
+
+## ★★ Scripts that read SavedVariables MUST be profile-aware
+
+**2026-08-24 — this produced two confidently wrong diagnoses in one session.** `GloomsAurasDB` and
+`GloomsBarsDB` hold **one profile per character**, and display/preset IDs restart inside each. The
+owner has eleven characters, so `["d18"]` exists many times in one file.
+
+A regex or scan that takes the **first** match reads a random character's config. That is how a
+session twice told the owner his Warlock's Infernal aura had "leftover Hunter triggers" — it was
+reading a Hunter alt's profile, and the advice was to break a display that was correctly configured.
+
+**Resolve the active profile first** (`profileKeys[<char> - <realm>]` → `profiles[<key>]`), then read
+inside it. If you cannot tell which profile is active, say so instead of guessing.
+
+---
+
 ## ★★ A comment in someone else's addon is not evidence
 
 Reference implementations are for reading CODE, not for inheriting CLAIMS. Both of these were taken
@@ -254,6 +293,16 @@ design, not a gap in his understanding** — the naming genuinely lied.
 
 - **`/reload` is enough, including for NEW files.** The old "new files → full client restart" rule
   is **RETIRED**; it cost the owner restarts he never needed.
+- **★ AN ADDON CANNOT ENUMERATE A FOLDER.** WoW exposes no filesystem API: Lua cannot list a
+  directory or test whether a file exists. **Dropping files into a drop-in folder does nothing on
+  its own** — something outside the game must build an index. Both suite cases use the same shape: a
+  shell script writes a generated `*Manifest.lua`, wrapped in a double-clickable `.command` for the
+  owner, then `/reload`. GB's icons (`Rebuild Icons.command`) and the Hub's sounds
+  (`Rebuild Sounds.command`).
+  ⚠ **Say this out loud when telling him to drop files somewhere.** On 2026-08-24 he copied 41
+  `.ogg` files into `GloomsHub\Sounds\`, restarted the client, saw nothing, and reasonably assumed
+  it was broken — because the instruction to copy them in omitted that a rebuild step existed.
+  ⚠ **A generated manifest ships EMPTY** (his media is git-ignored). Never commit a populated one.
 - **★ ONE EXCEPTION — FONTS.** WoW loads font files at LAUNCH, so a new `.ttf` genuinely needs a
   full restart. The Media tab's Fonts warning is CORRECT — do not "fix" it.
 - **Textures are NOT an exception** — verified 2026-07-25 by replacing two in place; a bare
@@ -384,6 +433,17 @@ design, not a gap in his understanding** — the naming genuinely lied.
 ---
 
 ## Design & working with the owner
+
+- **★ Report the CONCLUSION, not the evidence he cannot check.** He said it plainly on 2026-08-24:
+  *"You do realize that I can't/don't read the SavedVariables files myself, right? I'm a human."* A
+  session had spent the evening pasting saved-variable tables and Lua snippets at him as
+  justification. Reading those files is the part of the job he delegated; quoting them back looks
+  like rigour but is unverifiable to him, costs him reading time, and buries the finding in noise.
+  **Say what you found in terms of things he can see or do in game** — aura names, tab and setting
+  names, what to click, what he should hear. If a fact rests on file contents, say "I checked your
+  saved settings" and give the answer.
+  ⚠ Diagnostic output he PRODUCES on request (`/ga trace`, `/ga alertlog`, BugSack) is different —
+  he pastes it deliberately. Summarise what it means; do not read it back to him.
 
 - **★ Never frame a bug by WHICH SESSION introduced it.** On 2026-07-26 a regression report was
   answered twice with "not from today's changes, here's the diff". The owner's reply: *"I don't care

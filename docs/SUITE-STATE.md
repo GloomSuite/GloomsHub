@@ -9,7 +9,8 @@
 > **Keep this file short enough to re-read.** If it passes ~180 lines, move the settled history to
 > [ARCHIVE.md](ARCHIVE.md). A document nobody re-reads is a document nobody corrects.
 
-**Last updated:** 2026-08-15 (all four released at `v1.3.0`, verified anonymously; LibGloomSkin at MINOR 7)
+**Last updated:** 2026-08-24 (Hub/Bars/Auras at `v1.4.0`, Overlays deliberately left at `v1.3.0`;
+LibGloomSkin unchanged at MINOR 7 — nothing this session called a newer widget)
 
 ---
 
@@ -18,16 +19,28 @@
 **The 7-phase plan is complete and QA'd. All four addons ship and install cleanly.** GloomsHub is the
 shared base; Bars, Auras and Overlays each mount a tab in its window and hard-depend on it.
 StoneTweaks is retired, all five repos are public under the **`GloomSuite`** org (Build Barn stayed
-with `HandofDevastation`). **All four suite addons are published at `v1.3.0`** (2026-08-15, verified
-anonymously against `/releases/latest`, not copied). They are level because each of the four
-independently earned the same minor bump in that cut — **not** because versions are synchronized;
-drift is still permitted (see the locked decision below). What's left is in
-[BACKLOG.md](BACKLOG.md) — five items: finishing GA's bar coverage, the 12.1 sweep on live, a
-dev-tool leak, one unexplained hot code path, and finishing the QA of GB's profile rework.
+with `HandofDevastation`). **Hub, Bars and Auras are published at `v1.4.0`; Overlays remains at
+`v1.3.0`** (2026-08-24, verified anonymously against `/releases/latest`, not copied). **This is the
+first real version drift and it is correct** — Overlays was not touched, and the locked decision
+below permits exactly this. Do not "level" it. What's left is in [BACKLOG.md](BACKLOG.md) — eight
+items.
 
 **★ Patch 12.1 went LIVE on 2026-08-11, and all four suite TOCs now declare `## Interface: 120100`**
 (bumped 2026-08-12; the number was read off the installed addon set, not assumed). **Shipped in the
 `v1.3.0` cut on 2026-08-15** — WoWup users are no longer flagged out of date.
+
+**★ The Hub gained a SOUND CATALOG on 2026-08-24.** Sounds registered into LibSharedMedia — which
+is what puts them in GA's sound picker and every other LSM-aware addon. Two routes: a FileDataID or
+filename typed into the Media tab, or bulk via `Sounds/` + `SoundsManifest.lua`. **WoW cannot
+enumerate a folder**, so the manifest is a generated index — `Rebuild Sounds.command` (double-click)
+→ `tools/build-sound-manifest.sh` → `/reload`. Exactly the pattern GB's `IconsManifest.lua` uses.
+⚠ `Sounds/` is git-ignored and **`SoundsManifest.lua` ships EMPTY**, same rule as GB's icon
+manifest: the mechanism ships, the owner's audio does not.
+
+**★ GA gained three trigger/sound features on 2026-08-24** — a `CASTABLE` trigger state
+(`cd_ready AND IsSpellUsable`, the only way to see a proc), a PLAYER POWER load condition (17 power
+types, whole units), and a "When it comes off cooldown" sound timing that fires on a real cooldown
+transition rather than the display's shown edge. See FINDINGS §12.
 
 **★ GA gained a new subsystem on 2026-08-12: the 12.1 duration engine** (`AuraDuration.lua` +
 `AuraDuration.xml`, GA's first XML file). It renders DoT timers and stack counts on 12.1 by driving
@@ -58,19 +71,12 @@ repo is verifiably public. The user's three drop-in asset directories went with 
 
 ---
 
-## Phase status — all seven done
+## Phase status
 
-| Phase | What | Status |
-|---|---|---|
-| **A** | Stand up GloomsHub, media only | ✅ QA'd 2026-07-24 |
-| **B** | Tabbed shell + Media tab + `/gloom` | ✅ QA'd 2026-07-24 |
-| **C** | Migrate Gloom's Bars; toolkit → `LibGloomSkin` | ✅ QA'd 2026-07-24 |
-| **D** | Migrate Gloom's Auras | ✅ QA'd 2026-07-24 |
-| **E** | VibeOverlay → Gloom's Overlays; mount + reskin | ✅ QA'd 2026-07-24 (two gates) |
-| **F** | Retire StoneTweaks | ✅ QA'd 2026-07-24 |
-| **G** | Packaging / release / WoWup | ✅ QA'd 2026-07-25 (install **and** update paths) |
-
-Full QA evidence for every phase is in [ARCHIVE.md](ARCHIVE.md). Do not redo any of it.
+**All seven phases (A-G) are complete and QA'd**, the last on 2026-07-25. The per-phase table and
+its full QA evidence moved to [ARCHIVE.md](ARCHIVE.md) on 2026-08-24 — nothing in it has changed
+since it was written, and it was pure history sitting in the file people re-read. Do not redo any
+of it.
 
 ---
 

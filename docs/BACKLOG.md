@@ -6,9 +6,10 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-08-15 (GB's profile model reworked after the owner found it confusing — New
-now means the factory look, and a real bug was found and fixed: per-character profiles were never
-loaded at login. New item 5 holds what is still unverified.)
+**Last updated:** 2026-08-24 (a long three-repo session: the Hub gained a sound catalog + manifest,
+GA gained a `CASTABLE` trigger state, a PLAYER POWER load condition and a "comes off cooldown" sound
+timing, and GB's empty-slot collapse moved to the alpha path. Four new items, 6-9, are the tails
+that session left. Everything measured is in FINDINGS §12-§13.)
 
 ---
 
@@ -106,6 +107,45 @@ square. Circles were kept (round icons are the addon's whole point) and it is a 
 
 ---
 
+### 6 · The "silent yes" — an untracked or untalented spell reports `cd_ready = true`
+**Repo:** `~/GloomsAuras` · **Size:** small, but needs a trace FIRST · **Evidence:** `TESTED`
+
+Unknown ⇒ READY turns "show when ready" into "show always" for a spell the CDM never bound. The
+owner's Soul Fire display does it today. **He has a working workaround** (the `SPELL / TALENT KNOWN`
+field) and chose it over an engine fix, so this is not urgent.
+
+⚠ **Do not write the automatic known-check blind** — hero talents REPLACE spells, and if
+`IsPlayerSpell` returns false for an overridden base spell it would hide auras that work today.
+Trace that first.
+
+**Read first:** [FINDINGS.md](FINDINGS.md) §12
+
+---
+
+### 7 · GA's PLAYER POWER load condition has never been run
+**Repo:** `~/GloomsAuras` · **Size:** ten minutes of clicking · **Evidence:** `UNTESTED`
+
+Built 2026-08-24; nobody has clicked it. **The test:** an aura with Power = Soul Shards, *at least*,
+5 — hidden at 0-4, appears at 5, gone when you spend one. Works as a group load rule too.
+
+⚠ Power is not secret, but the read stays `issecretvalue`-guarded per this repo's standing rule.
+
+**Read first:** [FINDINGS.md](FINDINGS.md) §12
+
+---
+
+### 8 · `/ga debug` contradicts `/ga trace`
+**Repo:** `~/GloomsAuras` · **Size:** one small fix · **Evidence:** `TESTED`
+
+`CDM:Debug` keys off `cfg.spellID`, which is `nil` for every display built in the Auras tab, so it
+reports `NOT FOUND` for all of them while `trace` resolves them fine. It sent a session down the
+wrong path on 2026-08-24. Use `DisplaySpellID(cfg)` — the same fix `alertOff` already carries a
+warning about.
+
+**Read first:** `CDM:Debug` in `~/GloomsAuras/CDM.lua`
+
+---
+
 ## Not open — recorded so nobody re-raises them
 
 > Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
@@ -141,3 +181,22 @@ square. Circles were kept (round icons are the addon's whole point) and it is a 
 - **Distribution to friends/guild** — not ready; the owner will say when.
 - **The user's own media shipping in the addon** — FIXED and purged. **Never re-track them.**
 - **The colour picker** — **FULLY owner-QA'd.** IN USE holds the USER's colours; it is not modal.
+- **GB's empty-button collapse hiding the CONTAINER** — **MOVED to the alpha path 2026-08-24**,
+  FINDINGS §13. Blizzard re-shows containers and GB is combat-gagged, so the hide could never hold.
+  **Do not reinstate `cont:SetShown(false)` for empties**; comments at both ends say so.
+- **`C_Spell.IsSpellUsable` being simply banned** — **QUALIFIED 2026-08-24**, FINDINGS §12. Still
+  invalid ALONE; valid ANDed with the cooldown mirror, and it is the only signal that sees a proc.
+  GA's `CASTABLE` trigger state is built on that pairing.
+- **Sourcing the "comes off cooldown" sound from events only** — **TRIED and WRONG**, FINDINGS §12.
+  `CooldownFrame_Clear` is not reliably fired; the polled reconciler is sometimes the only witness.
+  Judge the transition's DURATION, not which writer noticed. Do not re-split by source.
+- **A settle/debounce timer on the ready sound** — **REMOVED**, it swallowed real sounds.
+  `CDM:PlaySound`'s 1s per-display throttle already handles duplicates.
+- **"The owner has stale Hunter auras"** — **FALSE.** Those live in OTHER CHARACTERS' profiles.
+  ⚠ `GloomsAurasDB`/`GloomsBarsDB` hold one profile per character and display IDs restart in each
+  (`d18` exists several times). **Any script reading them must be profile-aware** — grabbing the
+  first regex match produced two confidently wrong diagnoses on 2026-08-24.
+- **Immolate's pandemic sound firing every ~21s** — **NOT A BUG** (measured 2026-08-24: ~7 in 4.5
+  minutes). A Destruction rotation refreshes into the pandemic window constantly and the alert fires
+  each time; the spurious falloff one is separately suppressed (FINDINGS §12). Raised with the owner;
+  **he did not ask for anything.** Do not build a rate limit unprompted.

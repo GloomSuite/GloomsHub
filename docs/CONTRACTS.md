@@ -66,8 +66,29 @@ GloomsHub:ToggleWindow(id?)  -- slash semantics (added Phase B): open→close if
 GloomsHub:ResolveAssetPath(name)   -- name → "Interface\AddOns\GloomsHub\{Textures|Graphics}\<file>", or nil
 GloomsHub:ListMedia(kind)          -- kind "graphics"|"textures" → { {name=, tex=path}, … }  (GA uses this)
 GloomsHub.Media:AddFont(name,file) / :RemoveFont(i) / :AddTexture(…) / :AddGraphic(…) / …
+GloomsHub.Media:AddSound(name, ref)  -- ref = FileDataID (number) OR a filename in GloomsHub\Sounds\
+GloomsHub.Media:RemoveSound(i)
+GloomsHub.Media:Play(ref, kind)      -- kind "kit" → PlaySound (SoundKitID); otherwise PlaySoundFile
+GloomsHub.Media:Stop()               -- silences whatever Play last started
+GloomsHub.Media:SoundKits()          -- the game's 865 named SOUNDKIT entries, sorted (browser only)
+GloomsHub.SOUND_MANIFEST             -- GENERATED index of Sounds\; see SoundsManifest.lua
 ```
 - Fonts register into LSM as `font`; textures as `statusbar`; graphics are NOT in LSM (name→path only).
+- **Sounds register into LSM as `sound` (added 2026-08-24).** That registration is the whole point:
+  it is what puts them in GA's sound picker and every other LSM-aware addon. Two sources, both
+  ending in the same LSM table — the Media tab's hand-added entries (`GloomsHubDB.sounds`) and
+  everything listed in `SOUND_MANIFEST`.
+- **★ TWO ID NAMESPACES, NOT INTERCHANGEABLE.** `FileDataID` → `PlaySoundFile`; `SoundKitID` →
+  `PlaySound`. The same raid-warning sound is FileDataID `567397` and SoundKitID `8959`.
+  **LSM's sound table is FileDataID/path ONLY** — every consumer Fetches a value and hands it
+  straight to `PlaySoundFile` (BigWigs is the reference; GA's `CDM:PlaySound` does the same). A
+  SoundKitID registered into LSM would play the wrong file, or nothing, in every addon that read it.
+  `Media:Play(ref, "kit")` is the ONE place allowed to know the difference, and the Media tab's
+  sound browser is preview-only for exactly this reason. **Do not "fix" it by registering a kit ID.**
+- **`Media:AddSound` VERIFIES before saving** — it test-plays the reference and refuses anything that
+  produces no sound, naming the SoundKit if that is what was pasted. WoW exposes no filesystem API,
+  so a play attempt is the only existence check available; saving an unplayable sound is worse than
+  refusing it, because it reaches GA's picker looking valid and then fails silently on the aura.
 - **Back-compat shim — PERMANENT (decided Phase F step 6, the owner 2026-07-24):** GloomsHub defines
   global `StoneTweaks_ResolveAssetPath = function(n) return GloomsHub:ResolveAssetPath(n) end`
   **only if** ST's real one isn't loaded. **Nothing in the suite calls it** (Overlays moved to
@@ -75,7 +96,12 @@ GloomsHub.Media:AddFont(name,file) / :RemoveFont(i) / :AddTexture(…) / :AddGra
   stale outside the suite. **Live and proven since Phase F**, when ST was retired. Do not remove it.
   The `only if` guard is what makes re-enabling ST safe: ST defines the real function at file load,
   before `PLAYER_LOGIN`, so ST wins and the shim stays dormant.
-- SavedVariable `GloomsHubDB.fonts/.textures/.graphics` — same `{name,file}` shape as `StoneTweaksDB`.
+- SavedVariable `GloomsHubDB.fonts/.textures/.graphics/.sounds` — same `{name,file}` shape as
+  `StoneTweaksDB`. For a sound, `file` may be a **number** (FileDataID) as well as a path string.
+- **Drop-in folders are `Fonts/ Textures/ Graphics/ Sounds/`** — all four git-ignored, all four the
+  owner's own media. `Sounds/` needs a generated index because WoW cannot list a directory:
+  `Rebuild Sounds.command` → `tools/build-sound-manifest.sh` → `/reload`. ⚠ **`SoundsManifest.lua`
+  ships EMPTY**, exactly like GB's `IconsManifest.lua`. Never commit a populated one.
 
 ## 4. LibGloomSkin-1.0 (the shared toolkit) — **PINNED (Phase C, 2026-07-24)**
 Registered via LibStub: `local Skin = LibStub("LibGloomSkin-1.0")`. GloomsHub is the canonical

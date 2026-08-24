@@ -14,6 +14,7 @@
 local FONT_PATH    = "Interface\\AddOns\\GloomsHub\\Fonts\\"
 local TEXTURE_PATH = "Interface\\AddOns\\GloomsHub\\Textures\\"
 local GRAPHIC_PATH = "Interface\\AddOns\\GloomsHub\\Graphics\\"
+local SOUND_PATH   = "Interface\\AddOns\\GloomsHub\\Sounds\\"
 
 local Media = {}
 GloomsHub.Media = Media
@@ -56,6 +57,29 @@ local function RegisterTexture(entry)
     local ok = lsm:Register("statusbar", entry.name, path)
     if ok == false then
         return false, "A texture named \"" .. entry.name .. "\" is already registered (possibly by another addon)."
+    end
+    return true
+end
+
+-- ★ TWO DIFFERENT ID NAMESPACES — do not confuse them (verified 2026-08-24):
+--   * FileDataID  → PlaySoundFile(id)   — every audio file in the game.
+--   * SoundKitID  → PlaySound(id)       — the 865 named SOUNDKIT.* constants.
+-- They are NOT interchangeable. The same "raid warning" sound is FileDataID
+-- 567397 and SoundKitID 8959. LibSharedMedia's sound table is FileDataID/path
+-- ONLY: every consumer Fetches a value and hands it straight to PlaySoundFile
+-- (BigWigs_Plugins/Sound.lua:134 is the reference implementation, and GA's
+-- CDM:PlaySound does the same). Registering a SoundKitID into LSM would
+-- therefore play the wrong file — or nothing — in every addon that reads it.
+-- Sounds:Play below is the only place that is allowed to know the difference.
+local function RegisterSound(entry)
+    local lsm = GetLSM()
+    if not lsm then
+        return false, "LibSharedMedia-3.0 not found."
+    end
+    -- entry.file is a FileDataID (number) or a full Interface\ path (string).
+    local ok = lsm:Register("sound", entry.name, entry.file)
+    if ok == false then
+        return false, "A sound named \"" .. entry.name .. "\" is already registered (possibly by another addon)."
     end
     return true
 end
@@ -121,6 +145,30 @@ function Media:RegisterAll()
         end
     end
 
+    -- Sounds come from TWO places, both ending in the same LSM table:
+    --   1. SoundsManifest.lua — everything sitting in GloomsHub\\Sounds\\,
+    --      indexed by tools/build-sound-manifest.sh because WoW cannot list a
+    --      folder. This is the bulk route: drop files in, run the script.
+    --   2. GloomsHubDB.sounds — the Media tab's hand-added entries, which may
+    --      be FileDataIDs or paths into anywhere, so they are stored whole.
+    local soundCount = 0
+    for _, entry in ipairs(GloomsHub.SOUND_MANIFEST or {}) do
+        local ok, err = RegisterSound({ name = entry.name, file = SOUND_PATH .. entry.file })
+        if ok then
+            soundCount = soundCount + 1
+        else
+            GloomsHub:Print("|cffff4444Sound skipped — " .. entry.name .. ": " .. (err or "unknown") .. "|r")
+        end
+    end
+    for _, entry in ipairs(GloomsHubDB.sounds) do
+        local ok, err = RegisterSound(entry)
+        if ok then
+            soundCount = soundCount + 1
+        else
+            GloomsHub:Print("|cffff4444Sound skipped — " .. entry.name .. ": " .. (err or "unknown") .. "|r")
+        end
+    end
+
     -- Graphics are intentionally NOT registered into LSM.
 
     local parts = {}
@@ -129,6 +177,9 @@ function Media:RegisterAll()
     end
     if texCount > 0 then
         parts[#parts+1] = texCount .. " texture" .. (texCount == 1 and "" or "s")
+    end
+    if soundCount > 0 then
+        parts[#parts+1] = soundCount .. " sound" .. (soundCount == 1 and "" or "s")
     end
     if #parts > 0 then
         GloomsHub:Print("Registered " .. table.concat(parts, " and ") .. " into LibSharedMedia.")
@@ -304,6 +355,153 @@ function Media:RemoveGraphic(index)
 end
 
 -- ============================================================
+-- Public API — Sounds
+--
+-- Accepts EITHER a FileDataID (a bare number, the form wago.tools
+-- gives you) OR a filename dropped into GloomsHub\Sounds\. Both end
+-- up in LibSharedMedia's "sound" table, which is what makes them
+-- appear in GA's sound picker (and BigWigs', and everyone else's).
+-- ============================================================
+
+-- Normalize whatever the user typed into the value LSM stores, or nil + why.
+-- A bare number is a FileDataID and is passed through untouched; anything
+-- else is treated as a filename in GloomsHub\Sounds\.
+local function CoerceSoundRef(ref)
+    ref = tostring(ref or ""):match("^%s*(.-)%s*$")
+    if ref == "" then return nil, "Enter a FileDataID or a filename." end
+
+    local id = tonumber(ref)
+    if id then
+        if id <= 0 or id ~= math.floor(id) then
+            return nil, "A FileDataID must be a whole number above zero."
+        end
+        return id
+    end
+
+    local lower = ref:lower()
+    if not (lower:match("%.ogg$") or lower:match("%.mp3$")) then
+        return nil, "WoW only plays .ogg and .mp3 — or paste a numeric FileDataID."
+    end
+    -- Already a full Interface\ path? Take it as given; otherwise it's ours.
+    if lower:match("^interface\\") then return ref end
+    return SOUND_PATH .. ref
+end
+
+-- Both play calls hand back a sound HANDLE as their second return; StopSound
+-- takes that handle. We keep only the most recent one — auditioning is a
+-- one-at-a-time activity, and some of the game's sounds run for many seconds.
+local playingHandle
+
+-- Silence whatever Media:Play last started. Safe to call when nothing is
+-- playing, and safe to call on a handle whose sound already finished on its
+-- own (there is no "sound ended" event, so that is the normal case).
+function Media:Stop()
+    if not playingHandle then return false end
+    pcall(StopSound, playingHandle)
+    playingHandle = nil
+    return true
+end
+
+-- The ONE place that knows FileDataID from SoundKitID. `kind` is "kit" only
+-- for rows that came out of the SOUNDKIT browser; everything else is a
+-- FileDataID or a path and goes to PlaySoundFile. Returns true if it played.
+function Media:Play(ref, kind)
+    if not ref then return false end
+    self:Stop()   -- a new pick always cuts off the last one
+    local ok, played, handle
+    if kind == "kit" then
+        ok, played, handle = pcall(PlaySound, ref, "Master")
+    else
+        -- PlaySoundFile returns false (it does not raise) for a dead ID or path.
+        ok, played, handle = pcall(PlaySoundFile, ref, "Master")
+    end
+    if not ok then return false end
+    playingHandle = handle
+    return played ~= false
+end
+
+-- Does this number appear in SOUNDKIT? Used only to write a BETTER error
+-- message, never as the gate — the two namespaces overlap numerically, so a
+-- legitimate low FileDataID could match a kit by coincidence. The play test
+-- below is what actually decides.
+local function SoundKitNamed(id)
+    for _, item in ipairs(Media:SoundKits()) do
+        if item.id == id then return item.name end
+    end
+end
+
+function Media:AddSound(displayName, ref)
+    displayName = (displayName or ""):match("^%s*(.-)%s*$")
+    if displayName == "" then return false, "Display name cannot be empty." end
+
+    local value, err = CoerceSoundRef(ref)
+    if not value then return false, err end
+
+    for _, entry in ipairs(GloomsHubDB.sounds) do
+        if entry.name:lower() == displayName:lower() then
+            return false, "A sound named \"" .. displayName .. "\" is already saved."
+        end
+    end
+
+    -- ★ VERIFY BEFORE SAVING (added 2026-08-24, after a SoundKit ID was pasted
+    -- in from the browser below, registered happily, and then played nothing).
+    -- PlaySoundFile returns willPlay=false for an ID or path the client cannot
+    -- resolve, which is the only existence check available to us — there is no
+    -- filesystem API. Saving an unplayable sound is strictly worse than
+    -- refusing it: it reaches GA's picker looking perfectly valid and then
+    -- fails silently on the aura, which is the hardest kind of bug to trace.
+    if not self:Play(value) then
+        local kit = type(value) == "number" and SoundKitNamed(value)
+        if kit then
+            return false, kit .. " is a SoundKit ID from the browser below, not a FileDataID — "
+                .. "the two are different numbering systems. Look the sound up on wago.tools "
+                .. "and paste the FileDataID it gives you."
+        end
+        if type(value) == "number" then
+            return false, "Nothing plays for FileDataID " .. value .. " — check the number on wago.tools."
+        end
+        return false, "Nothing plays for that file. Check it is in GloomsHub\\Sounds\\ and is a real .ogg or .mp3."
+    end
+
+    local entry = { name = displayName, file = value }
+    local ok, rerr = RegisterSound(entry)
+    if not ok then
+        GloomsHub:Print("|cffff9900Note:|r " .. (rerr or ""))
+    end
+
+    table.insert(GloomsHubDB.sounds, entry)
+    -- Unlike fonts, a sound is live immediately — nothing is cached at launch.
+    -- It is playing right now: the verification above IS the preview.
+    return true, "Sound \"" .. displayName .. "\" saved — that is what it sounds like."
+end
+
+function Media:RemoveSound(index)
+    if GloomsHubDB.sounds[index] then
+        local name = GloomsHubDB.sounds[index].name
+        table.remove(GloomsHubDB.sounds, index)
+        return true, "\"" .. name .. "\" removed. It leaves other addons' lists after a /reload."
+    end
+    return false, "Invalid index."
+end
+
+-- The game's 865 named sound kits, sorted. Built once and cached: SOUNDKIT is
+-- a static FrameXML table, so it cannot change during a session.
+local soundKitCache
+function Media:SoundKits()
+    if soundKitCache then return soundKitCache end
+    soundKitCache = {}
+    if type(SOUNDKIT) == "table" then
+        for name, id in pairs(SOUNDKIT) do
+            if type(name) == "string" and type(id) == "number" then
+                soundKitCache[#soundKitCache + 1] = { name = name, id = id }
+            end
+        end
+        table.sort(soundKitCache, function(a, b) return a.name < b.name end)
+    end
+    return soundKitCache
+end
+
+-- ============================================================
 -- The Media tab — the reskinned Fonts/Textures/Graphics manager
 -- over the API above (functional port of StoneTweaks_UI's three
 -- media pages, rebuilt in the Gloom language: one-open accordion,
@@ -411,6 +609,8 @@ local function buildCatalogSection(body, spec)
     local addBtn = UI.flatButton(body, 110, 24, COLOR.purple, spec.addLabel, 12)
     addBtn:SetBase(1)
     addBtn:SetPoint("TOPRIGHT", -18, -24)
+    -- Optional per-section control tucked under Add (Sounds uses it for Stop).
+    if spec.extraControl then spec.extraControl(body, addBtn) end
 
     local note = UI.newText(body, FONTS.body, 10.5, COLOR.mute, "LEFT")
     note:SetPoint("TOPLEFT", 18, -88); note:SetPoint("TOPRIGHT", -18, -88)
@@ -444,7 +644,7 @@ local function buildCatalogSection(body, spec)
             row:SetPoint("TOPLEFT", 0, -y); row:SetPoint("TOPRIGHT", 0, -y)
             row:Show()
             row.nameText:SetText(entry.name)
-            row.fileText:SetText(entry.file)
+            row.fileText:SetText(spec.fileLabel and spec.fileLabel(entry) or entry.file)
             if row.preview then row.preview(row, entry) end
             row.removeBtn:SetScript("OnClick", function()
                 local ok, msg = spec.remove(i)
@@ -475,6 +675,119 @@ local function buildCatalogSection(body, spec)
 
     refreshers[#refreshers + 1] = refresh
     refresh()
+end
+
+-- One catalog section (Fonts / Textures / Graphics / Sounds) is above. The
+-- SOUND BROWSER below is a different shape and deliberately does not reuse it:
+-- it is read-only, it is 865 rows long, and it is the one place in the suite
+-- that plays SoundKitIDs rather than FileDataIDs.
+--
+-- ★ WHY THERE IS NO "ADD" BUTTON HERE. SOUNDKIT ids cannot go into
+-- LibSharedMedia — see the RegisterSound comment. This section exists to let
+-- the owner HEAR the game's sounds without leaving the client; getting one
+-- into GA's picker still means finding its FileDataID on wago.tools and
+-- pasting that into Sounds above. Do not "fix" this by registering item.id.
+local BROWSE_ROWS  = 12
+local BROWSE_ROW_H = 22
+
+local function buildBrowserSection(body)
+    local searchBox = UI.flatEditBox(body, 260, 22)
+    searchBox:SetPoint("TOPLEFT", 18, -12)
+    -- Always enabled: WoW fires no "sound ended" event, so we can never know
+    -- whether there is something to stop. A no-op Stop is the honest default.
+    local stopBtn = UI.flatButton(body, 62, 22, COLOR.heroic, "Stop", 11)
+    stopBtn:SetPoint("LEFT", searchBox, "RIGHT", 10, 0)
+    stopBtn:SetScript("OnClick", function()
+        if Media:Stop() then setStatus("Stopped.") end
+    end)
+    local counter = UI.newText(body, FONTS.body, 11, COLOR.mute, "RIGHT")
+    counter:SetPoint("TOPRIGHT", -18, -16)
+
+    local note = UI.newText(body, FONTS.body, 10.5, COLOR.mute, "LEFT")
+    note:SetPoint("TOPLEFT", 18, -44); note:SetPoint("TOPRIGHT", -18, -44)
+    note:SetText("Every sound the game's interface uses, by name. Click a row to hear it; type to filter by name or ID. "
+        .. "These are SoundKit IDs, which other addons cannot read — to use one in Gloom's Auras, look its file up on "
+        .. "wago.tools and paste that FileDataID into Sounds above.")
+
+    local LIST_TOP = 92
+    local list = CreateFrame("Frame", nil, body)
+    list:SetPoint("TOPLEFT", 0, -LIST_TOP)
+    list:SetPoint("TOPRIGHT", 0, -LIST_TOP)
+    list:SetHeight(BROWSE_ROWS * BROWSE_ROW_H)
+    list:EnableMouseWheel(true)
+
+    local filtered, offset, rows = {}, 0, {}
+
+    local function paint()
+        local maxOff = math.max(0, #filtered - BROWSE_ROWS)
+        if offset > maxOff then offset = maxOff end
+        if offset < 0 then offset = 0 end
+        for i = 1, BROWSE_ROWS do
+            local row, item = rows[i], filtered[i + offset]
+            if item then
+                row.nameText:SetText(item.name)
+                row.idText:SetText(item.id)
+                row.item = item
+                row:Show()
+            else
+                row.item = nil
+                row:Hide()
+            end
+        end
+        if #filtered == 0 then
+            counter:SetText("no matches")
+        elseif #filtered <= BROWSE_ROWS then
+            counter:SetText(#filtered .. (#filtered == 1 and " sound" or " sounds"))
+        else
+            counter:SetText(("%d–%d of %d"):format(offset + 1, math.min(offset + BROWSE_ROWS, #filtered), #filtered))
+        end
+    end
+
+    for i = 1, BROWSE_ROWS do
+        local row = CreateFrame("Button", nil, list)
+        row:SetHeight(BROWSE_ROW_H)
+        row:SetPoint("TOPLEFT", 0, -(i - 1) * BROWSE_ROW_H)
+        row:SetPoint("TOPRIGHT", 0, -(i - 1) * BROWSE_ROW_H)
+        local hover = row:CreateTexture(nil, "BACKGROUND")
+        hover:SetAllPoints(); hover:SetColorTexture(1, 1, 1, 0.06); hover:Hide()
+        row:SetScript("OnEnter", function() hover:Show() end)
+        row:SetScript("OnLeave", function() hover:Hide() end)
+        row.nameText = UI.newText(row, FONTS.body, 12, COLOR.text, "LEFT")
+        row.nameText:SetPoint("LEFT", 18, 0); row.nameText:SetWidth(330)
+        row.idText = UI.newText(row, FONTS.body, 11, COLOR.mute, "RIGHT")
+        row.idText:SetPoint("RIGHT", -18, 0)
+        row:SetScript("OnClick", function(self)
+            if not self.item then return end
+            -- "kit" — the ONLY caller that passes it. See Media:Play.
+            Media:Play(self.item.id, "kit")
+            setStatus(self.item.name .. "  ·  SoundKit " .. self.item.id)
+        end)
+        rows[i] = row
+    end
+
+    list:SetScript("OnMouseWheel", function(_, delta)
+        offset = offset - delta * 3
+        paint()
+    end)
+
+    local function applyFilter()
+        local q = (searchBox:GetText() or ""):lower():match("^%s*(.-)%s*$")
+        wipe(filtered)
+        for _, item in ipairs(Media:SoundKits()) do
+            if q == "" or item.name:lower():find(q, 1, true) or tostring(item.id):find(q, 1, true) then
+                filtered[#filtered + 1] = item
+            end
+        end
+        offset = 0
+        paint()
+    end
+
+    searchBox:SetScript("OnTextChanged", applyFilter)
+    searchBox:SetScript("OnEscapePressed", function(self) self:SetText(""); self:ClearFocus() end)
+    searchBox:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+
+    applyFilter()
+    body:SetHeight(LIST_TOP + BROWSE_ROWS * BROWSE_ROW_H + 14)
 end
 
 local SPECS = {
@@ -523,6 +836,37 @@ local SPECS = {
             return function(_, entry) tex:SetTexture(GRAPHIC_PATH .. entry.file) end
         end,
     },
+    {
+        title = "Sounds", addLabel = "Add Sound",
+        hint = "a FileDataID from wago.tools  (e.g.  567397)  — or  MySound.ogg",
+        note = "Registered into LibSharedMedia — this is what puts them in Gloom's Auras' sound picker, and every other LSM-aware addon. Paste a FileDataID from wago.tools, or drop an .ogg / .mp3 into GloomsHub\\Sounds\\ and type the filename. Browse the game's own sounds in the section below.",
+        empty = "No sounds yet — browse below, or paste a FileDataID above.",
+        getEntries = function() return GloomsHubDB and GloomsHubDB.sounds or {} end,
+        add = function(n, f) return Media:AddSound(n, f) end,
+        remove = function(i) return Media:RemoveSound(i) end,
+        fileLabel = function(entry)
+            if type(entry.file) == "number" then return "FileDataID " .. entry.file end
+            return (tostring(entry.file):gsub("^Interface\\AddOns\\GloomsHub\\Sounds\\", ""))
+        end,
+        extraControl = function(body, addBtn)
+            local stopBtn = UI.flatButton(body, 110, 22, COLOR.heroic, "Stop", 11)
+            stopBtn:SetPoint("TOPRIGHT", addBtn, "BOTTOMRIGHT", 0, -6)
+            stopBtn:SetScript("OnClick", function()
+                if Media:Stop() then setStatus("Stopped.") end
+            end)
+        end,
+        buildPreview = function(row)
+            local btn = UI.flatButton(row, 62, 20, COLOR.purple, "Play", 11)
+            btn:SetPoint("LEFT", 300, 0)
+            return function(_, entry)
+                btn:SetScript("OnClick", function()
+                    if not Media:Play(entry.file) then
+                        setStatus("\"" .. entry.name .. "\" did not play — the ID or file may be wrong.", false)
+                    end
+                end)
+            end
+        end,
+    },
 }
 
 local function BuildMediaTab(container)
@@ -563,8 +907,10 @@ local function BuildMediaTab(container)
             function(body) buildCatalogSection(body, spec) end,
             function() return #(spec.getEntries() or {}) end)
     end
+    makeSection("Browse Game Sounds", buildBrowserSection,
+        function() return #Media:SoundKits() end)
     relayout()
-    setStatus("The suite's shared media catalog — fonts, statusbar textures, and overlay graphics.")
+    setStatus("The suite's shared media catalog — fonts, statusbar textures, overlay graphics, and sounds.")
 end
 
 GloomsHub:RegisterTab{

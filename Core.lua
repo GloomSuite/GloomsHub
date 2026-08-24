@@ -12,6 +12,7 @@ local DB_DEFAULTS = {
     fonts    = {},  -- { name = "...", file = "..." } — registered into LSM as "font"
     textures = {},  -- { name = "...", file = "..." } — registered into LSM as "statusbar"
     graphics = {},  -- { name = "...", file = "..." } — NOT registered into LSM (name→path only)
+    sounds   = {},  -- { name = "...", file = <path string|FileDataID number> } — registered into LSM as "sound"
 }
 
 function GloomsHub:Print(msg)
@@ -79,6 +80,7 @@ initFrame:SetScript("OnEvent", function(self, event)
         if not GloomsHubDB.fonts    then GloomsHubDB.fonts    = {} end
         if not GloomsHubDB.textures then GloomsHubDB.textures = {} end
         if not GloomsHubDB.graphics then GloomsHubDB.graphics = {} end
+        if not GloomsHubDB.sounds   then GloomsHubDB.sounds   = {} end
         MigrateFromStoneTweaks()
         InstallCompatShim()
         GloomsHub:InitMinimapButton()   -- the ONE suite launcher (MinimapButton.lua)
@@ -100,7 +102,7 @@ SlashCmdList["GLOOMSHUB"] = function()
         GloomsHub:Print("Not initialized yet (before PLAYER_LOGIN).")
         return
     end
-    GloomsHub:Print(("Catalog: %d fonts, %d textures, %d graphics. migratedFromST = %s.")
+    GloomsHub:Print(("Catalog: %d fonts, %d textures, %d graphics, %d sounds. migratedFromST = %s.")
         :format(#GloomsHubDB.fonts, #GloomsHubDB.textures, #GloomsHubDB.graphics,
-                tostring(GloomsHubDB.migratedFromST or false)))
+                #GloomsHubDB.sounds, tostring(GloomsHubDB.migratedFromST or false)))
 end
