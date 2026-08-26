@@ -83,6 +83,12 @@ of it.
 ## Locked decisions — do not reopen
 
 - **Shared base = GloomsHub**, permanent asset path `Interface\AddOns\GloomsHub\…`.
+- **★ THE SILHOUETTE CATALOG AND THE ANIMATION ENGINE ARE THE HUB'S** (2026-08-25). Shapes, their
+  art, and the eight effect modules serve GB *and* GA, so they have one home like every other shared
+  fact. **The routing tables in the Hub's and GB's `CLAUDE.md` said "shapes/catalog + art" and
+  "glows" belonged to GB; both were rewritten in the same session.** Do not "restore" them — that
+  line predates GA drawing shapes at all. What stayed GB's: which shape a button wears, the Bars-tab
+  picker, the plate extension, and all glow triggering.
 - **Four separate addons + one shared base**, not a mega-addon. The Hub ships its own release.
 - **HARD dependency on GloomsHub, no standalone fallback** (2026-07-24). Each tool deleted its own
   window; its config renders ONLY inside the Hub's shell. Chosen over graceful fallback precisely to
@@ -131,12 +137,26 @@ of it.
 the permanent compat shim, `/gh` probe) · `Skin.lua` (**the body of `LibGloomSkin-1.0`**, LibStub-
 registered, **MINOR 7** — tokens, toolkit, `WarmFonts`/`RegisterWarmPairs`, **the suite's own colour
 picker + its "in use" palette**; `GloomsHub.COLOR/.FONT/
-.UI/.MEDIA` are aliases) · `Shell.lua` (the Suite window: `RegisterTab`/`Open`/`FocusTab`/
+.UI/.MEDIA` are aliases) · **`Shapes.lua`** (the suite's silhouette catalog — 21 shapes,
+`GloomsHub:ShapeAsset/ShapeInfo/GrowAnchor`) · **`Effects.lua`** (the eight shaped animation
+modules + `GloomsHub.Effects`) · `Shell.lua` (the Suite window: `RegisterTab`/`Open`/`FocusTab`/
 `ToggleWindow` + `/gloom`) · `Media.lua` (LSM registration, `ResolveAssetPath`, `ListMedia`, the
 Media tab) · `MinimapButton.lua` (**the ONE suite launcher** — never one per tool).
 
+**The shape catalog and the animation engine are the Hub's since 2026-08-25**, moved out of GB so
+Gloom's Auras could draw the same silhouettes without a second copy of 136 files. GB still owns
+which shape a button wears, its picker, the plate extension and all glow TRIGGERING; the Hub owns
+the vocabulary, the art and the renderers. GB's `HAND_SHAPES`/`HAND_ORDER`/`HAND_GROUPS`/`HandAsset`
+are unchanged aliases onto the Hub's, so its ~25 call sites never moved, and `GB.Anims` kept its
+whole public surface (`Get`/`Each`/`Params`/`Enabled`/`Reconcile`/`Invalidate`/`PreviewReconcile`)
+so its `Config.lua` and `Glows.lua` did not change at all. Owner-QA'd: all 21 thumbnails, procs and
+animations identical before and after. ⚠ **GB's `Glows.lua` shaped halo did NOT move** — it is
+entangled with Blizzard's spell-alert hooks and has a solid centre that only works because an opaque
+button icon hides it. GA gets its glow from the HOLLOW rim-based modules instead.
+
 **Tracked assets are `Media/` ONLY** — Khand ×2, GeneralSans ×3, their licence files, the GS and Gh
-marks. `Libs/` is gitignored and pulled by the packager. ⚠ **`Fonts/`, `Textures/` and `Graphics/`
+marks, plus **`Media/art/shapes/` (136 silhouette files) and `Media/art/effects/` (5 shared effect
+textures)**. `Libs/` is gitignored and pulled by the packager. ⚠ **`Fonts/`, `Textures/` and `Graphics/`
 are the USER's drop-in directories and are gitignored** (2026-07-26). They still exist on the
 owner's disk — 7 / 13 / 45 files, which his catalog resolves normally — but they are not in the repo,
 not in history, and not in any release. **Never track them.**
@@ -147,7 +167,11 @@ the **Bars** tab; `/gb` → `ToggleWindow("bars")`. `SKIN_NEEDS = 5` (its font p
 
 **`~/GloomsAuras`** — `main`. Hard-deps the Hub; mounts the **Auras** tab, fully reworked 2026-07-25
 (rail + full-width editor; splash, name banner and four drawers gone); `SKIN_NEEDS = 6` (its
-`MakeColor` drives `UI.colorPicker`; its private ColorPickerFrame flow is gone).
+`MakeColor` drives `UI.colorPicker`; its private ColorPickerFrame flow is gone). Since 2026-08-25 it
+also consumes the Hub's shapes and effects: a per-aura **Shape** (crops the texture, shapes the
+animation), the **eight animations** with a settings popup built from each module's own schema,
+**Effects only** (draws no artwork — for overlaying a live action button), and **rotation** as both a
+fixed angle and a continuous spin.
 
 **`~/GloomsOverlays`** — `master`. Hard-deps the Hub; mounts the **Overlays** tab; frame pooling and
 in-place layout apply; all nine stratas plus a numeric Level.

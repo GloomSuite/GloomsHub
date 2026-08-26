@@ -6,10 +6,11 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-08-24 (a long three-repo session: the Hub gained a sound catalog + manifest,
-GA gained a `CASTABLE` trigger state, a PLAYER POWER load condition and a "comes off cooldown" sound
-timing, and GB's empty-slot collapse moved to the alpha path. Four new items, 6-9, are the tails
-that session left. Everything measured is in FINDINGS §12-§13.)
+**Last updated:** 2026-08-25 (the SHARED SHAPE + EFFECTS migration. The 21-shape silhouette catalog,
+its 136 art files and all eight shaped animation modules moved out of GB and into the Hub, and GA
+now consumes them: aura shapes, the eight animations, an "Effects only" mode and rotation. GB is
+byte-for-byte unchanged on screen and was owner-QA'd at each stage. New items 9-10 are the tails.
+Everything measured is in FINDINGS §14.)
 
 ---
 
@@ -146,6 +147,42 @@ warning about.
 
 ---
 
+### 9 · An aura with no texture draws the magenta panel, not its spell's icon
+**Repo:** `~/GloomsAuras` · **Size:** two lines, but the DESIGN question is the real work · **Evidence:** `TESTED`
+
+`Displays:ApplyConfig` resolves its icon fallback with `C_Spell.GetSpellTexture(cfg.spellID or spellID)`.
+For every display built in the Auras tab `cfg.spellID` is nil and `spellID` is the display KEY (a
+string like `"d18"`), so the lookup fails and it draws the deliberate magenta "no art" panel.
+Measured 2026-08-25; FINDINGS §14. **Same root cause as item 8**, and the same call fixes it:
+`CDM:DisplaySpellID(cfg)`.
+
+⚠ **Do not just make the change.** Wiring that resolver in IS the parked "auto-icon a new aura from
+its first trigger" feature, which the owner has never decided on, and its open question is still
+open: *does an explicit texture pick set `cfg.texture`, so the auto-icon only ever fills the unset
+case?* **Ask before building.** On 2026-08-25 he pushed back on the premise itself — he did not want
+a trigger's icon appearing as artwork he had not chosen. The workaround he actually wanted was
+"Effects only", which shipped that day.
+
+**Read first:** [FINDINGS.md](FINDINGS.md) §14 · the "Deferred" block in `~/GloomsAuras/docs/HANDOFF.md`
+
+---
+
+### 10 · `hgAnchor` exists twice, knowingly
+**Repo:** `~/GloomsBars` (+ Hub's `Shapes.lua`) · **Size:** small, but it is GB's geometry engine · **Evidence:** `TESTED` (verified identical 2026-08-25)
+
+The grown-rect anchor every shaped glow and effect depends on is defined in BOTH
+`GloomsBars/Skin.lua` (local `hgAnchor`, 6 call sites) and `GloomsHub/Shapes.lua`
+(`GloomsHub:GrowAnchor`). They were verified line-for-line identical by script when the second was
+created, and ⚠ comments at both ends say they must not drift.
+
+It was left duplicated deliberately: collapsing GB's into a delegation means editing its layout
+geometry during a migration whose entire QA promise was "GB looks identical". That promise has been
+kept and banked, so this is now safe to do as its own small change with its own test.
+
+**Read first:** `GloomsHub:GrowAnchor` in `Shapes.lua` · `hgAnchor` in `~/GloomsBars/Skin.lua`
+
+---
+
 ## Not open — recorded so nobody re-raises them
 
 > Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
@@ -178,6 +215,15 @@ warning about.
   **Do not build tooling to find icon art.** ⚠ `IconsHD/` is git-ignored and `IconsManifest.lua`
   ships EMPTY — the mechanism ships, the owner's art does not. **Never commit a populated manifest.**
 - **GB's icon zoom applying to every preset** — **FIXED and owner-QA'd 2026-07-26.**
+- **GA telling GB to glow a real action button** — **RULED OUT by the owner, 2026-08-25.** It was
+  offered twice as the exact fix for "make the Cataclysm button glow" (perfect shape, perfect
+  alignment, follows the bars automatically). He declined both times: *"I don't really want an aura
+  telling GB what to do — that's a level of complexity that I suspect would introduce more problems
+  than it solved."* **He is content aligning an aura over a button by hand.** Do not re-offer it.
+- **"GA's shape/animation does nothing"** — check WHICH shape and WHICH texture before believing it.
+  Measured against the icon rect, `roundsq1` crops **1.2%**, `roundsq2` 4.7%, `circle` 21.4%,
+  `diamond` 50.1%. A rounded square over soft-edged art is a legitimately invisible change.
+  Animations additionally need a Shape set — with none they are skipped by design. FINDINGS §14.
 - **Distribution to friends/guild** — not ready; the owner will say when.
 - **The user's own media shipping in the addon** — FIXED and purged. **Never re-track them.**
 - **The colour picker** — **FULLY owner-QA'd.** IN USE holds the USER's colours; it is not modal.

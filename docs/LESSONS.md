@@ -184,6 +184,26 @@ should DIFFER from what you last saved.
 - **A shared account-wide db plus a per-character pointer is the shape that breeds this.** The
   pointer being right is not the feature; the load is.
 
+## ★★ Pick the test that can FAIL LOUDLY, not the test that is typical
+
+When you hand the owner one step to verify a change, choose the input where a working feature and a
+broken one look **maximally different** — not the one you imagine he'd use.
+
+On 2026-08-25 a new shape-mask feature was verified by asking him to apply `roundsq1` to an aura.
+That shape crops **1.2%** of the icon rect, and the texture he had on it measured 0–30 alpha out of
+255 in exactly the corners it removes. He reported "the texture didn't suppress or go away." The
+mask had been working perfectly the whole time; `diamond` (50.1%) proved it in one click. The round
+trip cost a reload and a chunk of his evening, and it very nearly triggered a hunt for a bug that
+did not exist.
+
+The same mistake in the other direction: the first rotation test suggested a texture that might have
+been a **circle**, which spins invisibly. Caught before it was sent, but only just.
+
+**The rule:** before asking him to look at something, ask *"if this were broken, would this test
+look different?"* If the answer is "not much", it is the wrong test. Measure the extremes first —
+`sips`, a pixel count, a quick decode — and pick from data, not intuition. **A test that cannot
+fail visibly is not a test; it is a way to launder a guess into a confirmation.**
+
 ## ★★ When the owner says a UI is confusing, read the code before agreeing OR reassuring
 
 He asked what GB's profile buttons actually did. Answering from the docs would have produced a

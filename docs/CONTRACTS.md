@@ -407,3 +407,71 @@ versions drift was a problem he wasn't aware of. It was — this was the problem
 all three tools did a bare `LibStub("LibGloomSkin-1.0")` with no version check whatsoever. The gate
 is also what makes the locked **hard-dependency** decision deliver what it promised: that a missing
 or inadequate Hub fails **loudly and legibly**, rather than as a pile of nil-call errors.
+
+---
+
+## 7. The silhouette catalog (GloomsHub owns) — **NEW 2026-08-25**
+```lua
+GloomsHub.SHAPES          -- key → { aspect, orient, label }   (21 shapes)
+GloomsHub.SHAPE_ORDER     -- ordered keys, picker order
+GloomsHub.SHAPE_GROUPS    -- { {title="1:1", keys={…}}, Portrait, Landscape }
+GloomsHub.SHAPE_PARTS     -- { "base","outer","inner","rim","line","swipe" }
+GloomsHub:ShapeAsset(key, part)   -- → path, or nil for an unknown key
+GloomsHub:ShapeInfo(key)          -- → metadata, falling back to circle
+GloomsHub:HasSplitSwipe(key)      -- the five 2:1 portraits also ship swipe-t / swipe-b
+GloomsHub:GrowAnchor(tex, icon, grow)
+```
+Art lives in `Media\art\shapes\<key>-<part>.png`, tracked and shipped.
+
+- **★ THE FILES ARE THE CONTRACT.** `key` and `part` index real files. Adding a shape means adding
+  its art AND its catalog row; renaming a key orphans every saved profile that stored it. **Treat
+  both as append-only.**
+- **★ THE ART IS HALF MARGIN.** 512×512 (portraits 512×768), silhouette in the central half.
+  A mask or glow must be anchored to a rect **twice** the icon's size — which is what `GrowAnchor`
+  at `grow = 0` produces. `SetAllPoints` draws it at half size in a transparent border.
+- **A mask texture must be WHITE**; masks read LUMINANCE, not alpha. This art was whitened on
+  import. Set it with `CLAMPTOBLACKADDITIVE` on both axes.
+- ⚠ `GrowAnchor` has a **twin**: `hgAnchor` in `GloomsBars/Skin.lua`, still used by GB's own layout.
+  Verified identical 2026-08-25. **Change the formula and you change both.** Backlog item 10.
+
+## 8. `GloomsHub.Effects` — the shaped animation engine (GloomsHub owns) — **NEW 2026-08-25**
+```lua
+GloomsHub.Effects.VERSION            -- 1; bump when the module set or contract changes
+Effects:Register(mod) / :Get(id) / :Each(fn)
+Effects:MergeParams(id, saved)       -- module defaults with `saved` laid over; nil if id unknown
+```
+Eight modules: `shine` Comet Chase · `march` Marching Lines · `sheen` Sheen Sweep · `sparkle`
+Sparkles · `breathe` Breathe · `burst` Burst Ring · `rimflash` Rim Flash · `radar` Radar Sweep.
+Shared textures in `Media\art\effects\`.
+
+**Module contract:**
+```lua
+{ id, label, defaults = {..}, params = { {key, kind, label, ...}, .. },
+  Start(host, icon, key, p), Stop(host) }
+```
+- `host` is ANY frame; `icon` is the region it sizes against; `key` is a Shapes catalog key.
+  **Start is idempotent** — call it again to reconfigure live.
+- `kind` is what a consumer's UI switches on: `"color"` | `"range"` | `"bispeed"` | `"choice"`.
+  A **`bispeed`** is one SIGNED velocity in `[-1,1]`: sign = direction, magnitude = speed, 0 = still.
+- **★ EVERY module needs a shape key.** No key, nothing to trace — the consumer must say so rather
+  than offering a control that silently does nothing.
+- **★ GUARD RE-`Start` ON HOT PATHS.** Modules prime their textures to `PRIME_ALPHA` and reveal one
+  frame later (because `AddMaskTexture` fails silently on a never-rendered texture), so an unguarded
+  re-push storm makes an animation *invisible*, not merely slow. GB guards via `Anims:Reconcile`
+  skipping an unchanged winner; GA via a signature of module + shape + merged params. FINDINGS §14.
+- **HOLLOW vs MASKED:** `breathe`, `burst` and `rimflash` draw the shape's `rim` art directly, so
+  they have no centre and can overlay a live action button. The other five mask to the shape.
+
+### Consumers
+| Consumer | uses |
+|---|---|
+| `GloomsBars/Core.lua` | `HAND_SHAPES`/`HAND_ORDER`/`HAND_GROUPS`/`HandAsset` are aliases onto §7 |
+| `GloomsBars/Anims.lua` | wiring only — modules come from §8 |
+| `GloomsAuras/Displays.lua` | `ApplyShape` (§7) and `ApplyEffects` (§8) |
+| `GloomsAuras/Config.lua` | the shape picker and the schema-driven settings popup |
+
+⚠ **These are ENGINE-level dependencies, so they must DEGRADE, never error** — CONTRACTS §6's rule
+still holds. `GB:HandAsset` returns a path for any non-nil key even against an ancient Hub;
+`GB.HAND_SHAPES` falls back to a one-entry circle catalog; `GB.Anims` resolves `Effects` per call
+and runs nothing if it is absent. GB's `Config.lua` login gate now also fires when the catalog is
+missing, and its message no longer claims the bars are unaffected — because they would be.

@@ -1026,3 +1026,66 @@ per-button Update post-hook that already runs mid-fight — so it re-asserts its
 long-shipped global `Hidden` mode, so consistent rather than new), and the collapse now respects the
 master layout switch — turning GB's layout off releases it, so a stale `showEmpty` cannot strand
 buttons invisible with no way back.
+
+---
+
+## §14 — GA's shape + effects work: what was measured, and the one real bug ✅ `TESTED` 2026-08-25
+
+The session that moved the silhouette catalog and the eight animation modules into the Hub. Three
+things here look like bugs and are not, and one thing does not look like a bug and is.
+
+### A rounded square removes almost nothing — `TESTED`
+Measured directly from the art, counting pixels with alpha > 127 inside the icon reference rect:
+
+| shape | keeps | crops |
+|---|---|---|
+| `square` | 100% | 0% |
+| `roundsq1` | 98.8% | **1.2%** |
+| `roundsq2` | 95.3% | 4.7% |
+| `roundsq3` | 91.7% | 8.3% |
+| `circle` | 78.6% | 21.4% |
+| `hexagon` | 65.0% | 35.0% |
+| `diamond` | 49.9% | **50.1%** |
+
+**So "I picked a shape and nothing happened" is the EXPECTED result for a rounded square**,
+especially over art that is already soft-edged. It cost this session a round trip because the test
+shape suggested was `roundsq1` — the single most invisible entry in the catalog. **Use `diamond` to
+prove a mask is live; use the rest to style.** ⚠ This is a crop and nothing else: it never adds an
+outline, a border or a glow.
+
+### The suite's shape art is HALF margin — `TESTED`
+Every `-base.png` is 512×512 (portraits 512×768) with the silhouette occupying the central **half**
+— a 128px transparent margin all round. A mask therefore has to be anchored to a rect **twice** the
+icon's size for the shape to land ON the icon, which is exactly what `GloomsHub:GrowAnchor(t, r, 0)`
+produces. `SetAllPoints` draws the shape at half size inside a transparent border and looks like a
+sizing bug. GB has always done this via its own `hgAnchor`; that is what it was for.
+
+### Effects re-`Start` on a hot path go INVISIBLE, not just slow — `TESTED`
+Every module primes its textures to `PRIME_ALPHA` (0.02) and reveals them one frame later, because
+`AddMaskTexture` silently fails on a never-rendered texture. `Displays:ApplyConfig` runs dozens of
+times per user action (§ backlog item 4), so calling `mod:Start` from it unguarded leaves an
+animation flickering or effectively invisible. GB never met this because `Anims:Reconcile` skips
+when the winning trigger is unchanged. GA now carries an equivalent guard keyed on module + shape +
+every merged param. **A redundant-push guard here is a correctness fix, not an optimisation.**
+
+### THE REAL BUG: a texture-less aura draws the magenta panel — `TESTED`
+`Displays:ApplyConfig` falls back to `C_Spell.GetSpellTexture(cfg.spellID or spellID)`. For any
+display built in the Auras tab, `cfg.spellID` is nil and `spellID` is the display KEY — a string
+like `"d18"` — so the lookup returns nil and it draws the deliberate magenta "no art" panel. With a
+red Recolor over it that renders as flat red (0.9×1, 0.2×0, 0.6×0), which is how it was found.
+
+**Same root cause as backlog item 8** and as the warning already on `alertOff`: *`cfg.spellID` is
+nil for everything built in the tab, and `CDM:DisplaySpellID(cfg)` is the resolver.* That is now
+**three** separate sites that made the same mistake — treat any new `cfg.spellID` read as suspect.
+
+⚠ **Not fixed, on purpose.** See backlog item 9: the fix is the parked auto-icon feature and the
+owner has not decided it.
+
+### KILLED by this session
+- ~~"The shape mask is not attaching / the crop does nothing"~~ — **KILLED.** It was `roundsq1`
+  (1.2%) over a texture whose corners measure 0–30 alpha out of 255. `diamond` on the same aura cuts
+  it visibly in half. The mask was working the entire time.
+- ~~"The animation's direction and speed sliders do not work"~~ — **KILLED.** Those were MOTION's
+  Rotate controls, which drive `f.tex` via `SetChildKey("tex")` while "Effects only" hides exactly
+  that region. An animation's own speed lives in its Settings popup. They now grey out when there is
+  no artwork to turn.

@@ -86,10 +86,10 @@ works.
 
 | The change is about… | It belongs in |
 |---|---|
-| Action-bar skin, shapes/catalog, glows, layout, presets, the Bars tab | `~/GloomsBars` |
+| Action-bar skin, layout, presets, glow TRIGGERING, which shape a button wears, the Bars tab | `~/GloomsBars` |
 | Cooldown-Manager auras, displays, the Auras tab | `~/GloomsAuras` |
 | The overlay engine, conditions, spritesheets, the Overlays tab | `~/GloomsOverlays` |
-| The Suite window + tab API · `LibGloomSkin` (tokens, widgets, `UI.*`) · media registration/resolver + the Media tab · the ONE minimap launcher · the suite docs | **`~/GloomsHub`** (here) |
+| The Suite window + tab API · `LibGloomSkin` (tokens, widgets, `UI.*`) · **the silhouette catalog + its art (`Shapes.lua`)** · **the shaped animation engine (`Effects.lua`)** · media registration/resolver + the Media tab · the ONE minimap launcher · the suite docs | **`~/GloomsHub`** (here) |
 | Gloom's Build Barn | `~/Desktop/glooms-build-barn` — **NOT a suite member. See the absolute rule below.** |
 
 ### ★★★ GLOOM'S BUILD BARN IS NEVER INCLUDED IN ANYTHING. EVER.
@@ -111,6 +111,12 @@ something, **say so and stop** — do not do it.
 
 **Rough test:** changes how ONE tool looks or behaves → that tool's repo. Changes something all
 three share, or the window they live in → here.
+
+⚠ **Shapes and glow ANIMATIONS moved to the Hub on 2026-08-25** — this table used to give both to
+GB, correctly, back when GB was the only thing that drew a shape. Gloom's Auras now draws the same
+silhouettes and runs the same eight modules, so the art and the renderers have one home like every
+other shared fact. **Do not restore the old line.** SUITE-STATE records it as a locked decision and
+CONTRACTS §7-§8 hold the API.
 
 **★ Before you WRITE to a sibling repo, read its `CLAUDE.md` first.** This is the one real cost of
 working from a single project: that repo's conventions and frozen decisions do not load

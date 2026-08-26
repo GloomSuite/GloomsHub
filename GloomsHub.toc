@@ -19,12 +19,17 @@ Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
 
 # Load order (SUITE-PLAN §2.2): Core (namespace + DB + ST migration + events)
 # → Skin (the LibGloomSkin-1.0 body: design tokens + widget toolkit)
+# → Shapes (the suite's silhouette catalog + its art paths — no dependencies,
+#   so its position only has to be before anything that draws a shape)
+# → Effects (the eight shaped animation modules; needs Shapes for its masks)
 # → Shell (the one Suite window: RegisterTab/Open/FocusTab + /gloom)
 # → SoundsManifest (GENERATED index of Sounds/ — WoW cannot list a folder)
 # → Media (LSM registration, resolver, catalog API + the Media tab)
 # → MinimapButton (the ONE suite launcher — GS icon, opens last-used tab).
 Core.lua
 Skin.lua
+Shapes.lua
+Effects.lua
 Shell.lua
 SoundsManifest.lua
 Media.lua
