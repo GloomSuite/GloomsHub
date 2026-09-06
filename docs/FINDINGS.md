@@ -1016,6 +1016,27 @@ reappeared after Edit Mode; 12.1 stopped firing `EDIT_MODE_LAYOUTS_UPDATED` on e
 fixed by registering one more event, and that could not work here** — in combat the geometry wall
 gags us no matter which event fires.
 
+**★ AMENDED 2026-09-05 — THE FIRST FIX WAS ONLY HALF THE STORY.** Two code paths hid containers,
+and only one was converted. The per-bar **button COUNT** (`c.count`, "show 8 of 12") kept its
+`cont:SetShown(false)` in `Layout.lua`, so a bar dropped to 8 had the identical bug: buttons 9-12
+came back mid-fight and stayed. The owner hit it on bars 1 and 2, and his workaround — bump to 12,
+clear slots 9-12, drop back to 8 — worked only because Blizzard will not draw an EMPTY button even
+when it re-shows the container.
+
+**The confirmed trigger is HOVERING the bars in combat** (reproduced twice, 2026-08-24 and
+2026-09-05). Nothing appears without something making Blizzard re-run `UpdateShownButtons` during
+the fight, which is why it looks intermittent and why it can seem to "stop happening". ⚠ **A bar
+that will not reproduce is usually missing the trigger, not fixed** — this cost time on 09-05.
+
+The count path needed the alpha treatment **plus one thing the empty path did not**: the containers
+are **parked off-screen** while out of combat. An alpha-0 button is still CLICKABLE, and unlike a
+collapsed empty (which keeps its own hole in the grid) an out-of-grid container sits at STALE
+coordinates — dropping 12 -> 8 re-centres the eight that remain and changes the row stride, so 9-12
+can land on buttons still in use. Invisible-and-clickable over a live button is worse than the bug.
+Parking is geometry, so it happens out of combat only, which is enough because it happens once.
+Safe because both positioning branches re-anchor every in-grid container on every pass, so raising
+the count un-parks them (owner-verified 12 -> 8 -> 12, 2026-09-05).
+
 **Fix: the collapse is an ALPHA treatment now**, answered in `Skin.lua`'s `applyEmptyAlpha` and no
 longer by hiding the container. Alpha is not geometry, is not combat-restricted, and rides the
 per-button Update post-hook that already runs mid-fight — so it re-asserts itself. This is the

@@ -6,7 +6,10 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-08-25 (the SHARED SHAPE + EFFECTS migration. The 21-shape silhouette catalog,
+**Last updated:** 2026-09-05 (one GB bug, found and fixed: a bar reduced below its full button
+count had the hidden buttons come back mid-combat — FINDINGS §13's mechanism in the sibling code
+path that was never converted. Owner-QA'd both ways. Before that, the 08-25 entry:
+the SHARED SHAPE + EFFECTS migration. The 21-shape silhouette catalog,
 its 136 art files and all eight shaped animation modules moved out of GB and into the Hub, and GA
 now consumes them: aura shapes, the eight animations, an "Effects only" mode and rotation. GB is
 byte-for-byte unchanged on screen and was owner-QA'd at each stage. New items 9-10 are the tails.
@@ -230,6 +233,12 @@ kept and banked, so this is now safe to do as its own small change with its own 
 - **GB's empty-button collapse hiding the CONTAINER** — **MOVED to the alpha path 2026-08-24**,
   FINDINGS §13. Blizzard re-shows containers and GB is combat-gagged, so the hide could never hold.
   **Do not reinstate `cont:SetShown(false)` for empties**; comments at both ends say so.
+- **"Buttons past the bar's count reappear in combat"** — **FIXED 2026-09-05**, FINDINGS §13 (see
+  the AMENDED block). Same mechanism as the empty-slot case, in the count path that was left behind.
+  Out-of-grid containers are now alpha-0 AND parked off-screen. ⚠ **The trigger is HOVERING the bars
+  in combat** — without that it will not reproduce, which is not the same as being fixed. **Do not
+  "simplify" the parking away**: alpha alone leaves an invisible button clickable on top of live
+  ones.
 - **`C_Spell.IsSpellUsable` being simply banned** — **QUALIFIED 2026-08-24**, FINDINGS §12. Still
   invalid ALONE; valid ANDed with the cooldown mirror, and it is the only signal that sees a proc.
   GA's `CASTABLE` trigger state is built on that pairing.

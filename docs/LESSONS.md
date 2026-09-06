@@ -184,6 +184,24 @@ should DIFFER from what you last saved.
 - **A shared account-wide db plus a per-character pointer is the shape that breeds this.** The
   pointer being right is not the feature; the load is.
 
+## ★★ When you retire a broken approach, hunt every SIBLING that still uses it
+
+Fixing the instance you were shown is not fixing the bug. If a mechanism turned out to be unsound,
+every other place using that same mechanism is already broken — it just has not been reported yet.
+
+On 2026-08-24 the empty-slot collapse was moved off "hide the container" onto an alpha treatment,
+because Blizzard re-shows containers in combat where GB is gagged (FINDINGS §13). A comment was even
+left saying *do not reinstate the hide here*. **The line immediately below it still hid containers**
+— the per-bar button COUNT path — and stayed broken for twelve days until the owner hit it. Same
+function, same file, same screen, one line apart.
+
+The tell was there in the write-up: it named `ActionBarMixin:UpdateShownButtons` as re-showing "the
+container of every in-range slot". Anything that hides a container was therefore already doomed, not
+just the one being fixed. **A finding that explains WHY something is unsound has told you the blast
+radius — go and grep for it.** `grep -n "SetShown" Layout.lua` would have found it in seconds.
+
+Ask, every time a fix lands: *what else does this exact thing?* Then actually look.
+
 ## ★★ Pick the test that can FAIL LOUDLY, not the test that is typical
 
 When you hand the owner one step to verify a change, choose the input where a working feature and a
