@@ -109,7 +109,7 @@ shipper — its `Skin.lua` IS the lib body (embedding a copy in each tool via `.
 externals is Phase G work). `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are Hub-side aliases of the
 same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Phase E**.
 
-**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 7) — the whole API; nothing else is public:**
+**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 8) — the whole API; nothing else is public:**
 - `Skin.COLOR` — `purple · heroic · green · red · orange` (each `{r,g,b,hex}`), `dark`, `rim`
   (both `{r,g,b,a}`), `text`, `mute` (`{r,g,b}`). The §1 literals.
 - `Skin.FONT` — `title · head · body · bodyM · label` → font files under
@@ -395,7 +395,12 @@ added and the two files that call it were bumped **in the same commit**. GA foll
 same discipline on 2026-07-25 when its layout rework adopted `UI.tabHeader` — gate bumped
 in the commit that first called it, which is the only maintenance this gate ever needs.
 
-Hub currently ships **MINOR 6** (`Skin.lua`).
+Hub currently ships **MINOR 8** (`Skin.lua`).
+
+⚠ **This line was stale for three weeks** — it still said MINOR 6 after 7 shipped on 2026-08-15, and
+was only caught on 09-08. It is the line a session reads to decide whether a `SKIN_NEEDS` bump is
+needed, so a stale value here defeats the very gate §6 describes. **Update it in the same commit that
+changes MINOR**, exactly as the consumer table demands.
 
 ★ **GB and Overlays did NOT need a bump for the color picker** — they reach it through
 `UI.colorSwatch`, whose signature is unchanged, so an older Hub simply gives them the old
@@ -475,3 +480,16 @@ still holds. `GB:HandAsset` returns a path for any non-nil key even against an a
 `GB.HAND_SHAPES` falls back to a one-entry circle catalog; `GB.Anims` resolves `Effects` per call
 and runs nothing if it is absent. GB's `Config.lua` login gate now also fires when the catalog is
 missing, and its message no longer claims the bars are unaffected — because they would be.
+
+
+### `UI.WarmFonts` — the second-draw rule (MINOR 8, 2026-09-08)
+```lua
+UI.RegisterWarmPairs{ {path, size}, … }      -- queue at file load; warms with the batch
+UI.WarmFonts(extraPairs, onVerified)         -- the Hub calls this ONCE at PLAYER_LOGIN
+```
+- The **synchronous return value is a GUESS and must never be used to accuse a file.** The first
+  draw of a cold pair fails as a matter of course — that is what warming exists to fix.
+- `onVerified(stillDead)` fires ~2s later with only the paths that failed a **second** draw. That is
+  the trustworthy answer, and the only one that should reach the user. FINDINGS §5.
+- ⚠ **Registration is never gated on either result.** Silently dropping a good font is worse than
+  the false warning this replaced.

@@ -184,6 +184,28 @@ should DIFFER from what you last saved.
 - **A shared account-wide db plus a per-character pointer is the shape that breeds this.** The
   pointer being right is not the feature; the load is.
 
+## ★★ A self-check routed through the mechanism it is checking will lie
+
+If a diagnostic answers its question by performing the very operation known to be unreliable, its
+first answer is not evidence — it is a sample of the unreliability.
+
+The Hub warms fonts at login because **the first draw of a cold font misbehaves** — that fact was
+measured and written down in 2026-07. The existence probe was then built on top of warming, and took
+the result of that first draw as proof the FILE was missing. It therefore accused every drop-in font
+on every cold start, and never on `/reload`, for six weeks. The refutation was already in the
+comment directly above the code.
+
+The tells, all present and all missed until 09-08:
+- **It only fired on a cold start.** A fault that disappears once something has been touched once is
+  a warm-up artefact, not a missing file.
+- **It fired on 100% of one category** (user drop-ins) and 0% of another (bundled). Systemic, not
+  per-file — so stop inspecting individual files.
+- **The user said it works.** "It says X is broken but X works" usually means the CHECK is broken.
+  Verify the claim, but do not open by assuming the reporter is wrong.
+
+**Ask of any check: what does it do to find out, and is that thing reliable the first time?** If the
+answer is no, the check needs a second pass before it is allowed to accuse anything.
+
 ## ★★ When you retire a broken approach, hunt every SIBLING that still uses it
 
 Fixing the instance you were shown is not fixing the bug. If a mechanism turned out to be unsound,

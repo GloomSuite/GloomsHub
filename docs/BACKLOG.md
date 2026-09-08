@@ -6,7 +6,9 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-09-05 (one GB bug, found and fixed: a bar reduced below its full button
+**Last updated:** 2026-09-08 (one Hub bug, found and fixed: the login font-load warning was
+the probe judging its own warm-up draw — FINDINGS §5, now `TESTED` and closed. LibGloomSkin went to
+MINOR 8. Before that, 09-05: one GB bug, found and fixed: a bar reduced below its full button
 count had the hidden buttons come back mid-combat — FINDINGS §13's mechanism in the sibling code
 path that was never converted. Owner-QA'd both ways. Before that, the 08-25 entry:
 the SHARED SHAPE + EFFECTS migration. The 21-shape silhouette catalog,
@@ -233,6 +235,12 @@ kept and banked, so this is now safe to do as its own small change with its own 
 - **GB's empty-button collapse hiding the CONTAINER** — **MOVED to the alpha path 2026-08-24**,
   FINDINGS §13. Blizzard re-shows containers and GB is combat-gagged, so the hide could never hold.
   **Do not reinstate `cont:SetShown(false)` for empties**; comments at both ends say so.
+- **"Gloom's Hub says my fonts did not load, but they work"** — **FIXED 2026-09-08**, FINDINGS §5.
+  The probe read its own first cold draw as the verdict, so it accused every drop-in catalog font on
+  every cold client start and never on `/reload`. It now re-checks ~2s later and reports only what
+  fails twice. ⚠ **The warning is still worth having** — a real typo or a deleted `.ttf` fails both
+  passes. **Do not gate font REGISTRATION on it**; that reasoning is unchanged and is what kept the
+  owner's fonts working throughout.
 - **"Buttons past the bar's count reappear in combat"** — **FIXED 2026-09-05**, FINDINGS §13 (see
   the AMENDED block). Same mechanism as the empty-slot case, in the count path that was left behind.
   Out-of-grid containers are now alpha-0 AND parked off-screen. ⚠ **The trigger is HOVERING the bars

@@ -10,7 +10,7 @@
 > [ARCHIVE.md](ARCHIVE.md). A document nobody re-reads is a document nobody corrects.
 
 **Last updated:** 2026-08-24 (Hub/Bars/Auras at `v1.4.0`, Overlays deliberately left at `v1.3.0`;
-LibGloomSkin unchanged at MINOR 7 — nothing this session called a newer widget)
+LibGloomSkin at MINOR 8 — WarmFonts gained an onVerified callback, 2026-09-08)
 
 ---
 
@@ -135,7 +135,7 @@ of it.
 
 **`~/GloomsHub`** — symlinked into AddOns. `Core.lua` (namespace, `GloomsHubDB`, ST copy-migration,
 the permanent compat shim, `/gh` probe) · `Skin.lua` (**the body of `LibGloomSkin-1.0`**, LibStub-
-registered, **MINOR 7** — tokens, toolkit, `WarmFonts`/`RegisterWarmPairs`, **the suite's own colour
+registered, **MINOR 8** — tokens, toolkit, `WarmFonts`/`RegisterWarmPairs`, **the suite's own colour
 picker + its "in use" palette**; `GloomsHub.COLOR/.FONT/
 .UI/.MEDIA` are aliases) · **`Shapes.lua`** (the suite's silhouette catalog — 21 shapes,
 `GloomsHub:ShapeAsset/ShapeInfo/GrowAnchor`) · **`Effects.lua`** (the eight shaped animation

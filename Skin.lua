@@ -9,7 +9,7 @@
 -- change it THERE and every consumer in the same session.
 -- ============================================================
 
-local MAJOR, MINOR = "LibGloomSkin-1.0", 7   -- MINOR 7 (2026-08-15): profileBlock gains optional `accent`; nameDialog trims the name it hands back
+local MAJOR, MINOR = "LibGloomSkin-1.0", 8   -- MINOR 8 (2026-09-08): UI.WarmFonts takes an optional onVerified callback — the trustworthy "still dead after a second draw" answer
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if lib then
@@ -1407,23 +1407,64 @@ local function drawPair(path, size)
   return ok
 end
 
-local function warmBatch(pairs)
+-- ⚠ THE FIRST DRAW OF A COLD PAIR IS NOT A VERDICT. This whole file exists
+-- because a cold pair's first draw misbehaves — the comment at the top of the
+-- section records it: "cold start -> blank catalog names; /reload in the same
+-- session -> fine, because the pairs were warm by then". The probe was reading
+-- that first, unreliable draw as proof the FILE was missing, which made it
+-- self-defeating: the very act performed to warm a font was the act it judged.
+--
+-- TESTED 2026-09-08 (FINDINGS §5): the owner's two drop-in catalog fonts were
+-- named as missing on every cold client start, never on /reload, and a manual
+-- SetFont on the same path and size returned true moments later. The files were
+-- present, correctly named, and valid TrueType the entire time. The Hub's own
+-- bundled faces never tripped it because its UI has already touched them.
+--
+-- So a failure is now only a CANDIDATE. `onVerified` gets the paths that still
+-- fail on a second draw, once the first has had a chance to load the file. A
+-- genuinely missing or misnamed file fails both passes, so the real signal —
+-- catching a typo'd filename or a deleted .ttf — survives intact.
+local function warmBatch(pairs, onVerified)
   if not warmer then
     warmer = CreateFrame("Frame", nil, UIParent)
     warmer:SetPoint("BOTTOMLEFT", 0, 0); warmer:SetSize(1, 1)
     warmer:SetFrameStrata("BACKGROUND")
     warmer:SetAlpha(0.01)
   end
-  local dead   -- path → true, for every pair whose face would not apply
+  local dead        -- path → true, for every pair whose face would not apply
+  local suspects    -- the (path, size) pairs behind those, for the second pass
   for _, pair in ipairs(pairs or {}) do
     if not drawPair(pair[1], pair[2]) then
       dead = dead or {}
       dead[pair[1]] = true
+      suspects = suspects or {}
+      suspects[#suspects + 1] = pair
     end
   end
   warmer:Show()
   C_Timer.After(2, function() warmer:Hide() end)   -- 2s on screen = safely rasterized
-  return dead
+
+  if onVerified then
+    if not suspects then
+      onVerified(nil)
+    else
+      -- Same 2s the warmer stays up for, and for the same reason: by then the
+      -- first draw has been rasterized and the face is loaded if it can be.
+      C_Timer.After(2, function()
+        local still
+        for _, pair in ipairs(suspects) do
+          -- Clear the cached COLD answer, or drawPair just repeats it.
+          warmedKeys[tostring(pair[1]) .. "@" .. tostring(pair[2])] = nil
+          if not drawPair(pair[1], pair[2]) then
+            still = still or {}
+            still[pair[1]] = true
+          end
+        end
+        onVerified(still)
+      end)
+    end
+  end
+  return dead   -- first-pass result; unchanged for callers that don't pass onVerified
 end
 
 function UI.RegisterWarmPairs(list)
@@ -1434,7 +1475,10 @@ function UI.RegisterWarmPairs(list)
   end
 end
 
-function UI.WarmFonts(extraPairs)
+-- `onVerified(stillDead)` (MINOR 8, optional) fires ~2s later with only the
+-- paths that failed a SECOND draw — the trustworthy answer. The synchronous
+-- return value is the first-pass guess and must not be used to accuse a file.
+function UI.WarmFonts(extraPairs, onVerified)
   warmRan = true
   local all = {}
   for _, entry in ipairs(WARM) do
@@ -1442,7 +1486,7 @@ function UI.WarmFonts(extraPairs)
   end
   for _, pair in ipairs(pendingPairs) do all[#all + 1] = pair end
   for _, pair in ipairs(extraPairs or {}) do all[#all + 1] = pair end
-  return warmBatch(all)   -- path → true for anything that would not load; Media.lua names them
+  return warmBatch(all, onVerified)
 end
 
 -- Family-styled hover tooltip (dark plate, purple title, GeneralSans body).

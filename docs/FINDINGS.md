@@ -533,12 +533,41 @@ and a dead LSM font applied to GB's keybind text falls back visibly instead of r
 **The durable shape to check for is not "stores a path" — it is "builds a path from saved data."**
 The catalog owner always does. Promoted to [LESSONS.md](LESSONS.md).
 
-### `UNTESTED` — one question the fix deliberately leaves open
-Warming now doubles as an existence probe (the only one the client permits — there is no filesystem
-API). **Registration is deliberately NOT gated on it:** WoW indexes fonts at launch, so a font added
-this session with a restart pending may fail the probe while being perfectly valid. Nobody has
-tested which way that goes. Until someone does, the probe stays advisory — silently dropping a good
-font would be worse than the bug this fixed. Pinned in [CONTRACTS.md](CONTRACTS.md) §4.
+### ✅ ANSWERED 2026-09-08 — and the answer was a THIRD thing, not either option
+
+**`TESTED`.** The open question was whether a present-but-not-yet-indexed font would fail the probe.
+It does — but not for the reason assumed, and the trigger is not "added this session". **The probe
+was reading its own warm-up draw as the verdict.**
+
+**Symptom (owner):** on every COLD client start, both of his drop-in catalog fonts were named as
+"missing or misnamed". Never on `/reload`. The fonts worked the whole time.
+
+**Evidence, in order:**
+1. Both files present in `Fonts/`, byte-exact filenames vs. the catalog entries, valid TrueType
+   (sfnt `0x00010000`), and `FONT_PATH` correct. So not a typo, not a format the client refuses.
+2. `SetFont` on the same path at the probe's own size, run manually after login, returned **`true`**
+   for the drop-in font AND for a bundled one. The face was fine.
+3. **Confirmed by prediction:** the owner was asked whether `/reload` warns. It does not — the pairs
+   are warm by then. Cold start warns, warm reload does not, every time.
+
+**Mechanism.** This file's own section header records that *"the first draw of a cold pair can render
+blank text: cold start → blank catalog names; `/reload` in the same session → fine, because the pairs
+were warm by then."* The probe judged the font on exactly that first, unreliable draw — **the very act
+warming exists to perform was the act it was reading as evidence.** The Hub's bundled faces never
+tripped it because its own UI has already touched them; a user's drop-in font is stone cold.
+
+**Fix (lib MINOR 8):** a failed first draw is now only a CANDIDATE. `UI.WarmFonts` takes an optional
+`onVerified` callback and re-draws the failures ~2s later, and only what fails the SECOND pass is
+reported. A genuinely missing or misnamed file fails both, so the real signal survives. Owner-QA'd
+on a cold restart, 2026-09-08: no warning, fonts working. Pinned in [CONTRACTS.md](CONTRACTS.md) §4.
+
+⚠ **The registration is still NOT gated on the probe, and must not be** — that reasoning is
+unchanged and is what kept these fonts working throughout.
+
+### `KILLED` — do not revive this reasoning
+- ~~*"A probe that draws the font is the cheap existence check the client permits."*~~ **Half true.**
+  Drawing is the only check available, but the FIRST draw is not evidence — it is the operation being
+  fixed. Any self-check routed through the mechanism it is checking will lie the first time.
 
 **Also unchecked:** GA's three `.ogg` sound paths into `ArcUI` and `EnhanceQoL` — the same
 "points into an addon that may not be installed" shape, through a different call. `PlaySoundFile` is

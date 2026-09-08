@@ -111,8 +111,24 @@ function Media:RegisterAll()
     -- session (file present, restart pending) may well fail the probe while
     -- being perfectly valid. Skipping registration on that signal would
     -- silently drop a good font, which is worse than the problem being fixed.
-    -- Whether a present-but-unloaded font passes is UNTESTED — see FINDINGS §5.
-    local dead = GloomsHub.UI.WarmFonts(warm)
+    --
+    -- ★ THE VERDICT IS NOW THE SECOND DRAW, NOT THE FIRST (2026-09-08, lib
+    -- MINOR 8). The first draw of a COLD font reliably fails — that is the very
+    -- thing warming exists to fix — so the old synchronous result accused every
+    -- drop-in catalog font of being missing on every cold client start, and
+    -- never on /reload. Owner-reported and confirmed by prediction; FINDINGS §5.
+    -- The callback fires ~2s later with only what still fails, which is the
+    -- answer worth printing. A truly missing file fails both passes.
+    GloomsHub.UI.WarmFonts(warm, function(stillDead)
+        if not stillDead then return end
+        for _, entry in ipairs(GloomsHubDB.fonts) do
+            if stillDead[FONT_PATH .. entry.file] then
+                GloomsHub:Print("|cffff9900Font \"" .. entry.name .. "\" did not load|r — GloomsHub\\Fonts\\"
+                    .. entry.file .. " is missing or misnamed. Check the filename, or remove it in the Media tab. "
+                    .. "(If you only just added it, restart WoW first — fonts load at launch.)")
+            end
+        end
+    end)
 
     local lsm = GetLSM()
     if not lsm then
@@ -128,11 +144,6 @@ function Media:RegisterAll()
             fontCount = fontCount + 1
         else
             GloomsHub:Print("|cffff4444Font skipped — " .. entry.name .. ": " .. (err or "unknown") .. "|r")
-        end
-        if dead and dead[FONT_PATH .. entry.file] then
-            GloomsHub:Print("|cffff9900Font \"" .. entry.name .. "\" did not load|r — GloomsHub\\Fonts\\"
-                .. entry.file .. " is missing or misnamed. Check the filename, or remove it in the Media tab. "
-                .. "(If you only just added it, restart WoW first — fonts load at launch.)")
         end
     end
 
