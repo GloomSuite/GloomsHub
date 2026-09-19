@@ -9,43 +9,25 @@
 > **Keep this file short enough to re-read.** If it passes ~180 lines, move the settled history to
 > [ARCHIVE.md](ARCHIVE.md). A document nobody re-reads is a document nobody corrects.
 
-**Last updated:** 2026-09-19 (Hub/Bars/Auras at `v1.4.0`, Overlays deliberately left at `v1.3.0`;
-LibGloomSkin at MINOR 8. Hub media registration moved to ADDON_LOADED; a FIFTH tool, Gloom's
-Portraits, is decided and not yet built — BACKLOG item 11.)
+**Last updated:** 2026-09-19, evening (**five tools**: Gloom's Portraits is built, both stages,
+owner-QA'd, on `master`, tagged `v1.0.0` for stage 1 only. Hub/Bars/Auras at `v1.4.0`, Overlays at
+`v1.3.0`; LibGloomSkin at MINOR 8. **Distribution decision recorded: symlinks for the owner,
+CurseForge if ever public, the WoWup path retired.**)
 
 ---
 
 ## The one-paragraph answer
 
-**The 7-phase plan is complete and QA'd. All four addons ship and install cleanly.** GloomsHub is the
-shared base; Bars, Auras and Overlays each mount a tab in its window and hard-depend on it.
-StoneTweaks is retired, all five repos are public under the **`GloomSuite`** org (Build Barn stayed
-with `HandofDevastation`). **Hub, Bars and Auras are published at `v1.4.0`; Overlays remains at
-`v1.3.0`** (2026-08-24, verified anonymously against `/releases/latest`, not copied). **This is the
-first real version drift and it is correct** — Overlays was not touched, and the locked decision
-below permits exactly this. Do not "level" it. What's left is in [BACKLOG.md](BACKLOG.md) — eight
-items.
+**The 7-phase plan is complete and QA'd. Five addons: the Hub and four tools.** GloomsHub is the
+shared base; Bars, Auras, Overlays and **Portraits** each mount a tab in its window and hard-depend
+on it. StoneTweaks is retired; all five suite repos are public under the **`GloomSuite`** org (Build
+Barn stayed with `HandofDevastation`). **Hub, Bars and Auras are at `v1.4.0`; Overlays at `v1.3.0`;
+Portraits at `v1.0.0`** with stage 2 on `master` untagged. Versions drift by design — do not "level"
+them. What's left is in [BACKLOG.md](BACKLOG.md).
 
-**★ Patch 12.1 went LIVE on 2026-08-11, and all four suite TOCs now declare `## Interface: 120100`**
-(bumped 2026-08-12; the number was read off the installed addon set, not assumed). **Shipped in the
-`v1.3.0` cut on 2026-08-15** — WoWup users are no longer flagged out of date.
+**★ Patch 12.1 went LIVE on 2026-08-11, and every suite TOC declares `## Interface: 120100`**
+(bumped 2026-08-12; the number was read off the installed addon set, not assumed).
 
-**★ The Hub gained a SOUND CATALOG on 2026-08-24.** Sounds registered into LibSharedMedia — which
-is what puts them in GA's sound picker and every other LSM-aware addon. Two routes: a FileDataID or
-filename typed into the Media tab, or bulk via `Sounds/` + `SoundsManifest.lua`. **WoW cannot
-enumerate a folder**, so the manifest is a generated index — `Rebuild Sounds.command` (double-click)
-→ `tools/build-sound-manifest.sh` → `/reload`. Exactly the pattern GB's `IconsManifest.lua` uses.
-⚠ `Sounds/` is git-ignored and **`SoundsManifest.lua` ships EMPTY**, same rule as GB's icon
-manifest: the mechanism ships, the owner's audio does not.
-
-**★ GA gained three trigger/sound features on 2026-08-24** — a `CASTABLE` trigger state
-(`cd_ready AND IsSpellUsable`, the only way to see a proc), a PLAYER POWER load condition (17 power
-types, whole units), and a "When it comes off cooldown" sound timing that fires on a real cooldown
-transition rather than the display's shown edge. See FINDINGS §12.
-
-**★ GA gained a new subsystem on 2026-08-12: the 12.1 duration engine** (`AuraDuration.lua` +
-`AuraDuration.xml`, GA's first XML file). It renders DoT timers and stack counts on 12.1 by driving
-regions a Blizzard `AuraButton` owns. Owner-QA'd. See FINDINGS §1.
 **Known live bugs in shipped code: none the owner has reported.** (The Quick Keybind concern that
 used to sit here was CLOSED as not a GB bug — FINDINGS §8 — and the two bugs found since, FINDINGS
 §13 and §5, were fixed the day they were found and are in `v1.4.0`/master.)
@@ -77,10 +59,18 @@ of it.
   line predates GA drawing shapes at all. What stayed GB's: which shape a button wears, the Bars-tab
   picker, the plate extension, and all glow triggering.
 - **Four separate addons + one shared base**, not a mega-addon. The Hub ships its own release.
-  **★ A FIFTH tool is decided (2026-09-19): "Gloom's Portraits"** — the owner's stand-alone
-  `StoneModel` addon (3D/2D player + target portraits) joins the suite as `GloomsPortraits`, its own
-  repo under `GloomSuite`, hard-depending on the Hub like the others. Not into the Hub (shared infra,
-  not a tool), not into Overlays (a 3D model is not a textured overlay). Not built yet — BACKLOG 11.
+  **★ The FIFTH tool is Gloom's Portraits** (decided and built 2026-09-19) — 3D/2D player + target
+  portraits, its own repo `GloomSuite/GloomsPortraits`, hard-depending on the Hub like the others.
+  Not into the Hub (shared infra, not a tool), not into Overlays (a 3D model is not a textured
+  overlay). ⚠ Its predecessor's name is not publishable (Hub `CLAUDE.md` PRIVACY); the one permitted
+  survivor is the old SavedVariables global in its copy-migration, the `StoneTweaksDB` precedent.
+- **★ DISTRIBUTION: SYMLINKS FOR THE OWNER, CURSEFORGE IF EVER PUBLIC — the WoWup path is RETIRED**
+  (the owner, 2026-09-19). Every suite addon on his client is a symlink into `~/<repo>`; WoWup's
+  GitHub install "doesn't work very well" (Build Barn and Loot Advisor both moved to CurseForge over
+  it). A tag still cuts a GitHub Release, and that is now a version MARKER and nothing else — not a
+  delivery. Do not verify `latest` for WoWup's sake, do not frame a change as "so WoWup picks it
+  up", do not tell him to install a release. CurseForge setup (project IDs, token) happens only when
+  he says the suite goes public.
 - **★ THE HUB REGISTERS ITS MEDIA AT ITS OWN `ADDON_LOADED`, NOT AT `PLAYER_ENTERING_WORLD`**
   (2026-09-19). Every addon that sorts before "G" builds its frames at `PLAYER_LOGIN`; registering
   after that let LibSharedMedia hand them its DEFAULT font for the owner's name, which they cached
@@ -172,6 +162,14 @@ fixed angle and a continuous spin.
 
 **`~/GloomsOverlays`** — `master`. Hard-deps the Hub; mounts the **Overlays** tab; frame pooling and
 in-place layout apply; all nine stratas plus a numeric Level.
+
+**`~/GloomsPortraits`** — `master`. Hard-deps the Hub; two files — the ENGINE (`GloomsPortraits.lua`:
+frames, `GloomsPortraitsDB`, the secret-identity handling of FINDINGS §17, a small API on the
+`GloomsPortraits` namespace) and the **Portraits** tab (`GloomsPortraits_Tab.lua`, `SKIN_NEEDS = 4`,
+order 40). `/gp` → `ToggleWindow("portraits")`. No profile block (two fixed units, one account-wide
+config), no minimap button, no floating panel. Each mode keeps its own size/position/layer
+(`cfg.layouts[mode]`); the in-combat 2D stand-in wears the 2D set. The Gp mark is
+`Media/ui/logo.png`, composed from the family G and GB's b flipped.
 ⚠ **`VibeOverlayDB` / `VibeOverlayDBChar` keep their names on purpose.** WoW keys SavedVariables off
 the addon FOLDER name; 23 save files were copied in place and **12 characters ride non-Default
 profiles**. Renaming those globals is silent data loss, not cleanup.
@@ -196,7 +194,7 @@ Both were identity-scanned and are clean.
   re-run on this machine, move the symlinks aside first and restore after — **and uninstall in
   WoWup BEFORE restoring them**, because WoWup's Remove deletes the folder it manages and could
   follow a symlink into live source.
-- **All four addons point at their normal repos on BOTH the retail and PTR clients**, so an edit is
+- **Every suite addon points at its normal repo on BOTH the retail and PTR clients**, so an edit is
   live on both. Remember that before editing during PTR work.
 - **★ `~/GloomsBars/IconsHD/` is the ONLY copy of the owner's hand-authored action-bar icons.** It is
   gitignored by design (his art must never enter a public repo), so git holds nothing and deleting

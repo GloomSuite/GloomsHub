@@ -22,11 +22,10 @@
 > **When a claim is disproved, strike it through and move it to the KILLED list under its finding.
 > Never delete it** — a silently removed theory gets re-derived by the next session.
 
-**Last updated:** 2026-09-19 (new §15 — a DoT REFRESH fires no reliable CDM alert; the player's own
-cast is the signal. New §16 — the owner's font rendered in Friz on EllesmereUI's unit frames because
-the Hub registered media at PLAYER_ENTERING_WORLD and LSM answers an unknown name with its default.
-Both `TESTED`, both fixed, both owner-QA'd. §12's pandemic entry gained a pointer.)
-
+**Last updated:** 2026-09-19, evening (new §17 — what the game will and won't identify for an addon
+on a restricted map, measured `/dump` by `/dump` in a delve for Gloom's Portraits. Earlier the same
+day: §15 — a DoT REFRESH fires no reliable CDM alert; §16 — the owner's font drew in Friz on EUI's
+unit frames. All `TESTED`, all fixed, all owner-QA'd.)
 ---
 
 ## §1 — GA cannot READ aura duration/stacks on 12.1 — but CAN display them via `AuraContainer` ★
@@ -1258,3 +1257,56 @@ nobody drafts the report unasked.
   late-registration listener makes "before PLAYER_LOGIN" sufficient, and the Hub's own ADDON_LOADED
   meets that.
 
+---
+
+## §17 — Which units the game will identify for an addon on a restricted map ✅ `TESTED` 2026-09-19
+
+**Why it matters.** Gloom's Portraits draws a 3D `PlayerModel` of the target. In a delve, targeting a
+friendly (Valeera) worked; targeting a mob did not — and worse, friendly → clear → mob showed the
+FRIENDLY model again. The 2026-09-05 note in the engine said "UnitGUID is secret in instances; no
+workaround" and had been written from one measurement whose combat state was never recorded.
+
+### ▶ `TESTED` — every line is a `/dump issecretvalue(…)` the owner ran in a delve, on a hostile mob
+
+| Question | Out of combat | In combat |
+|---|---|---|
+| `UnitGUID("target")` | **false** (readable) | **true** |
+| `UnitName("target")` | **false** | — |
+| `UnitGUID("nameplateN")` (the mob's own plate) | **true** | — |
+| `UnitGUID("mouseover")` (cursor on the mob) | **true** | — |
+| `UnitIsUnit("target", "nameplateN")` | — | **a real boolean** — one plate `true`, the rest `false`, none secret |
+
+Corollaries, also `TESTED` the same evening:
+- **`Model:SetUnit` on a secret unit loads NOTHING** — `GetDisplayInfo()` stays 0 at 0, 0.5 and 2
+  seconds and `OnModelLoaded` never fires. It also does not clear what was there, which is the
+  stale-model symptom.
+- **`ClearModel()` on a `PlayerModel` did not clear it either** — `OBSERVED`: the symptom survived
+  a code path that called it. Cause not established; the fix does not depend on it (the frame is
+  hidden while blocked).
+- **`SetPortraitTexture(tex, "target")` renders the correct face for a secret hostile in combat.**
+  It is engine-side and on no guarded list. That is the 2D stand-in.
+- **`SetCreature(npcID)`** takes a plain number and is not guarded; the ID is read from the GUID
+  while the target is identifiable and recorded against the plate it stands under.
+
+**So the rule is:** on a restricted map the game identifies **exactly one unit** for an addon — the
+**target, out of combat**. Everything else you can point at is secret before the pull, and the
+target goes secret at the pull. The one thing that survives into combat is *sameness*: which
+nameplate the target is. **Shipped on that basis** (GloomsPortraits, master): 3D out of combat; 3D
+for a mob targeted before the pull when tabbed back to; the correct 2D portrait otherwise, in its
+own 2D layout; a re-ask on `PLAYER_REGEN_ENABLED` so the stand-in yields to 3D by itself.
+
+**Two working-practice traps from the same evening,** both now in LESSONS: a `/run` pasted into chat
+is silently truncated at **255 characters** and then does nothing at all (two probes were lost to
+this before the diagnostic moved into the addon as `/gp plates`); and **secrecy differs by TOKEN
+and by combat state** — test the exact token the code will use, in the state it will use it.
+
+### `KILLED` — do not revive these
+- ~~*"UnitGUID is secret in instances; there is no addon-side workaround."*~~ **KILLED in its
+  generality** (the 2026-09-05 engine comment). It is secret **in combat**; out of combat the target
+  is fully identifiable, which is what the pre-pull path and the nameplate cache are built on.
+- ~~*"Record the whole pack from its nameplates as it comes into view."*~~ **KILLED** — plate units
+  are secret on the map, combat or not; a model of one never loads.
+- ~~*"Sweep the cursor over the pack to identify it."*~~ **KILLED** — `mouseover` is secret too.
+- ~~*"Read the display ID off a model after SetUnit and replay it with SetDisplayInfo."*~~ **KILLED**
+  for secret units (nothing loads, so there is no ID to read); untested for identifiable ones,
+  and unnecessary — the GUID's creature ID plus `SetCreature` needs no model at all.

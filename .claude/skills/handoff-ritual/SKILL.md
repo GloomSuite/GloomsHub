@@ -19,7 +19,7 @@ doesn't apply, say so in the final report rather than omitting it.
 ## 1 · Take stock
 
 ```bash
-for d in ~/GloomsHub ~/GloomsBars ~/GloomsAuras ~/GloomsOverlays; do
+for d in ~/GloomsHub ~/GloomsBars ~/GloomsAuras ~/GloomsOverlays ~/GloomsPortraits; do
   echo "=== $d ($(git -C $d rev-parse --abbrev-ref HEAD)) ==="; git -C $d status --short
 done
 ```
@@ -27,7 +27,7 @@ done
 Write down, for yourself: **what actually changed this session, what was proved, what was
 disproved, and what is left unfinished.** Everything below is bookkeeping against that list.
 
-⚠ Branches differ: Hub and Overlays are on `master`, Bars and Auras on `main`. Don't assume.
+⚠ Branches differ: Hub, Overlays and Portraits are on `master`, Bars and Auras on `main`. Don't assume.
 
 ---
 
@@ -89,7 +89,7 @@ the same commit — forgetting is the only way to defeat the version gate.
 
 ## 7 · The owning repo's own docs
 
-If the work was Bars', Auras' or Overlays', update **that repo's** `docs/HANDOFF.md` with the detail
+If the work was Bars', Auras', Overlays' or Portraits', update **that repo's** `docs/HANDOFF.md` (Portraits keeps its notes in its `CLAUDE.md`) with the detail
 — the tool-specific reasoning, frozen decisions and gotchas live there, not here.
 
 **Point, never copy.** Suite-wide facts (release state, phase status, contracts) live only in the
@@ -129,8 +129,9 @@ Release **only the addons that actually changed**. Versions drift by design; do 
 4. **Confirm the workflow actually ran.** A tag pushed too close to a branch push can land before
    the workflow registers and silently trigger nothing:
    `gh api repos/GloomSuite/<repo>/actions/runs --jq '.workflow_runs[0] | {name, status, conclusion}'`
-5. **Verify `latest` ANONYMOUSLY** — it is what WoWup installs, and it breaks if releases land out
-   of order. That endpoint caches, so re-read a stale answer before chasing it:
+5. **Verify `latest` ANONYMOUSLY** — it breaks if releases land out of order (this used to matter for
+   WoWup; that path is retired, but a wrong `latest` is still a wrong marker). The endpoint caches,
+   so re-read a stale answer before chasing it:
    `curl -s https://api.github.com/repos/GloomSuite/<repo>/releases/latest | grep tag_name`
    Fix with `gh api -X PATCH repos/GloomSuite/<repo>/releases/<id> -f make_latest=true`.
 6. Update the version in `SUITE-STATE.md` and tell him which addons moved and which deliberately

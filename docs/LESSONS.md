@@ -322,6 +322,11 @@ design, not a gap in his understanding** — the naming genuinely lied.
   that looks like YOUR bug, not a length limit. The tell is the `msg=` local in the error: it shows
   the string cut off mid-token. **Keep in-client one-liners well under 255**, and when a diagnostic
   genuinely needs more, write a throwaway addon instead of golfing the line down.
+  ⚠ **And AGAIN on 2026-09-19 — a 271-character probe, and this time it produced NOTHING**, not
+  even an error the owner could see, so it read as "the API is dead" for a round trip. The rule that
+  finally stuck: **do not hand the owner a `/run` at all. Put the probe in the addon as a slash
+  subcommand** (`/gp plates`, `/gp probe`) — no length limit, printable labels, and it stays for the
+  next session. Count with `printf '%s' '…' | wc -c` if a one-liner is unavoidable.
   ⚠ **This was already written here — twice — and it happened AGAIN on 2026-07-26**: a 268-character
   probe went to the owner and failed on his first paste. Knowing the rule did not stop it, so the
   rule needs a mechanical step, not more prose: **before sending any `/run` line, count it**
@@ -353,6 +358,15 @@ design, not a gap in his understanding** — the naming genuinely lied.
 
 - **`/reload` is enough, including for NEW files.** The old "new files → full client restart" rule
   is **RETIRED**; it cost the owner restarts he never needed.
+- **★★ SECRECY IS PER TOKEN AND PER COMBAT STATE — test the exact token the code will use, in the
+  state it will use it.** On 2026-09-19 (FINDINGS §17) the same hostile mob in the same delve was
+  identifiable through `target` out of combat, secret through `target` in combat, and secret through
+  its own `nameplateN` and through `mouseover` even OUT of combat — while `UnitIsUnit("target",
+  "nameplateN")` stayed a plain boolean in combat. A single measurement generalised into "GUIDs are
+  secret in instances" had been sitting in a comment for two weeks, wrong in both directions. One
+  `/dump issecretvalue(...)` per (token, state) pair is cheap; write the table down, not the rule
+  you inferred from one cell of it. And **a guarded `SetUnit` does NOT fail — it does nothing**, so
+  "the model is still showing" is never evidence that the call worked.
 - **★★ REGISTER SHARED MEDIA AS EARLY AS THE CATALOG EXISTS — and never trust an LSM `Fetch` that
   was not told `noDefault`.** Two facts that combined into a wrong font on 2026-09-19 (FINDINGS
   §16): (1) `LibSharedMedia:Fetch(type, name)` answers an UNKNOWN name with the type's DEFAULT

@@ -6,15 +6,14 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-09-19 (two jobs, both owner-QA'd and shipped to master/main, nothing
-released. GA: bars gained a **Pandemic Background** — the backdrop wears a second colour in the
-DoT's pandemic window and reverts on refresh; the refresh signal had to be MEASURED, FINDINGS §15.
-Hub: the owner's font drew in Friz on EllesmereUI's unit frames because the Hub registered media at
-PLAYER_ENTERING_WORLD; registration now happens at the Hub's ADDON_LOADED, FINDINGS §16. **New item
-11 is the next job the owner asked for: Gloom's Portraits, a fifth suite tool.** Before that, 09-08:
-the login font-load warning fix, FINDINGS §5. Before that, 09-05: GB's hidden-button-count bug,
-FINDINGS §13. Before that, 08-25: the shared SHAPE + EFFECTS migration into the Hub, FINDINGS §14.)
-
+**Last updated:** 2026-09-19, evening (**Gloom's Portraits is BUILT — both stages, owner-QA'd, on
+`master`.** The suite has five tools. The instance problem — 3D models of enemies — was MEASURED
+rather than assumed: the game identifies exactly one unit for an addon on a restricted map, the
+target, out of combat; FINDINGS §17 has every `/dump`. What shipped is the best that measurement
+permits, and the round-bottomed 3D bust the owner asked for is impossible for a reason recorded
+under "Not open". **New item 12 is what he wants next: a circular health-bar treatment.** Earlier the
+same day: GA's Pandemic Background (FINDINGS §15) and the Hub's ADDON_LOADED media registration
+(FINDINGS §16). ⚠ The WoWup distribution path is RETIRED — see "Not open".)
 ---
 
 ## Open items
@@ -186,45 +185,60 @@ kept and banked, so this is now safe to do as its own small change with its own 
 
 ---
 
-### 11 · Gloom's Portraits — bring `StoneModel` into the suite as a fifth tool ★ NEXT
-**Repo:** NEW — `~/GloomsPortraits` under the `GloomSuite` org (+ Hub docs) · **Size:** stage 1 ~an hour, stage 2 a design session · **Evidence:** decided 2026-09-19
+### 12 · A circular health-bar treatment ★ NEXT — the owner will brief it
+**Repo:** UNDECIDED — the owner said so himself · **Size:** a design session first · **Evidence:** not started
 
-`StoneModel` is a single-file addon (~900 lines, `/sm`) already installed at
-`…/Interface/AddOns/StoneModel/` — free-floating 3D full-body models or 2D circular portraits for
-player and target, each placeable/sizeable/rotatable, with show conditions. It has no repo and no
-project. **The owner wants it in the suite and chose the name "Gloom's Portraits."**
+The owner's words (2026-09-19, closing the Portraits session): *"I want to discuss the creation of
+a circular health bar treatment. Whether that means co-opting EUI's unitframes or just the health
+bar part, I don't know. I'll give you more details in the next session."* **Open with the question,
+not a proposal** — he has details he has not given yet.
 
-**Stage 1 — make it a suite member, no visual change:**
-- New repo `GloomsPortraits` (`GloomsPortraits.toc`, namespace `GloomsPortraits`, SavedVariables
-  `GloomsPortraitsDB`, slash `/gp`), `## Dependencies: GloomsHub`, `Author: Gloom` (the TOC currently
-  says `Claude`). Copy `.pkgmeta`, `.gitignore`, the release workflow and a `CLAUDE.md` from a
-  sibling — Overlays is the smallest template.
-- **⚠ PRIVACY: the current name is NOT publishable — the Hub `CLAUDE.md` PRIVACY section says
-  why, and the same rule already retired StoneTweaks' name. Neither the old filename, the `.bak`
-  beside it, nor the old folder name may appear in any commit.** Start the repo from the renamed
-  file only.
-- **One-time copy-migration** of `StoneModelDB` → `GloomsPortraitsDB` so positions/sizes survive —
-  the exact pattern `MigrateFromStoneTweaks` uses in the Hub's `Core.lua`. Never move, only copy.
-- Symlink into the client, `/reload`, confirm the models appear where they were. Keep the existing
-  `/sm` panel working (add `/gp` alongside).
-- Create the GitHub repo under **GloomSuite** with private membership, push, cut `v1.0.0`.
+What the next session already knows, so it doesn't re-derive it:
+- **A circular bar is drawable on 12.1 with secret values.** Health is secret in instances but
+  `StatusBar:SetValue` accepts a secret (FINDINGS §1 — the whole duration engine rests on that).
+  A *circular* bar is not a StatusBar, though: it is a cooldown-swipe style reveal or a masked
+  texture, and whether `Cooldown:SetCooldown` / `MaskTexture` paths can be driven from a secret
+  health value is **UNTESTED** — measure it before designing anything.
+- **EllesmereUI's unit frames were read in FINDINGS §16** — module layout, its font caching, how it
+  rebuilds frames. That is the starting map if "co-opt EUI" is the route.
+- **Ownership:** a new visual around the player/target is closest to Gloom's Portraits (it already
+  owns the player/target frames and their placement) — but say that as a recommendation and let him
+  decide; a health bar might equally be its own thing.
 
-**Stage 2 — make it look like one (its own session):** replace the control panel with a **Portraits
-tab** in the Suite window on LibGloomSkin — rail + editor like GB, sliding switches, the shared
-sliders/colour picker. Read `StoneModel.lua` properly before designing; stage 1 only skims it.
-
-**Not the Hub (shared infra, not a tool) and not Overlays (a 3D model is not a textured overlay).**
-
-**Read first:** `…/Interface/AddOns/StoneModel/StoneModel.lua` · the PRIVACY section of the Hub's
-`CLAUDE.md` · `MigrateFromStoneTweaks` in `~/GloomsHub/Core.lua` · `~/GloomsOverlays/.pkgmeta`,
-`GloomsOverlays.toc` and `.github/workflows/` as the packaging template · [CONTRACTS.md](CONTRACTS.md)
-§1-§2 (the tab API) only when stage 2 starts
+**Read first:** [FINDINGS.md](FINDINGS.md) §1 (secrets, what accepts them) and §16 (EUI's unit
+frames) · `~/GloomsPortraits/CLAUDE.md` if it lands there · the EUI Unit Frames module under
+`…/Interface/AddOns/EllesmereUIUnitFrames/` once he says which route
 
 ---
 
 ## Not open — recorded so nobody re-raises them
 
 > Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
+
+- **"Show the 3D model of an enemy targeted mid-combat in an instance"** — **NOT POSSIBLE, measured
+  2026-09-19** (FINDINGS §17). On a restricted map the game identifies ONE unit for an addon: the
+  target, out of combat. Nameplate units and mouseover are secret even before the pull; `SetUnit`
+  on any of them loads nothing. What ships is the ceiling: 3D out of combat, 3D for a mob targeted
+  before the pull when tabbed back to (nameplate-matched, `SetCreature`), the correct 2D portrait
+  otherwise, flipping back to 3D when combat drops. The owner called it "so fucking lame" and he is
+  right; **do not re-chase it without a NEW API.** `UnitIsUnit("target","nameplateN")` being a real
+  boolean in combat is the one door that is open, and it is already used.
+- **A ROUND-BOTTOMED 3D bust (a mask on a PlayerModel)** — **IMPOSSIBLE on the current client**
+  (2026-09-19). A `PlayerModel` is a live viewport into a rectangle, not a texture; `MaskTexture`,
+  `SetClipsChildren` and alpha all act on textures or rectangles, and there is no render-to-texture
+  for addons. A corner matte hides the world under the corners; slicing into clipped copies is
+  jagged, heavy and the copies' idle animations drift apart. **Becomes a one-liner if Blizzard ever
+  ships model-to-texture — that is the only trigger for reopening it.** The owner wants it; record
+  the wish, not a hack.
+- **The WoWup / GitHub-Releases distribution path** — **RETIRED by the owner, 2026-09-19.** He runs
+  every suite addon as a SYMLINK for development; WoWup's GitHub install "doesn't work very well"
+  (learned on Build Barn and Loot Advisor, both moved to CurseForge). Tags still cut a GitHub
+  Release as a version marker, nothing more. **If the suite ever goes public it goes through
+  CurseForge**, and he will say when. Do not frame changes as "so WoWup picks it up", do not verify
+  `latest` for WoWup's sake, do not tell him to install from a release.
+- **Gloom's Portraits keeping its own minimap button / floating panel / slash subcommands** — all
+  **GONE with stage 2** (2026-09-19). The suite has ONE launcher; `/gp` opens the tab; the tab's
+  open/close IS the lock. Reset lives in the tab's rail.
 
 - **"GB's per-character profiles don't work / my alt looks wrong"** — **FIXED 2026-08-15**, FINDINGS
   §11. Login never loaded the bound profile. ⚠ The old bug already overwrote some saved presets;

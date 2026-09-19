@@ -19,6 +19,68 @@
 
 ---
 
+# MOVED OUT OF SUITE-STATE — 2026-09-19 evening (the sound catalog + two shipped GA features)
+
+Pure history that had been sitting in the file people re-read. The mechanisms are documented where
+they live — FINDINGS §12 and §1, GA's own HANDOFF, and CONTRACTS §3 for the sound catalog. The
+"manifest ships EMPTY" rule stays live in SUITE-STATE's release paragraph and in LESSONS.
+
+**★ The Hub gained a SOUND CATALOG on 2026-08-24.** Sounds registered into LibSharedMedia — which
+is what puts them in GA's sound picker and every other LSM-aware addon. Two routes: a FileDataID or
+filename typed into the Media tab, or bulk via `Sounds/` + `SoundsManifest.lua`. **WoW cannot
+enumerate a folder**, so the manifest is a generated index — `Rebuild Sounds.command` (double-click)
+→ `tools/build-sound-manifest.sh` → `/reload`. Exactly the pattern GB's `IconsManifest.lua` uses.
+⚠ `Sounds/` is git-ignored and **`SoundsManifest.lua` ships EMPTY**, same rule as GB's icon
+manifest: the mechanism ships, the owner's audio does not.
+
+**★ GA gained three trigger/sound features on 2026-08-24** — a `CASTABLE` trigger state
+(`cd_ready AND IsSpellUsable`, the only way to see a proc), a PLAYER POWER load condition (17 power
+types, whole units), and a "When it comes off cooldown" sound timing that fires on a real cooldown
+transition rather than the display's shown edge. See FINDINGS §12.
+
+**★ GA gained a new subsystem on 2026-08-12: the 12.1 duration engine** (`AuraDuration.lua` +
+`AuraDuration.xml`, GA's first XML file). It renders DoT timers and stack counts on 12.1 by driving
+regions a Blizzard `AuraButton` owns. Owner-QA'd. See FINDINGS §1.
+
+---
+
+# BACKLOG item 11 — Gloom's Portraits, the fifth tool — CLOSED 2026-09-19, both stages
+
+**What it was.** The owner's single-file `StoneModel` addon (~900 lines, `/sm`, no repo) — free-
+floating 3D full-body models or 2D circular portraits for player and target — brought into the
+suite as **Gloom's Portraits**, repo `GloomSuite/GloomsPortraits`, namespace `GloomsPortraits`,
+SavedVariables `GloomsPortraitsDB`, slash `/gp`.
+
+**Stage 1 (morning).** New repo from the renamed live file only (never the `.bak`; the old name is
+not publishable — Hub `CLAUDE.md` PRIVACY), Overlays' packaging template, `Author: Gloom`. One-time
+COPY migration of the old saved table at `PLAYER_LOGIN` (the old addon sorts after ours, so its
+table does not exist at our `ADDON_LOADED`); the copy was verified value-for-value against the old
+WTF file. Symlinked, `/reload`, models where they were, old addon disabled. Repo created public
+under GloomSuite, `v1.0.0` tagged, workflow ran, zip verified (addon folder only, `Version` stamped),
+public file scanned clean for name and handle.
+
+**Stage 2 (afternoon, no mockup — the owner's instruction).** The panel and the minimap button
+deleted; the file split into the engine (`GloomsPortraits.lua`, every rendering line kept, a small
+API on the namespace) and the tab (`GloomsPortraits_Tab.lua`, `RegisterTab` id `portraits`, order
+40, `SKIN_NEEDS = 4`). Layout copied from Overlays/GB: rail (Gp mark via `UI.tabHeader`, a
+Player/Target list with mode + condition in mute, Reset through `UI.confirm`) and a scrolling editor
+(mode, size + X/Y `numRow`s with caret nudge, a Camera section that hides in 2D, layer, visibility).
+Everything applies live; the container's OnShow/OnHide is the lock. The **Gp mark** was composed by
+script: the family G plus GB's orange **b flipped vertically** — a flipped b IS a p. Owner-QA'd:
+values loaded, live size, nudge, on-screen drag updating X/Y, lock on close.
+
+**The instance problem (evening).** See FINDINGS §17 for the measurements. Shipped: the stale-model
+fix (hide while blocked, never trust `ClearModel`), the 2D stand-in for a blocked 3D model, the
+nameplate-matched `SetCreature` path for mobs targeted before the pull, re-ask on `PLAYER_REGEN_
+ENABLED`, and **per-mode layouts** (`x y size strata` at the top level are the active mode's;
+`cfg.layouts[mode]` holds the other's; the stand-in wears the 2D set) because the owner would not
+accept a stand-in at the model's size and place. All owner-QA'd in a delve.
+
+**Not done, by the owner's decision:** no profile block (two fixed units, one config — nothing to
+switch), no `v1.1.0` tag (releases are markers only now; see SUITE-STATE's distribution decision).
+
+---
+
 # MOVED OUT OF SUITE-STATE — 2026-09-19 (the v1.3.0 verification record)
 
 Two paragraphs of history that had been sitting in the file people re-read. Nothing in them has

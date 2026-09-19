@@ -52,7 +52,7 @@ GloomsHub:ToggleWindow(id?)  -- slash semantics (added Phase B): open→close if
   doesn't register; the shell shows present tools' tabs + the always-present Media tab.
 - A tool's former window-local footer controls move INTO its tab container, not the shared footer.
 - Reserved tab ids: `auras` (order 10, live Phase D), `bars` (order 20, live Phase C),
-  `overlays` (Phase E), `media` (order 90).
+  `overlays` (order 30, Phase E), **`portraits` (order 40, 2026-09-19)**, `media` (order 90).
 - **Container content size — PINNED (Phase D, 2026-07-24): at least 860 wide × 626 high.**
   Tabs may lay out against these as deterministic minimums (GA's centered 620-wide column
   does; GB's panes stretch). The shell (Hub-owned `SHELL_W/H`, currently 860×740) may GROW
@@ -335,6 +335,12 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
   `BackdropTemplate`, `UIDropDownMenu`, `StaticPopup`, `UIPanel*Template`, `MakeButton`/
   `MakeSlider`/`MakeCheck`); asset browser is a docked drawer; warm pairs registered.
   Keeps SavedVariables globals `VibeOverlayDB`/`VibeOverlayDBChar` on purpose.
+- **Gloom's Portraits** — ✅ built as a consumer from the start (2026-09-19): repo
+  `~/GloomsPortraits`, hard-deps the Hub, mounts the `portraits` tab (order 40) as a GB-style rail +
+  editor from `GloomsPortraits_Tab.lua`; gate **`SKIN_NEEDS = 4`** (`tabHeader`); warm pairs
+  `head 13 · label 11` registered; no profile block (two fixed units, one config); slash `/gp` →
+  `GloomsHub:ToggleWindow("portraits")`. Every native template its predecessor used
+  (`OptionsSliderTemplate`, `UIPanelButtonTemplate`, `BackdropTemplate`, LibDBIcon) is gone.
 
 ---
 
@@ -345,7 +351,7 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
 calls into it. But **`## Dependencies: GloomsHub` only checks that the Hub is PRESENT, never that
 it is NEW ENOUGH** — WoW's TOC dependency system has no version constraint at all.
 
-So once the four addons version independently (which they now do — the "all four synchronized"
+So once the addons version independently (which they now do — the "all four synchronized"
 scheme was relaxed once drift became legible), this becomes reachable:
 
 > A user updates **Gloom's Bars** but not **Gloom's Hub**. GB calls a MINOR-4 widget. Their Hub is

@@ -1,7 +1,8 @@
 # Gloom's Hub — the Gloom Suite's home of record
 
-**This is the ONLY project folder the owner opens.** All four suite repos are already in this
-session's working directories — `~/GloomsBars`, `~/GloomsAuras`, `~/GloomsOverlays` and this one.
+**This is the ONLY project folder the owner opens.** All five suite repos are already in this
+session's working directories — `~/GloomsBars`, `~/GloomsAuras`, `~/GloomsOverlays`,
+`~/GloomsPortraits` and this one.
 Work on any of them from here. **Never tell him to close this project and open another one.**
 
 ---
@@ -24,7 +25,7 @@ Which one — or is there something else you'd rather do?
 ```
 
 **Then, and only then, read that item's "Read first" list.** Every backlog entry names its repo and
-its reading list precisely so you never have to load all four repos' documentation to find out what
+its reading list precisely so you never have to load all five repos' documentation to find out what
 a job needs. **Loading less is what keeps the things you do load in focus.**
 
 If he raises something that isn't on the list, route it (below), read that repo's `CLAUDE.md`, and
@@ -80,7 +81,7 @@ here.** The goal is that no cross-repo edit ever happens silently. It is **not**
 > the others, actually tell me." — the owner, 2026-07-25
 
 **Naming the repo is the whole obligation.** Say it in one line, up front — not buried at the end of
-a long reply — and wait for his answer rather than answering for him. The four-repo split exists so
+a long reply — and wait for his answer rather than answering for him. The five-repo split exists so
 **friends can install and update the tools independently**; it was never meant to dictate how he
 works.
 
@@ -89,6 +90,7 @@ works.
 | Action-bar skin, layout, presets, glow TRIGGERING, which shape a button wears, the Bars tab | `~/GloomsBars` |
 | Cooldown-Manager auras, displays, the Auras tab | `~/GloomsAuras` |
 | The overlay engine, conditions, spritesheets, the Overlays tab | `~/GloomsOverlays` |
+| The player/target 3D models + 2D portraits, their placement and show conditions, the Portraits tab | `~/GloomsPortraits` |
 | The Suite window + tab API · `LibGloomSkin` (tokens, widgets, `UI.*`) · **the silhouette catalog + its art (`Shapes.lua`)** · **the shaped animation engine (`Effects.lua`)** · media registration/resolver + the Media tab · the ONE minimap launcher · the suite docs | **`~/GloomsHub`** (here) |
 | Gloom's Build Barn | `~/Desktop/glooms-build-barn` — **NOT a suite member. See the absolute rule below.** |
 
@@ -100,7 +102,7 @@ different org with its own release scheme and its own cadence. **Do not commit t
 do not release it, do not add files to it, do not include it in any batch.** The only thing that
 puts you in that repo is the owner *explicitly naming Build Barn* as the thing he wants worked on.
 
-**"All the addons" means the four suite addons. It has never meant GBB.**
+**"All the addons" means the five suite addons. It has never meant GBB.**
 
 ⚠ **This rule exists because it was broken on 2026-07-26.** A session doing a suite-wide font-licence
 pass reasoned that because GBB bundles the same two font families, it "obviously" needed the same
@@ -186,8 +188,10 @@ the ledger recorded two suspicions in the same confident voice as its measuremen
   sliding switches, no native Blizzard chrome. The tokens LIVE here, in `Skin.lua`.
 - Slash: `/gloom` opens the Suite window on the last-used tab. Each tool keeps its own (`/gb`,
   `/ga`, `/go`) to open focused on its tab.
-- Symlinked into the client at `…/Interface/AddOns/GloomsHub`. Ships via the BigWigs packager →
-  GitHub Releases → WoWup.
+- Symlinked into the client at `…/Interface/AddOns/GloomsHub` — **every suite addon is a symlink on
+  the owner's client; that IS the install.** A tag cuts a GitHub Release via the BigWigs packager as
+  a version marker only. **The WoWup path is retired (2026-09-19)**; if the suite ever goes public it
+  goes through CurseForge. SUITE-STATE holds the decision.
 
 ---
 
@@ -198,7 +202,7 @@ personal GitHub handle may appear anywhere** — not in file content, not in com
 commit metadata.
 
 **Two orgs — know which is which:**
-- **`GloomSuite`** owns the four suite repos. This is the suite's home and the org friends install
+- **`GloomSuite`** owns the five suite repos. This is the suite's home and the org friends install
   from.
 - **`HandofDevastation`** is the GUILD's org: the guild website + `GloomsBuildBarn`.
 
@@ -216,7 +220,7 @@ stay that way on both.**
   handle.**
 - Git identity is global: `Gloom <gloom@handofdevastation.invalid>` — a reserved-TLD address that is
   undeliverable by design and links to no account. **Do not override it per-repo.**
-- All five repos are **PUBLIC**, which is what makes the WoWup path work. The identity scrub is
+- All the repos are **PUBLIC** (the org is what hides the owner, not the repo). The identity scrub is
   ✅ **DONE** and verified on fresh clones. **The scrub backups were deleted, so there is no undo —
   any future rewrite must take fresh backups first.**
 - **★ A force-push does NOT purge old commits from GitHub — it only unlinks them.** The only

@@ -4,6 +4,7 @@
       "~/GloomsBars",
       "~/GloomsAuras",
       "~/GloomsOverlays",
+      "~/GloomsPortraits",
       "/Applications/World of Warcraft/_retail_/Interface/AddOns",
       "/Applications/World of Warcraft/_retail_/WTF"
     ]
@@ -14,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "jq -Rs '{hookSpecificOutput:{hookEventName:\"SessionStart\",additionalContext:(\"SESSION START — the Gloom Suite backlog is below. Present these items to the owner and ask which one he wants, before reading anything else. See CLAUDE.md § SESSION START.\\n\\n\" + .)}}' \"$HOME/GloomsHub/docs/BACKLOG.md\" 2>/dev/null || true",
+            "command": "jq -Rs '{hookSpecificOutput:{hookEventName:\"SessionStart\",additionalContext:(\"SESSION START \u2014 the Gloom Suite backlog is below. Present these items to the owner and ask which one he wants, before reading anything else. See CLAUDE.md \u00a7 SESSION START.\\n\\n\" + .)}}' \"$HOME/GloomsHub/docs/BACKLOG.md\" 2>/dev/null || true",
             "statusMessage": "Loading the suite backlog",
             "timeout": 10
           }
