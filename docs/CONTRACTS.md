@@ -271,7 +271,8 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     (the Hub-as-an-addon), NOT GS — GS is the *suite's* mark and already sits on the
     window title bar directly above.
   - `UI.WarmFonts(extraPairs?)` — **the Hub calls this, once, at PLAYER_ENTERING_WORLD**
-    (Media.lua's RegisterAll); draws the base list + everything registered + the arg
+    (Media.lua's `VerifyFonts`; LSM *registration* itself moved earlier, to the Hub's own
+    ADDON_LOADED, on 2026-09-19 — FINDINGS §16); draws the base list + everything registered + the arg
   - `UI.RegisterWarmPairs({ {fontPath, size}, … })` — **how a TOOL warms its pairs**: call at
     file load; pairs queue and warm with the Hub's PEW batch (called after the batch — e.g.
     load-on-demand — it warms immediately). Each (path, size) draws at most once per session.

@@ -6,16 +6,14 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-09-08 (one Hub bug, found and fixed: the login font-load warning was
-the probe judging its own warm-up draw — FINDINGS §5, now `TESTED` and closed. LibGloomSkin went to
-MINOR 8. Before that, 09-05: one GB bug, found and fixed: a bar reduced below its full button
-count had the hidden buttons come back mid-combat — FINDINGS §13's mechanism in the sibling code
-path that was never converted. Owner-QA'd both ways. Before that, the 08-25 entry:
-the SHARED SHAPE + EFFECTS migration. The 21-shape silhouette catalog,
-its 136 art files and all eight shaped animation modules moved out of GB and into the Hub, and GA
-now consumes them: aura shapes, the eight animations, an "Effects only" mode and rotation. GB is
-byte-for-byte unchanged on screen and was owner-QA'd at each stage. New items 9-10 are the tails.
-Everything measured is in FINDINGS §14.)
+**Last updated:** 2026-09-19 (two jobs, both owner-QA'd and shipped to master/main, nothing
+released. GA: bars gained a **Pandemic Background** — the backdrop wears a second colour in the
+DoT's pandemic window and reverts on refresh; the refresh signal had to be MEASURED, FINDINGS §15.
+Hub: the owner's font drew in Friz on EllesmereUI's unit frames because the Hub registered media at
+PLAYER_ENTERING_WORLD; registration now happens at the Hub's ADDON_LOADED, FINDINGS §16. **New item
+11 is the next job the owner asked for: Gloom's Portraits, a fifth suite tool.** Before that, 09-08:
+the login font-load warning fix, FINDINGS §5. Before that, 09-05: GB's hidden-button-count bug,
+FINDINGS §13. Before that, 08-25: the shared SHAPE + EFFECTS migration into the Hub, FINDINGS §14.)
 
 ---
 
@@ -188,6 +186,42 @@ kept and banked, so this is now safe to do as its own small change with its own 
 
 ---
 
+### 11 · Gloom's Portraits — bring `StoneModel` into the suite as a fifth tool ★ NEXT
+**Repo:** NEW — `~/GloomsPortraits` under the `GloomSuite` org (+ Hub docs) · **Size:** stage 1 ~an hour, stage 2 a design session · **Evidence:** decided 2026-09-19
+
+`StoneModel` is a single-file addon (~900 lines, `/sm`) already installed at
+`…/Interface/AddOns/StoneModel/` — free-floating 3D full-body models or 2D circular portraits for
+player and target, each placeable/sizeable/rotatable, with show conditions. It has no repo and no
+project. **The owner wants it in the suite and chose the name "Gloom's Portraits."**
+
+**Stage 1 — make it a suite member, no visual change:**
+- New repo `GloomsPortraits` (`GloomsPortraits.toc`, namespace `GloomsPortraits`, SavedVariables
+  `GloomsPortraitsDB`, slash `/gp`), `## Dependencies: GloomsHub`, `Author: Gloom` (the TOC currently
+  says `Claude`). Copy `.pkgmeta`, `.gitignore`, the release workflow and a `CLAUDE.md` from a
+  sibling — Overlays is the smallest template.
+- **⚠ PRIVACY: the current name is NOT publishable — the Hub `CLAUDE.md` PRIVACY section says
+  why, and the same rule already retired StoneTweaks' name. Neither the old filename, the `.bak`
+  beside it, nor the old folder name may appear in any commit.** Start the repo from the renamed
+  file only.
+- **One-time copy-migration** of `StoneModelDB` → `GloomsPortraitsDB` so positions/sizes survive —
+  the exact pattern `MigrateFromStoneTweaks` uses in the Hub's `Core.lua`. Never move, only copy.
+- Symlink into the client, `/reload`, confirm the models appear where they were. Keep the existing
+  `/sm` panel working (add `/gp` alongside).
+- Create the GitHub repo under **GloomSuite** with private membership, push, cut `v1.0.0`.
+
+**Stage 2 — make it look like one (its own session):** replace the control panel with a **Portraits
+tab** in the Suite window on LibGloomSkin — rail + editor like GB, sliding switches, the shared
+sliders/colour picker. Read `StoneModel.lua` properly before designing; stage 1 only skims it.
+
+**Not the Hub (shared infra, not a tool) and not Overlays (a 3D model is not a textured overlay).**
+
+**Read first:** `…/Interface/AddOns/StoneModel/StoneModel.lua` · the PRIVACY section of the Hub's
+`CLAUDE.md` · `MigrateFromStoneTweaks` in `~/GloomsHub/Core.lua` · `~/GloomsOverlays/.pkgmeta`,
+`GloomsOverlays.toc` and `.github/workflows/` as the packaging template · [CONTRACTS.md](CONTRACTS.md)
+§1-§2 (the tab API) only when stage 2 starts
+
+---
+
 ## Not open — recorded so nobody re-raises them
 
 > Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
@@ -259,6 +293,11 @@ kept and banked, so this is now safe to do as its own small change with its own 
   ⚠ `GloomsAurasDB`/`GloomsBarsDB` hold one profile per character and display IDs restart in each
   (`d18` exists several times). **Any script reading them must be profile-aware** — grabbing the
   first regex match produced two confidently wrong diagnoses on 2026-08-24.
+- **Reporting EllesmereUI's font-cache bugs upstream** — **DECLINED by the owner, 2026-09-19.**
+  FINDINGS §16 names both bugs; the Hub-side fix makes them moot for us. Do not draft the report.
+- **"Make the bar FILL change colour in the pandemic window"** — **NOT BUILT, by design** (2026-09-19).
+  The fill is the engine's Blizzard button and cannot be restyled in combat (FINDINGS §1, §15); the
+  owner chose the BACKDROP and it shipped. Do not re-offer the fill.
 - **Immolate's pandemic sound firing every ~21s** — **NOT A BUG** (measured 2026-08-24: ~7 in 4.5
   minutes). A Destruction rotation refreshes into the pandemic window constantly and the alert fires
   each time; the spurious falloff one is separately suppressed (FINDINGS §12). Raised with the owner;

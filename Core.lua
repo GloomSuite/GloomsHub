@@ -65,28 +65,43 @@ end
 
 -- ============================================================
 -- Events
--- Media registration happens at PLAYER_ENTERING_WORLD (same
--- point StoneTweaks used — LSM is fully up by then).
+-- Media REGISTRATION happens at the Hub's own ADDON_LOADED — as early
+-- as the saved catalog exists — so addons that load before us (they
+-- all do; "G" is late in the alphabet) see the fonts before they
+-- build their frames at PLAYER_LOGIN. Why, and what went wrong at the
+-- old PLAYER_ENTERING_WORLD timing: the note above Media:RegisterAll.
+-- The font load-CHECK stays at PLAYER_ENTERING_WORLD (FINDINGS §5).
 -- ============================================================
 
+local function EnsureDB()
+    if not GloomsHubDB then
+        GloomsHubDB = CopyTable(DB_DEFAULTS)
+    end
+    if not GloomsHubDB.fonts    then GloomsHubDB.fonts    = {} end
+    if not GloomsHubDB.textures then GloomsHubDB.textures = {} end
+    if not GloomsHubDB.graphics then GloomsHubDB.graphics = {} end
+    if not GloomsHubDB.sounds   then GloomsHubDB.sounds   = {} end
+end
+
 local initFrame = CreateFrame("Frame")
+initFrame:RegisterEvent("ADDON_LOADED")
 initFrame:RegisterEvent("PLAYER_LOGIN")
 initFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-initFrame:SetScript("OnEvent", function(self, event)
-    if event == "PLAYER_LOGIN" then
-        if not GloomsHubDB then
-            GloomsHubDB = CopyTable(DB_DEFAULTS)
-        end
-        if not GloomsHubDB.fonts    then GloomsHubDB.fonts    = {} end
-        if not GloomsHubDB.textures then GloomsHubDB.textures = {} end
-        if not GloomsHubDB.graphics then GloomsHubDB.graphics = {} end
-        if not GloomsHubDB.sounds   then GloomsHubDB.sounds   = {} end
+initFrame:SetScript("OnEvent", function(self, event, arg1)
+    if event == "ADDON_LOADED" then
+        if arg1 ~= "GloomsHub" then return end
+        self:UnregisterEvent("ADDON_LOADED")
+        EnsureDB()
+        GloomsHub.Media:RegisterAll()
+
+    elseif event == "PLAYER_LOGIN" then
+        EnsureDB()   -- harmless repeat; keeps this block self-sufficient
         MigrateFromStoneTweaks()
         InstallCompatShim()
         GloomsHub:InitMinimapButton()   -- the ONE suite launcher (MinimapButton.lua)
 
     elseif event == "PLAYER_ENTERING_WORLD" then
-        GloomsHub.Media:RegisterAll()
+        GloomsHub.Media:VerifyFonts()
         self:UnregisterAllEvents()
     end
 end)

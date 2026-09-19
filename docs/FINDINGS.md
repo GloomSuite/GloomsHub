@@ -22,8 +22,10 @@
 > **When a claim is disproved, strike it through and move it to the KILLED list under its finding.
 > Never delete it** — a silently removed theory gets re-derived by the next session.
 
-**Last updated:** 2026-08-03 (§1 ANSWERED — `AuraContainer` is the route; large `KILLED` list added.
-New §10 on the CDM alert events. §4's Ellesmere paragraph corrected.)
+**Last updated:** 2026-09-19 (new §15 — a DoT REFRESH fires no reliable CDM alert; the player's own
+cast is the signal. New §16 — the owner's font rendered in Friz on EllesmereUI's unit frames because
+the Hub registered media at PLAYER_ENTERING_WORLD and LSM answers an unknown name with its default.
+Both `TESTED`, both fixed, both owner-QA'd. §12's pandemic entry gained a pointer.)
 
 ---
 
@@ -955,6 +957,10 @@ that.** The genuine pandemic arrives many seconds clear of any removal, so both 
 safely: an after-check on a timestamp, and a before-check by deferring the sound 0.3s so an imminent
 removal can cancel it.
 
+**2026-09-19:** the same cleaned-up signal now also drives a bar's **Pandemic Background** (the
+backdrop, deliberately not the fill). Clearing it needed a *refresh* signal the alerts do not give —
+see **§15**.
+
 ### ▶ `TESTED` — `CooldownFrame_Clear` is NOT reliably fired; the polled reconciler is sometimes the only witness
 
 This one cost two failed fixes, and the lesson generalises well beyond sounds.
@@ -1139,3 +1145,116 @@ owner has not decided it.
   Rotate controls, which drive `f.tex` via `SetChildKey("tex")` while "Effects only" hides exactly
   that region. An animation's own speed lives in its Settings popup. They now grey out when there is
   no artwork to turn.
+
+---
+
+## §15 — A DoT REFRESH fires no reliable CDM alert; the player's own cast is the signal ✅ `TESTED` 2026-09-19
+
+**Why it came up.** GA's bars gained a **Pandemic Background** — the backdrop wears a second colour
+while the tracked DoT is in its pandemic window. Setting it was free: it rides the same double-guarded
+`PandemicTime` path as the pandemic sound (§12). Clearing it on a *refresh* was the problem, because
+the first build keyed the clear on `OnAuraApplied`, and the owner reported the bar **staying red after
+a refresh**.
+
+### ▶ `TESTED` — what Blizzard actually fires on a refresh (`/ga alertlog`, Rogue, two fights)
+
+```
+fight 1  17104.49  Garrote  OnAuraApplied      first cast
+         17121.57  Garrote  PANDEMIC (clean)   backdrop red, 17s in
+         17123.12  Garrote  avail false→true   ← REFRESH cast here (cooldown restarts)
+                   — no alert of any kind —
+         17145.56  Garrote  PANDEMIC (clean)   red again, 22s later
+         17152.50  Garrote  OnAuraRemoved      fell off; cleared correctly
+
+fight 2  17286.04  Garrote  cast → OnAuraRemoved + OnAuraApplied (both!)   ← refresh, this time WITH alerts
+         17277.03  Envenom  cast → nothing     (buff refresh, 3 of 3 refreshes silent)
+         17288.05  Rupture  cast → nothing     (bleed refresh, silent)
+```
+
+**Conclusion.** A refresh *sometimes* fires a Removed+Applied pair and *usually* fires nothing —
+one refresh in five across three spells produced an alert. **`OnAuraApplied` means "a fresh aura
+instance", not "the aura was (re)applied".** The CDM.lua comment that said the latter was half right:
+it is exactly what makes it immune to target-swap re-fires, and exactly why it cannot mark a refresh.
+
+Two other candidates were probed on the item frame and rejected: **`RefreshData` fires on every
+tick of every tracked spell** (useless as a signal), and **`OnAuraInstanceInfoSet` fired only with
+the Removed+Applied pair** (so it is the same unreliable event under another name).
+
+**What landed on EVERY refresh, all three spells, both fights: `UNIT_SPELLCAST_SUCCEEDED` for the
+spell itself** — a plain event with a plain spellID, nothing secret. So "you cast it" is the clear.
+Matched through `AuraDuration:CandidateSpellIDs` (spell + override + linked) because a DoT's cast id
+and its aura id can differ. **Owner-QA'd 2026-09-19:** flips at the genuine pandemic point, never at
+the falloff, reverts the instant a refresh lands, plain on a fresh cast.
+
+### Why the BACKDROP and not the fill — `TESTED` by construction, not by measurement
+
+On 12.1 a duration bar's visible fill belongs to the engine's Blizzard `AuraButton` (§1), a forbidden
+object whenever auras are secret — so every fill restyle queues to `PLAYER_REGEN_ENABLED`, and a
+pandemic window happens nowhere but combat. The backdrop is GA's own texture on GA's own frame,
+already written in combat every fight (the stack count sits on the same frame). The owner also
+pointed out the design reason: *by the pandemic point the bar is mostly drained, so the backdrop is
+most of what is on screen.* Whether `SetStatusBarColor` **alone** would throw on the engine's region
+in combat remains **`UNTESTED`** — nobody measured it, and nothing now depends on the answer.
+
+### Accepted gap
+A cast that does **not land** (dodge/miss) clears the colour while the DoT is still in its window,
+and the alert cannot re-fire for that instance, so the bar stays plain until the next real refresh.
+Cosmetic, rare, self-correcting.
+
+### `KILLED` — do not revive these
+- ~~*"`OnAuraApplied` fires on a genuine (re)application, so it marks a refresh."*~~ **KILLED** by the
+  logs above. It marks a fresh *instance*. Four of five refreshes fired nothing.
+- ~~*"Hook `OnAuraInstanceInfoSet` / `RefreshData` on the item frame for the refresh."*~~ **KILLED** —
+  probed the same day; one is the same unreliable event, the other fires constantly.
+- ~~*"Recolour the FILL at the pandemic point"*~~ — not killed, **never attempted**: it would queue to
+  end of combat by the engine's own rules (§1), which is never. The backdrop was chosen instead.
+
+---
+
+## §16 — The owner's font rendered in Friz Quadrata on EllesmereUI's unit frames ✅ `TESTED` 2026-09-19
+
+**Symptom.** A Hub-registered LSM font, selected as EUI's global font, showed correctly everywhere in
+EUI — dropdown, options preview, every other module — **except the live player/target unit frames,
+which drew Friz Quadrata.** EUI's own bundled fonts worked on those frames.
+
+### ▶ `TESTED` — the mechanism, read out of both codebases and confirmed by two predictions
+
+1. **Load order:** every `EllesmereUI…` folder loads before `GloomsHub` (alphabetical). EUI's
+   Unit Frames module resolves its font path at its own `ADDON_LOADED` and again when it builds the
+   frames at `PLAYER_LOGIN`.
+2. **The Hub registered media at `PLAYER_ENTERING_WORLD`** — after both of those moments. The timing
+   was inherited from StoneTweaks ("LSM is fully up by then"), never chosen.
+3. **LibSharedMedia's `Fetch` answers an UNKNOWN name with the type's DEFAULT** unless told
+   `noDefault`. The font default is **Friz Quadrata TT**. EUI asked without `noDefault`, got a real
+   path back, and **cached it** — in its core's `_smFontPaths`, its memo cache, *and* the Unit
+   Frames module's private `cachedFontPath`.
+4. EUI's core **does** listen for `LibSharedMedia_Registered` and corrects the first two caches when
+   the Hub finally registers. **The Unit Frames module's private copy is refreshed only by a frame
+   rebuild** — so the live frames kept Friz, while the options preview (built later from the corrected
+   core cache) showed the right font. Every observed detail fits.
+
+**Prediction 1, confirmed by the owner:** changing *any* unit-frame setting (which rebuilds the frames)
+snapped the live frames to the correct font, no reload. **Prediction 2, confirmed:**
+`/run print(LibStub("LibSharedMedia-3.0"):Fetch("font","<name>",true))` printed the file path.
+
+**Fix (Hub, `Core.lua` + `Media.lua`):** registration moved to the Hub's own `ADDON_LOADED` — the
+earliest moment `GloomsHubDB` exists, and before EUI's `PLAYER_LOGIN` frame build. The font
+load-CHECK (`WarmFonts`, §5) deliberately stayed at `PLAYER_ENTERING_WORLD`, where its two-pass timing
+was proven; `RegisterAll` was split into `RegisterAll` + `VerifyFonts`. **Owner-QA'd on a fresh
+login:** correct font on the live frames, no load warning, the "Registered…" line now among the
+load-time chat messages.
+
+**EUI's side** has two real bugs (Fetch without `noDefault`; a private font cache with no
+registration listener). **The owner declined to report them** — it works for us now. Recorded so
+nobody drafts the report unasked.
+
+### `KILLED` — do not revive these
+- ~~*"Register at PLAYER_ENTERING_WORLD — LSM is fully up by then."*~~ **KILLED.** LSM is usable from
+  file load; registering late is what poisoned another addon's caches with the library default.
+- ~~*"The lookup FAILS before registration, so the frame falls back to the default."*~~ **KILLED** in
+  its wording: the lookup *succeeds with the wrong answer*. That is why the symptom was Friz (LSM's
+  default) and not Expressway (EUI's own fallback) — the fallback path never ran.
+- ~~*"A companion addon named to sort before EllesmereUI is needed."*~~ **KILLED** — not needed. EUI's
+  late-registration listener makes "before PLAYER_LOGIN" sufficient, and the Hub's own ADDON_LOADED
+  meets that.
+

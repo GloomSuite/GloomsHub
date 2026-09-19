@@ -9,8 +9,9 @@
 > **Keep this file short enough to re-read.** If it passes ~180 lines, move the settled history to
 > [ARCHIVE.md](ARCHIVE.md). A document nobody re-reads is a document nobody corrects.
 
-**Last updated:** 2026-08-24 (Hub/Bars/Auras at `v1.4.0`, Overlays deliberately left at `v1.3.0`;
-LibGloomSkin at MINOR 8 — WarmFonts gained an onVerified callback, 2026-09-08)
+**Last updated:** 2026-09-19 (Hub/Bars/Auras at `v1.4.0`, Overlays deliberately left at `v1.3.0`;
+LibGloomSkin at MINOR 8. Hub media registration moved to ADDON_LOADED; a FIFTH tool, Gloom's
+Portraits, is decided and not yet built — BACKLOG item 11.)
 
 ---
 
@@ -45,29 +46,15 @@ transition rather than the display's shown edge. See FINDINGS §12.
 **★ GA gained a new subsystem on 2026-08-12: the 12.1 duration engine** (`AuraDuration.lua` +
 `AuraDuration.xml`, GA's first XML file). It renders DoT timers and stack counts on 12.1 by driving
 regions a Blizzard `AuraButton` owns. Owner-QA'd. See FINDINGS §1.
-⚠ **"There is no known live bug in shipped code" NO LONGER HOLDS unconditionally** (was true as of
-the v1.2.0 cut; corrected 2026-07-26). GB's Quick Keybind defect (FINDINGS §8) is in shipped code
-and has only been observed on the PTR — **whether it also bites on live is untested**, and that
-check is the first step of BACKLOG item 2.
+**Known live bugs in shipped code: none the owner has reported.** (The Quick Keybind concern that
+used to sit here was CLOSED as not a GB bug — FINDINGS §8 — and the two bugs found since, FINDINGS
+§13 and §5, were fixed the day they were found and are in `v1.4.0`/master.)
 
-**The shipped zips are verified, not assumed.** `GloomsHub-v1.3.0.zip` is **400 KB** (it would have
-been ~5.4 MB before the purge), contains no `Fonts/`, `Textures/` or `Graphics/`, no identifying
-filename, both font licence files, and all 21 packager-embedded library files.
-★ **`GloomsBars-v1.3.0.zip` was checked for the owner's icon art and is clean** — zero `IconsHD/`
-entries, zero `.tga` files, and `IconsManifest.lua` ships EMPTY. Re-check this every cut: the
-manifest is a tracked file that the in-game tooling WRITES, so it turns up populated in the working
-tree and must never be staged.
-⚠ **The release cut needed three attempts** — `repos.wowace.com`, the SVN host every `.pkgmeta`
-external is fetched from, returned HTTP 500 for roughly half an hour. Overlays was unaffected because
-it is the one suite repo with no externals. **A packaging failure on wowace is an outage, not a
-regression — re-run, don't debug.**
-
-**★ The identity scrub was INCOMPLETE until 2026-07-26 and is now re-verified on a fourth surface.**
-It had covered file contents and commit metadata; it had never covered **file paths**. A texture
-named after the owner's real first name was public from the Hub's first commit. It was purged with
-`git-filter-repo`, the repo was deleted and recreated, and the old commit returns **422** while the
-repo is verifiably public. The user's three drop-in asset directories went with it. See
-[LESSONS.md](LESSONS.md) — all four surfaces must be scanned, every time.
+**The release ZIPs are verified at every cut, never assumed** — no drop-in media, no identifying
+filename, both manifests EMPTY (they are tracked files the in-game tooling WRITES, so they show up
+populated in the working tree and must never be staged). The v1.3.0 verification record and the
+wowace-outage note moved to [ARCHIVE.md](ARCHIVE.md) 2026-09-19; the rules live in
+[LESSONS.md](LESSONS.md) § Git, GitHub & packaging.
 
 ---
 
@@ -90,6 +77,15 @@ of it.
   line predates GA drawing shapes at all. What stayed GB's: which shape a button wears, the Bars-tab
   picker, the plate extension, and all glow triggering.
 - **Four separate addons + one shared base**, not a mega-addon. The Hub ships its own release.
+  **★ A FIFTH tool is decided (2026-09-19): "Gloom's Portraits"** — the owner's stand-alone
+  `StoneModel` addon (3D/2D player + target portraits) joins the suite as `GloomsPortraits`, its own
+  repo under `GloomSuite`, hard-depending on the Hub like the others. Not into the Hub (shared infra,
+  not a tool), not into Overlays (a 3D model is not a textured overlay). Not built yet — BACKLOG 11.
+- **★ THE HUB REGISTERS ITS MEDIA AT ITS OWN `ADDON_LOADED`, NOT AT `PLAYER_ENTERING_WORLD`**
+  (2026-09-19). Every addon that sorts before "G" builds its frames at `PLAYER_LOGIN`; registering
+  after that let LibSharedMedia hand them its DEFAULT font for the owner's name, which they cached
+  (FINDINGS §16). The font load-CHECK stayed at PLAYER_ENTERING_WORLD on purpose (FINDINGS §5). Do
+  not move either one back.
 - **HARD dependency on GloomsHub, no standalone fallback** (2026-07-24). Each tool deleted its own
   window; its config renders ONLY inside the Hub's shell. Chosen over graceful fallback precisely to
   avoid two window paths that could drift. A tool installed without the Hub fails **loudly**.
@@ -140,7 +136,8 @@ picker + its "in use" palette**; `GloomsHub.COLOR/.FONT/
 .UI/.MEDIA` are aliases) · **`Shapes.lua`** (the suite's silhouette catalog — 21 shapes,
 `GloomsHub:ShapeAsset/ShapeInfo/GrowAnchor`) · **`Effects.lua`** (the eight shaped animation
 modules + `GloomsHub.Effects`) · `Shell.lua` (the Suite window: `RegisterTab`/`Open`/`FocusTab`/
-`ToggleWindow` + `/gloom`) · `Media.lua` (LSM registration, `ResolveAssetPath`, `ListMedia`, the
+`ToggleWindow` + `/gloom`) · `Media.lua` (LSM registration — `RegisterAll` at the Hub's
+ADDON_LOADED, `VerifyFonts` at PLAYER_ENTERING_WORLD — `ResolveAssetPath`, `ListMedia`, the
 Media tab) · `MinimapButton.lua` (**the ONE suite launcher** — never one per tool).
 
 **The shape catalog and the animation engine are the Hub's since 2026-08-25**, moved out of GB so

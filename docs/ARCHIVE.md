@@ -19,6 +19,33 @@
 
 ---
 
+# MOVED OUT OF SUITE-STATE — 2026-09-19 (the v1.3.0 verification record)
+
+Two paragraphs of history that had been sitting in the file people re-read. Nothing in them has
+changed since written; the durable rules were already in LESSONS.
+
+**The shipped zips are verified, not assumed.** `GloomsHub-v1.3.0.zip` is **400 KB** (it would have
+been ~5.4 MB before the purge), contains no `Fonts/`, `Textures/` or `Graphics/`, no identifying
+filename, both font licence files, and all 21 packager-embedded library files.
+★ **`GloomsBars-v1.3.0.zip` was checked for the owner's icon art and is clean** — zero `IconsHD/`
+entries, zero `.tga` files, and `IconsManifest.lua` ships EMPTY. Re-check this every cut: the
+manifest is a tracked file that the in-game tooling WRITES, so it turns up populated in the working
+tree and must never be staged.
+⚠ **The release cut needed three attempts** — `repos.wowace.com`, the SVN host every `.pkgmeta`
+external is fetched from, returned HTTP 500 for roughly half an hour. Overlays was unaffected because
+it is the one suite repo with no externals. **A packaging failure on wowace is an outage, not a
+regression — re-run, don't debug.**
+
+**★ The identity scrub was INCOMPLETE until 2026-07-26 and is now re-verified on a fourth surface.**
+It had covered file contents and commit metadata; it had never covered **file paths**. A texture
+named after the owner's real first name was public from the Hub's first commit. It was purged with
+`git-filter-repo`, the repo was deleted and recreated, and the old commit returns **422** while the
+repo is verifiably public. The user's three drop-in asset directories went with it. See
+[LESSONS.md](LESSONS.md) — all four surfaces must be scanned, every time.
+
+
+---
+
 # SESSION RECORD — 2026-07-26 evening (PII purge + the SetFont guard — backlog items 4 and 5, closed)
 
 **Started as two small robustness items and turned up a privacy breach.** Both backlog items closed;

@@ -85,10 +85,10 @@ local function RegisterSound(entry)
 end
 
 -- ============================================================
--- Register all saved entries (fired at PLAYER_ENTERING_WORLD)
+-- The font load-check — fired at PLAYER_ENTERING_WORLD (see RegisterAll)
 -- ============================================================
 
-function Media:RegisterAll()
+function Media:VerifyFonts()
     -- Pre-warm the UI's font/size pairs plus each catalog font at every size
     -- the suite draws it: 13 = the Media tab's preview rows, 11 / 14 = the
     -- tools' font pickers (dropdown label / flyout rows — GB's, and GA's come
@@ -100,7 +100,8 @@ function Media:RegisterAll()
             warm[#warm + 1] = { FONT_PATH .. entry.file, size }
         end
     end
-    -- Warming runs BEFORE registration and now reports which faces would not
+    -- Warming runs AFTER registration now (it used to run just before it, in the
+    -- same function; the two were split 2026-09-19) and reports which faces would not
     -- load — the only existence check the client permits (there is no
     -- filesystem API). A catalog entry can outlive its file: AddFont validates
     -- the extension but cannot confirm the .ttf is actually there, so a typo'd
@@ -129,7 +130,31 @@ function Media:RegisterAll()
             end
         end
     end)
+end
 
+-- ============================================================
+-- Register all saved entries — fired at the Hub's own ADDON_LOADED
+-- (the earliest moment GloomsHubDB exists), NOT at PLAYER_ENTERING_WORLD.
+--
+-- ★ WHY SO EARLY (2026-09-19, owner-confirmed by prediction). Addons load
+-- alphabetically, so every "EllesmereUI…" module starts before the Hub and
+-- asks LibSharedMedia for the owner's font before it is registered. LSM's
+-- Fetch answers an UNKNOWN name with its DEFAULT — Friz Quadrata — and EUI's
+-- unit-frame module caches that answer privately, refreshing it only when its
+-- frames are rebuilt. EUI's core does listen for late registrations, so the
+-- one moment that matters is: register BEFORE PLAYER_LOGIN, when EUI builds
+-- its unit frames. ADDON_LOADED is; PLAYER_ENTERING_WORLD was not, and the
+-- live player/target frames rendered in Friz while EUI's own preview (built
+-- later, from the corrected cache) showed the right font.
+-- The old timing was inherited from StoneTweaks, not chosen; LSM is usable
+-- from file load. Registration is additive — earlier can only be seen by
+-- more consumers — so nothing in the suite depends on it being late.
+--
+-- The load-check (WarmFonts, in Media:VerifyFonts above) deliberately STAYS
+-- at PLAYER_ENTERING_WORLD, where its two-pass timing was proven (FINDINGS §5).
+-- ============================================================
+
+function Media:RegisterAll()
     local lsm = GetLSM()
     if not lsm then
         GloomsHub:Print("|cffff9900LibSharedMedia-3.0 not found.|r Fonts and textures won't appear in other addons.")

@@ -353,6 +353,19 @@ design, not a gap in his understanding** — the naming genuinely lied.
 
 - **`/reload` is enough, including for NEW files.** The old "new files → full client restart" rule
   is **RETIRED**; it cost the owner restarts he never needed.
+- **★★ REGISTER SHARED MEDIA AS EARLY AS THE CATALOG EXISTS — and never trust an LSM `Fetch` that
+  was not told `noDefault`.** Two facts that combined into a wrong font on 2026-09-19 (FINDINGS
+  §16): (1) `LibSharedMedia:Fetch(type, name)` answers an UNKNOWN name with the type's DEFAULT
+  (fonts: Friz Quadrata) — a real, truthy path that a consumer will happily cache; (2) addons load
+  alphabetically and most build their frames at `PLAYER_LOGIN`, so anything a "G…" addon registers
+  at `PLAYER_ENTERING_WORLD` arrives after every "A…F" addon has already asked and cached the wrong
+  answer. **Register at your own `ADDON_LOADED`.** When *probing* whether a name is registered, pass
+  `noDefault = true` (`Fetch("font", name, true)`) or the probe cannot fail. The "LSM is fully up by
+  PLAYER_ENTERING_WORLD" comment was inherited, never true as a reason, and defended the bug.
+- **★ A DoT REFRESH has no reliable CDM alert.** `OnAuraApplied` means a fresh aura *instance*; four
+  of five refreshes measured on 2026-09-19 fired nothing at all (FINDINGS §15). The refresh signal
+  is the player's own `UNIT_SPELLCAST_SUCCEEDED` for the spell, matched through the spell's
+  override/linked ids. Do not key "the DoT was renewed" on any aura event.
 - **★ AN ADDON CANNOT ENUMERATE A FOLDER.** WoW exposes no filesystem API: Lua cannot list a
   directory or test whether a file exists. **Dropping files into a drop-in folder does nothing on
   its own** — something outside the game must build an index. Both suite cases use the same shape: a
