@@ -6,14 +6,14 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-09-19, evening (**Gloom's Portraits is BUILT — both stages, owner-QA'd, on
-`master`.** The suite has five tools. The instance problem — 3D models of enemies — was MEASURED
-rather than assumed: the game identifies exactly one unit for an addon on a restricted map, the
-target, out of combat; FINDINGS §17 has every `/dump`. What shipped is the best that measurement
-permits, and the round-bottomed 3D bust the owner asked for is impossible for a reason recorded
-under "Not open". **New item 12 is what he wants next: a circular health-bar treatment.** Earlier the
-same day: GA's Pandemic Background (FINDINGS §15) and the Hub's ADDON_LOADED media registration
-(FINDINGS §16). ⚠ The WoWup distribution path is RETIRED — see "Not open".)
+**Last updated:** 2026-09-19, night (**Gloom's Unit Frames is BUILT — the sixth tool, on disk at
+`~/GloomsUnitFrames`, symlinked, owner-QA'd through a full session.** Circular health / power /
+class-resource / cast rings for player and target, every one an arc of any span, drawn from
+12.1's SECRET values through an engine-evaluated-curve + rotating-mask technique that FINDINGS §18
+records in full — with the six setters that lie about secrets, the three-mask limit and the
+anti-aliasing rule that cost the session its middle hours. Item 12 is now the tool's milestone
+list. ⚠ The GitHub repo `GloomSuite/GloomsUnitFrames` does NOT exist yet — the first commit is
+local; the owner decides when it goes up.)
 ---
 
 ## Open items
@@ -185,35 +185,53 @@ kept and banked, so this is now safe to do as its own small change with its own 
 
 ---
 
-### 12 · A circular health-bar treatment ★ NEXT — the owner will brief it
-**Repo:** UNDECIDED — the owner said so himself · **Size:** a design session first · **Evidence:** not started
+### 12 · Gloom's Unit Frames — milestone 2 onward ★ NEXT
+**Repo:** `~/GloomsUnitFrames` (NEW, sixth tool) · **Size:** several sessions, in pieces · **Evidence:** milestone 1 + rings `TESTED` (owner-QA'd 2026-09-19)
 
-The owner's words (2026-09-19, closing the Portraits session): *"I want to discuss the creation of
-a circular health bar treatment. Whether that means co-opting EUI's unitframes or just the health
-bar part, I don't know. I'll give you more details in the next session."* **Open with the question,
-not a proposal** — he has details he has not given yet.
+**Built and owner-QA'd:** health, power, class-resource (segmented, count follows the game) and
+cast rings for player and target; per ring: size, thickness, offset, span, start angle, direction,
+solid/gradient/shift colours, empty-track colour+opacity, round ends; resource breakpoint colour;
+cast ring with channel-drain, target interrupt-state colours (ready / on CD / back-in-time tint +
+kick tick / uninterruptible) and a 5s preview loop while its section is open; accordion tab, drag
+positioning, Z (strata+level), show conditions, centre percent text, Copy-from-other-unit.
 
-What the next session already knows, so it doesn't re-derive it:
-- **A circular bar is drawable on 12.1 with secret values.** Health is secret in instances but
-  `StatusBar:SetValue` accepts a secret (FINDINGS §1 — the whole duration engine rests on that).
-  A *circular* bar is not a StatusBar, though: it is a cooldown-swipe style reveal or a masked
-  texture, and whether `Cooldown:SetCooldown` / `MaskTexture` paths can be driven from a secret
-  health value is **UNTESTED** — measure it before designing anything.
-- **EllesmereUI's unit frames were read in FINDINGS §16** — module layout, its font caching, how it
-  rebuilds frames. That is the starting map if "co-opt EUI" is the route.
-- **Ownership:** a new visual around the player/target is closest to Gloom's Portraits (it already
-  owns the player/target frames and their placement) — but say that as a recommendation and let him
-  decide; a health bar might equally be its own thing.
+**Next, in order** (the owner's brief: replace EUI's player/target frames outright, keep EUI for
+ToT/focus/pet/boss via its per-unit *hidden* source — FINDINGS §16 + the session notes):
+1. **Class colour for the health fill** (owner, closing 2026-09-19 — "especially for target").
+   `UnitClass` is a SECRET token on identity-restricted units (EUI's shim, FINDINGS §16 reading);
+   EUI resolves it with `C_ClassColor`/curve tricks — read `UF_SecretSafeHealthColor` in
+   `EllesmereUIUnitFrames.lua` before building. Reaction colour for NPCs belongs with it.
+2. **Text** — name + level around the ring; centre text gaining absolute / percent / both.
+3. **Combat indicator**; then the **absorb arc** (probe the absorb value the way §18 probed health).
+4. **Target cast times in a delve** — untested whether they go secret; the engine has the
+   duration-object fallback (`SetFromDuration`) ready and hides the ring if even the total is secret.
+5. **Auras on the frames** (yours-only buffs/debuffs) — GA's `AuraContainer` route, FINDINGS §1.
+6. **Death Knight runes** are not a power type — the resource ring skips DKs until built separately.
+7. Then flip EUI's player/target frame source to *hidden*.
 
-**Read first:** [FINDINGS.md](FINDINGS.md) §1 (secrets, what accepts them) and §16 (EUI's unit
-frames) · `~/GloomsPortraits/CLAUDE.md` if it lands there · the EUI Unit Frames module under
-`…/Interface/AddOns/EllesmereUIUnitFrames/` once he says which route
+**Create the GitHub repo** `GloomSuite/GloomsUnitFrames` (public, org-owned, private membership
+— PRIVACY section) when the owner says; until then the repo is local only.
+
+**Read first:** `~/GloomsUnitFrames/CLAUDE.md` · [FINDINGS.md](FINDINGS.md) §18 (the whole drawing
+technique and every trap) · the engine header comment in `~/GloomsUnitFrames/GloomsUnitFrames.lua`
+· for auras, FINDINGS §1
 
 ---
 
 ## Not open — recorded so nobody re-raises them
 
 > Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
+
+- **"Draw the unit-frame rings with `SetGradient`, or hide an empty piece with alpha 0, or
+  position anything with a secret"** — **NO, all measured 2026-09-19**, FINDINGS §18. A texture with
+  `SetGradient` ignores a secret alpha; a secret alpha of exactly ZERO is ignored everywhere;
+  `SetPoint` accepts a secret and drops it. The engine's gradient is a ramp *layer*, "empty" is
+  geometry, and nothing is positioned by a value.
+- **"A cast ring could use the Cooldown swipe"** — not needed: the player's cast times are PLAIN
+  (§18). The swipe is the fallback only if a target's total duration is secret, and then the ring
+  hides rather than lie.
+- **"Rings over 180° can be one piece"** — **NO.** Masks only subtract; two chunks, overlapped by a
+  hard-edged start mask. §18.
 
 - **"Show the 3D model of an enemy targeted mid-combat in an instance"** — **NOT POSSIBLE, measured
   2026-09-19** (FINDINGS §17). On a restricted map the game identifies ONE unit for an addon: the

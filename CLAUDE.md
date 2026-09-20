@@ -1,8 +1,8 @@
 # Gloom's Hub — the Gloom Suite's home of record
 
-**This is the ONLY project folder the owner opens.** All five suite repos are already in this
+**This is the ONLY project folder the owner opens.** All six suite repos are already in this
 session's working directories — `~/GloomsBars`, `~/GloomsAuras`, `~/GloomsOverlays`,
-`~/GloomsPortraits` and this one.
+`~/GloomsPortraits`, `~/GloomsUnitFrames` and this one.
 Work on any of them from here. **Never tell him to close this project and open another one.**
 
 ---
@@ -25,7 +25,7 @@ Which one — or is there something else you'd rather do?
 ```
 
 **Then, and only then, read that item's "Read first" list.** Every backlog entry names its repo and
-its reading list precisely so you never have to load all five repos' documentation to find out what
+its reading list precisely so you never have to load all six repos' documentation to find out what
 a job needs. **Loading less is what keeps the things you do load in focus.**
 
 If he raises something that isn't on the list, route it (below), read that repo's `CLAUDE.md`, and
@@ -81,7 +81,7 @@ here.** The goal is that no cross-repo edit ever happens silently. It is **not**
 > the others, actually tell me." — the owner, 2026-07-25
 
 **Naming the repo is the whole obligation.** Say it in one line, up front — not buried at the end of
-a long reply — and wait for his answer rather than answering for him. The five-repo split exists so
+a long reply — and wait for his answer rather than answering for him. The six-repo split exists so
 **friends can install and update the tools independently**; it was never meant to dictate how he
 works.
 
@@ -91,6 +91,7 @@ works.
 | Cooldown-Manager auras, displays, the Auras tab | `~/GloomsAuras` |
 | The overlay engine, conditions, spritesheets, the Overlays tab | `~/GloomsOverlays` |
 | The player/target 3D models + 2D portraits, their placement and show conditions, the Portraits tab | `~/GloomsPortraits` |
+| The circular unit frames — health / power / class-resource / cast RINGS for player and target, their placement, colours and cast/interrupt logic, the Unit Frames tab | `~/GloomsUnitFrames` |
 | The Suite window + tab API · `LibGloomSkin` (tokens, widgets, `UI.*`) · **the silhouette catalog + its art (`Shapes.lua`)** · **the shaped animation engine (`Effects.lua`)** · media registration/resolver + the Media tab · the ONE minimap launcher · the suite docs | **`~/GloomsHub`** (here) |
 | Gloom's Build Barn | `~/Desktop/glooms-build-barn` — **NOT a suite member. See the absolute rule below.** |
 
@@ -102,7 +103,7 @@ different org with its own release scheme and its own cadence. **Do not commit t
 do not release it, do not add files to it, do not include it in any batch.** The only thing that
 puts you in that repo is the owner *explicitly naming Build Barn* as the thing he wants worked on.
 
-**"All the addons" means the five suite addons. It has never meant GBB.**
+**"All the addons" means the six suite addons. It has never meant GBB.**
 
 ⚠ **This rule exists because it was broken on 2026-07-26.** A session doing a suite-wide font-licence
 pass reasoned that because GBB bundles the same two font families, it "obviously" needed the same
@@ -111,8 +112,8 @@ table already said GBB was not a suite member. **The reasoning was plausible and
 a shared *fact* about GBB is never a licence to act on it.** If GBB genuinely looks like it needs
 something, **say so and stop** — do not do it.
 
-**Rough test:** changes how ONE tool looks or behaves → that tool's repo. Changes something all
-three share, or the window they live in → here.
+**Rough test:** changes how ONE tool looks or behaves → that tool's repo. Changes something the
+tools share, or the window they live in → here.
 
 ⚠ **Shapes and glow ANIMATIONS moved to the Hub on 2026-08-25** — this table used to give both to
 GB, correctly, back when GB was the only thing that drew a shape. Gloom's Auras now draws the same
@@ -202,7 +203,7 @@ personal GitHub handle may appear anywhere** — not in file content, not in com
 commit metadata.
 
 **Two orgs — know which is which:**
-- **`GloomSuite`** owns the five suite repos. This is the suite's home and the org friends install
+- **`GloomSuite`** owns the suite repos (five public today; Unit Frames is local until the owner says). This is the suite's home and the org friends install
   from.
 - **`HandofDevastation`** is the GUILD's org: the guild website + `GloomsBuildBarn`.
 

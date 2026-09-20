@@ -1310,3 +1310,101 @@ and by combat state** — test the exact token the code will use, in the state i
 - ~~*"Read the display ID off a model after SetUnit and replay it with SetDisplayInfo."*~~ **KILLED**
   for secret units (nothing loads, so there is no ID to read); untested for identifiable ones,
   and unnecessary — the GUID's creature ID plus `SetCreature` needs no model at all.
+
+---
+
+## §18 — Drawing a circular unit frame from 12.1's secret values ✅ `TESTED` 2026-09-19
+
+**The question** was whether a health ring is even possible once the number is secret. It is, and
+Gloom's Unit Frames is built on what this section records. Every line below is a `/dump`, a probe
+panel (`/gloomprobe`, a throwaway that lived in the Hub for the day) or an on-screen result the
+owner reported, all on the live 12.1 client the same day.
+
+### ▶ `TESTED` — health is a SECRET number for EVERY unit, everywhere
+`issecretvalue(UnitHealth(u))` is **true** for `player` and `target` on a training dummy, in a
+delve out of combat, and in the same delve in combat. `UnitHealthMax("player")` is the only plain
+one; the target's max is secret. So is a target's `UnitPowerMax` and `UnitPowerPercent`. **No Lua
+arithmetic on health is ever possible** — `angle = health / max × span` cannot be written. The old
+backlog wording "secret in instances" was too kind; it is secret on a dummy.
+
+### ▶ `TESTED` — what a secret number can be handed to (the sink table)
+Measured with a real secret from `UnitHealthPercent(unit, true, curve)`:
+
+| Sink | Result |
+|---|---|
+| `Texture:SetRotation(secret)` · `MaskTexture:SetRotation(secret)` | **works, visibly** (a 45° diamond at full health, ~30° at two-thirds) |
+| `SetRotation(secret, pivot)` — the optional normalized rotation point | **works**, texture and mask, about a point outside the region (probe K) |
+| `Texture:SetAlpha(secret)` | **works for non-zero values** (a grey square at 68%) |
+| `Texture:SetAlpha(secret that evaluates to 0)` | **ACCEPTED AND IGNORED** — the layer keeps its last opacity. Rendered on screen as the gate curve's text: `gate 0.00`, sliver still drawn. A secret may not decide visibility. |
+| `SetAlpha(secret)` on a texture carrying `SetGradient` | **ACCEPTED AND IGNORED** at any value (probe J: two gradient squares fully opaque at 30% health) |
+| `Texture:SetPoint(…, secret, 0)` | **ACCEPTED AND IGNORED** — the region lands at 0,0 |
+| `Texture:SetTexCoord(0, secret, 0, 1)` · `StatusBar:SetValue(secret)` | work |
+| `Texture:SetWidth(secret)` · `Cooldown:SetCooldownDuration(secret)` · `Animation:SetDegrees(secret)` | **refused** ("Secret values are only allowed during untainted execution") |
+| `SetVertexColor` with secret channels · `SetFormattedText("%d", secret)` | work (EUI relies on both) |
+
+★ **Three of those say "ok" and do nothing.** `pcall` succeeding is not evidence for a secret sink;
+only the picture is. LESSONS has the general form.
+
+### ▶ `TESTED` — the curve API is the bridge
+`C_CurveUtil.CreateCurve()` + `AddPoint(x, y)` (x is the 0..1 percent) and
+`UnitHealthPercent(unit, true, curve)` / `UnitPowerPercent(unit, type, true, curve)` return the
+curve's value at the secret percent — still secret, evaluated engine-side. A per-piece curve is how
+a wedge, an alpha gate, a resource segment's window and a colour blend are all expressed without
+Lua ever touching the number. `CurveConstants.ScaleTo100` gives the percent as text-ready 0–100.
+Duration objects have the same door: `d:EvaluateRemainingDuration(curve, default)` (x = remaining
+seconds), which is what drives the interrupt-return tick.
+
+### ▶ `TESTED` — the drawing technique (the engine header in `GloomsUnitFrames.lua` is canonical)
+1. **Ring art never moves.** Two HALF-PLANE masks sit on it — one fixed at the arc's start, one
+   rotated by the secret sweep angle from a curve. Their intersection is the wedge.
+2. **Masks only subtract**, so one pair carves at most 180°; a wider span is two "chunks" (the
+   owner's question "does it HAVE to be two pieces?" — yes). A 360° ring adds a hard 3° cap over
+   the closing point, gated above ~99.6%.
+3. **Two half-planes never intersect to NOTHING.** Rotating "past empty" wraps the overlap round to
+   the far side — the floating chunk seen on the first build. Empty must be GEOMETRY: no mask
+   overshoots its far end, so an empty chunk is a hairline. (Alpha cannot hide it — zero is ignored.)
+4. **Seams.** Two anti-aliased edges on one line each draw at 50%, and 50 over 50 is 75%: a bleed on
+   an opaque fill, invisible on a 12% track. So the fill's following chunk OVERLAPS the previous by
+   1.5° with a HARD-edged mask (a soft edge drawn in two layers — base + ramp — leaves a residual of
+   the base colour along it, a line over solid colour; a hard edge between identical pixels is
+   invisible), while track chunks meet exactly. The rotating mask is soft on its leading edge and
+   hard on its trailing one, because at spans ≥ ~358° the trailing edge lands inside the overlap.
+5. **Thickness** is a third mask, a hole cut from a solid disc (`CLAMP` wrap so it is opaque
+   forever outward; a zero-size mask hides everything, so a solid disc parks the hole off to the
+   side). **A texture takes at most THREE masks** — measured by the error, `AddMaskTexture(): Texture
+   already has the maximum number of mask textures (3)` — which is why the gradient ramp has its
+   shape baked in as a companion image rather than masked by the art.
+6. **Gradient** = a second layer (the ramp companion, alpha 0→1 across the disc) tinted with the
+   end colour, aimed by rotating its TEXTURE COORDINATES (`SetTexCoord` with rotated corners). Not
+   `SetRotation` on the texture: a rotated texture is clipped by its masks half a pixel tighter than
+   an unrotated one — a fringe of the base colour along every mask edge. Not `SetGradient`: see the
+   sink table.
+7. **Shift** (colour drains toward mid/low) and the resource breakpoint and the cast ring's
+   mid-cast tint are all extra LAYERS whose alpha is a curve — mid opaque by 50%, low fading in
+   below it, so 50% shows exactly the mid colour. "Off" is 0.4% alpha, never 0 (rule 3).
+8. **Round ends** are the band itself cut by a disc mask plus the hole (so the cap has the arc's own
+   edges — a separately drawn disc read as "bulging"); the moving end's mask pivots about the ring's
+   centre by the sweep curve. The arc is pulled in by half a cap so the cap's far edge lands where
+   the flat end would have been.
+9. **Stacking** is by FRAME LEVEL, one child frame per chunk, one band of eight levels per ring:
+   ARTWORK sublevels did not guarantee order across textures carrying different masks (the
+   boundary spoke), and two rings on the same levels interleave their pieces.
+10. **The player's cast** is PLAIN — `UnitCastingInfo` name/start/end, the duration object's total
+    and remaining — so the cast ring is clock arithmetic per frame. Whether a TARGET's cast goes
+    secret on a restricted map is `UNTESTED`; the engine falls back to the duration object and
+    hides the ring if even the total is secret.
+
+### `KILLED` — do not revive these
+- ~~*"Health is secret in instances"*~~ (backlog item 12's old wording) — **KILLED**: secret on a
+  dummy, for the player. There is no plain-number path anywhere.
+- ~~*"Hide an empty chunk with alpha 0."*~~ **KILLED** — a secret zero is ignored (measured with the
+  gate value rendered as text).
+- ~~*"`pcall` said ok, so the sink took the secret."*~~ **KILLED** three times over (SetPoint,
+  SetAlpha-on-gradient, SetAlpha-to-zero).
+- ~~*"Explicit ARTWORK sublevels fix the overlap order."*~~ **KILLED** — they changed the arbitrary
+  order into a different arbitrary order; frame levels are absolute.
+- ~~*"The seam is the mask art."*~~ Half true, once: the first 182° mask was a shifted half-plane,
+  not a wedge (the polygon never passed through the centre) — measured by sampling the PNG by
+  angle. Fixed; the remaining seams were the alpha rules above.
+- ~~*"A cast ring must be a Cooldown swipe (full circle from 12 o'clock)."*~~ **KILLED** for the
+  player — times are plain. Still the only fallback for a fully secret target cast.

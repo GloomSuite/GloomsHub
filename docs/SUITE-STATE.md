@@ -9,8 +9,9 @@
 > **Keep this file short enough to re-read.** If it passes ~180 lines, move the settled history to
 > [ARCHIVE.md](ARCHIVE.md). A document nobody re-reads is a document nobody corrects.
 
-**Last updated:** 2026-09-19, evening (**five tools**: Gloom's Portraits is built, both stages,
-owner-QA'd, on `master`, tagged `v1.0.0` for stage 1 only. Hub/Bars/Auras at `v1.4.0`, Overlays at
+**Last updated:** 2026-09-19, night (**six tools**: Gloom's Unit Frames is built and owner-QA'd
+on disk — local repo only, NOT yet on GitHub; Gloom's Portraits is on `master`, tagged `v1.0.0`
+for stage 1 only. Hub/Bars/Auras at `v1.4.0`, Overlays at
 `v1.3.0`; LibGloomSkin at MINOR 8. **Distribution decision recorded: symlinks for the owner,
 CurseForge if ever public, the WoWup path retired.**)
 
@@ -18,10 +19,11 @@ CurseForge if ever public, the WoWup path retired.**)
 
 ## The one-paragraph answer
 
-**The 7-phase plan is complete and QA'd. Five addons: the Hub and four tools.** GloomsHub is the
-shared base; Bars, Auras, Overlays and **Portraits** each mount a tab in its window and hard-depend
-on it. StoneTweaks is retired; all five suite repos are public under the **`GloomSuite`** org (Build
-Barn stayed with `HandofDevastation`). **Hub, Bars and Auras are at `v1.4.0`; Overlays at `v1.3.0`;
+**The 7-phase plan is complete and QA'd. Six addons: the Hub and five tools.** GloomsHub is the
+shared base; Bars, Auras, Overlays, **Portraits** and **Unit Frames** each mount a tab in its window
+and hard-depend on it. StoneTweaks is retired; five suite repos are public under the **`GloomSuite`**
+org (Build Barn stayed with `HandofDevastation`); **`GloomsUnitFrames` is a local git repo with no
+remote yet** — the owner says when it goes up. **Hub, Bars and Auras are at `v1.4.0`; Overlays at `v1.3.0`;
 Portraits at `v1.0.0`** with stage 2 on `master` untagged. Versions drift by design — do not "level"
 them. What's left is in [BACKLOG.md](BACKLOG.md).
 
@@ -64,6 +66,11 @@ of it.
   Not into the Hub (shared infra, not a tool), not into Overlays (a 3D model is not a textured
   overlay). ⚠ Its predecessor's name is not publishable (Hub `CLAUDE.md` PRIVACY); the one permitted
   survivor is the old SavedVariables global in its copy-migration, the `StoneTweaksDB` precedent.
+  **★ The SIXTH tool is Gloom's Unit Frames** (decided and built 2026-09-19) — circular health /
+  power / class-resource / cast rings for player and target, meant to REPLACE EllesmereUI's player
+  and target frames outright (EUI keeps ToT/focus/pet/boss via its per-unit *hidden* source). Its
+  own repo, not Portraits: the owner — "they're not necessarily going to be linked in any fashion".
+  Not clickable unit buttons yet; that and auras are milestones (BACKLOG item 12).
 - **★ DISTRIBUTION: SYMLINKS FOR THE OWNER, CURSEFORGE IF EVER PUBLIC — the WoWup path is RETIRED**
   (the owner, 2026-09-19). Every suite addon on his client is a symlink into `~/<repo>`; WoWup's
   GitHub install "doesn't work very well" (Build Barn and Loot Advisor both moved to CurseForge over
@@ -81,11 +88,8 @@ of it.
   avoid two window paths that could drift. A tool installed without the Hub fails **loudly**.
 - **★ VERSIONS MAY DRIFT — release only the addon that changed** (2026-07-25). *"It doesn't bother
   me if the versions of the individual units drift."* The shell footer lists every installed addon's
-  version, which is what retired the reason for synchronizing them.
-  **Still true after the 2026-07-26 sync to `v1.2.0`** — the owner asked for a one-time squaring-up
-  because the Hub's published releases had just been deleted in the PII purge, which would have left
-  the shared base looking *older* than its own dependents. That was a tidy-up of a specific mess, not
-  a standing requirement. Do not synchronize versions again by default.
+  version, which is what retired the reason for synchronizing them. (The one-time `v1.2.0`
+  squaring-up of 2026-07-26 was a tidy-up after the PII purge, not a standing rule — ARCHIVE.)
 - **★ EVERY `LibGloomSkin` CONSUMER CARRIES A VERSION GATE** — pinned in [CONTRACTS.md](CONTRACTS.md)
   §6. This is what makes drift safe. `## Dependencies: GloomsHub` checks only that the Hub is
   PRESENT, never that it is NEW ENOUGH — WoW's TOC system has no version constraint. Each consumer
@@ -170,6 +174,15 @@ order 40). `/gp` → `ToggleWindow("portraits")`. No profile block (two fixed un
 config), no minimap button, no floating panel. Each mode keeps its own size/position/layer
 (`cfg.layouts[mode]`); the in-combat 2D stand-in wears the 2D set. The Gp mark is
 `Media/ui/logo.png`, composed from the family G and GB's b flipped.
+
+**`~/GloomsUnitFrames`** — local git, no remote, symlinked into AddOns. Hard-deps the Hub; two files —
+the ENGINE (`GloomsUnitFrames.lua`: the arc renderer of FINDINGS §18, `GloomsUnitFramesDB`,
+rings per unit, the cast/kick logic, a small API + `/gu debug`) and the **Unit Frames** tab
+(`GloomsUnitFrames_Tab.lua`, `SKIN_NEEDS = 4`, order 50, a GB-style accordion). `/gu` →
+`ToggleWindow("unitframes")`. Art in `Media/art/` is GENERATED (Python/PIL, the scripts were
+throwaway): `disc.png` + its ramp companion, the two half-plane masks per sweep direction, the two
+"lead" masks, `hole.png`, `cap.png`. The Gu mark is still the Hub's logo — a real mark is owed.
+
 ⚠ **`VibeOverlayDB` / `VibeOverlayDBChar` keep their names on purpose.** WoW keys SavedVariables off
 the addon FOLDER name; 23 save files were copied in place and **12 characters ride non-Default
 profiles**. Renaming those globals is silent data loss, not cleanup.
@@ -178,18 +191,14 @@ profiles**. Renaming those globals is silent data loss, not cleanup.
 `migratedFromST = true`. The Hub is the only media registrar and wins all 7 LSM names with no
 collision.
 
-### ⚠ Two Desktop folders that must NOT be deleted
-- **`~/Desktop/VibeOverlay-retired-2026-07-24`** — the ONLY copy of the pre-rename VibeOverlay
-  source. Git never held it: GloomsOverlays' first commit already contains the renamed files.
-- **`~/Desktop/StoneTweaks-retired-2026-07-24`** — 73 files. `StoneTweaksDB` was deliberately left
-  in WTF, so rollback is just moving this folder back and re-enabling.
-
-Both were identity-scanned and are clean.
-
 ---
 
 ## ⚠ Standing hazards
 
+- **Two Desktop folders must NOT be deleted** — `~/Desktop/VibeOverlay-retired-2026-07-24` (the ONLY
+  copy of the pre-rename Overlays source; git never held it) and
+  `~/Desktop/StoneTweaks-retired-2026-07-24` (the rollback for the Hub's media half). Details in
+  [ARCHIVE.md](ARCHIVE.md).
 - **The dev symlinks and a WoWup install target the SAME folder names.** If an install QA is ever
   re-run on this machine, move the symlinks aside first and restore after — **and uninstall in
   WoWup BEFORE restoring them**, because WoWup's Remove deletes the folder it manages and could

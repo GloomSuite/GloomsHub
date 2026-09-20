@@ -356,6 +356,25 @@ design, not a gap in his understanding** — the naming genuinely lied.
 
 ## WoW client behaviour
 
+- **★★ A SETTER THAT ACCEPTS A SECRET MAY STILL DO NOTHING — the picture is the test, never
+  `pcall`.** On 2026-09-19 (FINDINGS §18) three setters took a secret without complaint and ignored
+  it: `SetPoint` (region lands at 0,0), `SetAlpha` on a texture carrying `SetGradient` (stays
+  opaque), and `SetAlpha` with a secret that evaluates to exactly ZERO (keeps its last opacity — a
+  secret is not allowed to decide visibility). Each cost an hour of chasing "geometry" that was
+  right. When a secret sink is in doubt, render its value as TEXT next to the thing it drives
+  (`SetFormattedText` takes secrets) and compare what the number says with what the pixels do.
+- **★★ TWO ANTI-ALIASED EDGES ON ONE LINE ARE A SEAM, AND TWO LAYERS ON ONE SOFT EDGE LEAVE A
+  RESIDUE.** 50% coverage over 50% coverage composites to 75%, not 100% — visible on an opaque
+  fill, invisible on a translucent track, so the two want OPPOSITE fixes (overlap the fill, abut
+  the track). And a soft edge drawn as base colour + a ramp layer leaves a line of the base colour
+  along it wherever it lies over solid colour: the edge that overlaps must be HARD (binary mask,
+  `NEAREST`). Sublevels did not settle draw order across masked textures; frame levels did.
+  FINDINGS §18 has the whole rule set — read it before drawing anything with masks.
+- **★ A texture takes at most THREE masks; masks only subtract; `v or default` is wrong for a
+  boolean setting.** Three small ones from the same day: the mask cap is a hard error at login,
+  so bake a shape into the art instead of masking it; a wedge wider than 180° needs two pieces,
+  no mask arrangement gets round it; and `rc[field] or default` reads an OFF switch (`false`) as
+  its default — test `== nil`. The toggle that "worked once and then stuck" was that.
 - **`/reload` is enough, including for NEW files.** The old "new files → full client restart" rule
   is **RETIRED**; it cost the owner restarts he never needed.
 - **★★ SECRECY IS PER TOKEN AND PER COMBAT STATE — test the exact token the code will use, in the

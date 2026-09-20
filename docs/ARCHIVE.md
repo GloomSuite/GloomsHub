@@ -1434,3 +1434,22 @@ Verbatim, for the record. All seven complete; nothing here has changed since it 
 | **G** | Packaging / release / WoWup | ✅ QA'd 2026-07-25 (install **and** update paths) |
 
 Full QA evidence for every phase is in [ARCHIVE.md](ARCHIVE.md). Do not redo any of it.
+
+
+---
+
+## Moved from SUITE-STATE on 2026-09-19 (night)
+
+### The one-time `v1.2.0` version sync (2026-07-26)
+The owner asked for a one-time squaring-up of every suite version to `v1.2.0` because the Hub's
+published releases had just been deleted in the PII purge, which would have left the shared base
+looking *older* than its own dependents. A tidy-up of a specific mess, not a standing rule —
+versions drift by design (SUITE-STATE, locked decisions).
+
+### The two retired Desktop folders (2026-07-24)
+- **`~/Desktop/VibeOverlay-retired-2026-07-24`** — the ONLY copy of the pre-rename VibeOverlay
+  source. Git never held it: GloomsOverlays' first commit already contains the renamed files.
+- **`~/Desktop/StoneTweaks-retired-2026-07-24`** — 73 files. `StoneTweaksDB` was deliberately left
+  in WTF, so rollback is just moving this folder back and re-enabling.
+
+Both were identity-scanned and are clean. The "do not delete" rule stays in SUITE-STATE's hazards.
