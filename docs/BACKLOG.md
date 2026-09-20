@@ -6,14 +6,14 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-09-19, night (**Gloom's Unit Frames is BUILT — the sixth tool, on disk at
-`~/GloomsUnitFrames`, symlinked, owner-QA'd through a full session.** Circular health / power /
-class-resource / cast rings for player and target, every one an arc of any span, drawn from
-12.1's SECRET values through an engine-evaluated-curve + rotating-mask technique that FINDINGS §18
-records in full — with the six setters that lie about secrets, the three-mask limit and the
-anti-aliasing rule that cost the session its middle hours. Item 12 is now the tool's milestone
-list. ⚠ The GitHub repo `GloomSuite/GloomsUnitFrames` does NOT exist yet — the first commit is
-local; the owner decides when it goes up.)
+**Last updated:** 2026-09-19, late night (**Gloom's Unit Frames grew its second layer in one
+session** — class/reaction color on the health fill, the shield WASH (presence, not amount — FINDINGS
+§19 closes the absorb arc for good), a free-form TEXT system of placeable shortcode pieces, and
+AURA GROUPS on the frames: filtered lists with engine sort, Hub silhouettes on every icon, and a
+"This spell" highlight that runs a Hub effect while one aura is up — FINDINGS §20 records what an
+aura button's children can and cannot do. Ring level bands are 16 wide now. **The owner's next job
+is item 13, the tab's layout compaction, "immediately".** ⚠ `GloomSuite/GloomsUnitFrames` still
+does NOT exist on GitHub — two commits, local only.)
 ---
 
 ## Open items
@@ -185,42 +185,80 @@ kept and banked, so this is now safe to do as its own small change with its own 
 
 ---
 
-### 12 · Gloom's Unit Frames — milestone 2 onward ★ NEXT
-**Repo:** `~/GloomsUnitFrames` (NEW, sixth tool) · **Size:** several sessions, in pieces · **Evidence:** milestone 1 + rings `TESTED` (owner-QA'd 2026-09-19)
+### 12 · Gloom's Unit Frames — what is left after the second session
+**Repo:** `~/GloomsUnitFrames` (sixth tool, LOCAL git only) · **Size:** small pieces + measurements · **Evidence:** everything shipped is owner-QA'd 2026-09-19
 
-**Built and owner-QA'd:** health, power, class-resource (segmented, count follows the game) and
-cast rings for player and target; per ring: size, thickness, offset, span, start angle, direction,
-solid/gradient/shift colours, empty-track colour+opacity, round ends; resource breakpoint colour;
-cast ring with channel-drain, target interrupt-state colours (ready / on CD / back-in-time tint +
-kick tick / uninterruptible) and a 5s preview loop while its section is open; accordion tab, drag
-positioning, Z (strata+level), show conditions, centre percent text, Copy-from-other-unit.
+**Built and owner-QA'd (both sessions):** the four rings and everything FINDINGS §18 describes ·
+class color for players / reaction color for NPCs on the health fill (solid mode; a gradient wins) ·
+the shield wash while an absorb is present (§19) · **Texts** — any number of pieces per unit, a
+template of words and `[shortcodes]` (name, level, class, hp/hpmax/pct, absorb, power, shards, cast,
+status markers, threat…), each with font/size/outline/color/class-color/offset/align/max-width/layer
+· **Auras** — any number of groups per unit: Buffs / Debuffs with engine filters (tri-state classes,
+only-these / never-these spell lists, timed-only), engine sort, icon size/spacing/per-row/grow,
+countdown + stacks, swipe, a Hub SHAPE on every icon; and **This spell** — one aura by ID with a Hub
+shape + Hub effect and the effect's full schema-driven settings.
 
-**Next, in order** (the owner's brief: replace EUI's player/target frames outright, keep EUI for
-ToT/focus/pet/boss via its per-unit *hidden* source — FINDINGS §16 + the session notes):
-1. **Class colour for the health fill** (owner, closing 2026-09-19 — "especially for target").
-   `UnitClass` is a SECRET token on identity-restricted units (EUI's shim, FINDINGS §16 reading);
-   EUI resolves it with `C_ClassColor`/curve tricks — read `UF_SecretSafeHealthColor` in
-   `EllesmereUIUnitFrames.lua` before building. Reaction colour for NPCs belongs with it.
-2. **Text** — name + level around the ring; centre text gaining absolute / percent / both.
-3. **Combat indicator**; then the **absorb arc** (probe the absorb value the way §18 probed health).
-4. **Target cast times in a delve** — untested whether they go secret; the engine has the
-   duration-object fallback (`SetFromDuration`) ready and hides the ring if even the total is secret.
-5. **Auras on the frames** (yours-only buffs/debuffs) — GA's `AuraContainer` route, FINDINGS §1.
-6. **Death Knight runes** are not a power type — the resource ring skips DKs until built separately.
-7. Then flip EUI's player/target frame source to *hidden*.
+**Left, in order:**
+1. **Flip EUI's player/target frames to *hidden*** (EUI per-unit source) and live on these — the
+   owner decides when. Recommended before any more feature work: it surfaces what is actually missed.
+2. **Delve measurements**, next time he is in one: does a TARGET's cast time go secret (engine
+   falls back to the duration object, hides if the total is secret); do the target's level /
+   classification / name stay readable in a pull (`[level]` shows `??` logic only when plain); does
+   the shield wash switch OFF (only ever seen off on the probe square — §19).
+3. **Aura filter classes** beyond timed-only and cast-by-you — same engine path, `UNTESTED`
+   individually; whichever bites first gets checked then. Also `UNTESTED`: creating a container in
+   combat (a Show-kind change mid-fight rebuilds one).
+4. **Death Knight runes** — not a power type; the resource ring skips DKs. Only if he rolls one.
+5. **Create the GitHub repo** `GloomSuite/GloomsUnitFrames` when he says (public, org-owned, private
+   membership — Hub `CLAUDE.md` PRIVACY).
 
-**Create the GitHub repo** `GloomSuite/GloomsUnitFrames` (public, org-owned, private membership
-— PRIVACY section) when the owner says; until then the repo is local only.
+**Read first:** `~/GloomsUnitFrames/CLAUDE.md` · [FINDINGS.md](FINDINGS.md) §18 (the renderer), §19
+(absorbs), §20 (aura buttons) · the header comments of `GloomsUnitFrames_Text.lua` and
+`GloomsUnitFrames_Auras.lua`
 
-**Read first:** `~/GloomsUnitFrames/CLAUDE.md` · [FINDINGS.md](FINDINGS.md) §18 (the whole drawing
-technique and every trap) · the engine header comment in `~/GloomsUnitFrames/GloomsUnitFrames.lua`
-· for auras, FINDINGS §1
+---
+
+### 13 · The Unit Frames tab's layout — compact it the way EUI lays out settings ★ NEXT
+**Repo:** `~/GloomsUnitFrames` (the tab); possibly a new `LibGloomSkin` row widget in `~/GloomsHub` · **Size:** a session · **Evidence:** owner request, 2026-09-19
+
+> "EUI is far easier to use, because they've managed to compact the settings panels into dropdowns
+> and side-by-side display, whereas you tend to just stack things endlessly." — the owner. He wants
+> this done **immediately, next session**, before any more aura work.
+
+The tab is a single column, one control per row: the Health ring section alone is ~990 px, the
+Auras editor ~730 px plus its filter block. EUI's shape (his screenshots this session): two columns
+of label + control, sub-settings behind a cog that opens a small popover, filters as a dropdown
+with Show/Hide check columns. What to do:
+- A **two-column row** primitive (label left, control right, two per line) — if it is built as a
+  `LibGloomSkin` widget it serves every tab and needs a MINOR bump + `SKIN_NEEDS` in the same commit
+  (CONTRACTS §6); if it stays local to the GU tab, no contract moves. Recommend the widget.
+- **Popovers for sub-settings** (the `UI.flyout` / dropdown machinery is the precedent): a ring's
+  shield-wash block, a text piece's font/outline/shadow, an aura group's filters and effect params.
+- Keep the accordion; the per-section stacking is what has to go, not the sections.
+- The Auras filter block already went two-column with tri-state buttons — use it as the seed, and
+  the rings' "Color" / "Shift" / "Shield" groups as the first targets.
+
+**Read first:** `~/GloomsUnitFrames/GloomsUnitFrames_Tab.lua` (whole file — it is the deliverable)
+· [CONTRACTS.md](CONTRACTS.md) §4 and §6 if a widget is added · the owner's EUI screenshots are not
+on disk; ask him to show the panel again if the shape is unclear.
 
 ---
 
 ## Not open — recorded so nobody re-raises them
 
 > Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
+
+- **"An absorb ARC on the health ring"** — **NOT POSSIBLE, measured 2026-09-19**, FINDINGS §19:
+  no absorb-percent function exists, a curve refuses to evaluate a secret, and `UnitHealthPercent`'s
+  flag does not include absorbs (34 / 34 with a 292K shield). What shipped is the shield WASH
+  (presence via the plain-zero-then-secret alpha gate) and `[absorb]` as text. Reopen only on a new API.
+- **"Start an aura icon's glow from the button's OnShow / from a child's OnUpdate"** — **NO**,
+  FINDINGS §20: no script under an aura button ever fires and its `IsShown` is a secret boolean.
+  Effects start at wiring time and live under the button; the Hub's modules verify their mask bind.
+- **Class color + gradient on the health fill** — **mutually exclusive by the owner's call**
+  (2026-09-19): a gradient wins, and the switch hides in gradient mode. Do not blend them.
+- **A GA display as the "boss debuff on me" highlight** — **not the answer**: GA's displays are
+  CDM-trackable auras; a boss debuff is not one. The GU "This spell" aura group is the tool for it.
 
 - **"Draw the unit-frame rings with `SetGradient`, or hide an empty piece with alpha 0, or
   position anything with a secret"** — **NO, all measured 2026-09-19**, FINDINGS §18. A texture with

@@ -9,11 +9,12 @@
 > **Keep this file short enough to re-read.** If it passes ~180 lines, move the settled history to
 > [ARCHIVE.md](ARCHIVE.md). A document nobody re-reads is a document nobody corrects.
 
-**Last updated:** 2026-09-19, night (**six tools**: Gloom's Unit Frames is built and owner-QA'd
-on disk — local repo only, NOT yet on GitHub; Gloom's Portraits is on `master`, tagged `v1.0.0`
-for stage 1 only. Hub/Bars/Auras at `v1.4.0`, Overlays at
-`v1.3.0`; LibGloomSkin at MINOR 8. **Distribution decision recorded: symlinks for the owner,
-CurseForge if ever public, the WoWup path retired.**)
+**Last updated:** 2026-09-19, late night (**six tools**: Gloom's Unit Frames has rings, texts and
+aura groups, all owner-QA'd — local repo only, NOT yet on GitHub; Gloom's Portraits is on `master`,
+tagged `v1.0.0` for stage 1 only. Hub/Bars/Auras at `v1.4.0`, Overlays at `v1.3.0`; LibGloomSkin
+at MINOR 8; the Hub's `Effects.lua` gained a secret-tolerant mask bind on `master`, untagged.
+**Distribution decision recorded: symlinks for the owner, CurseForge if ever public, the WoWup path
+retired.**)
 
 ---
 
@@ -70,7 +71,9 @@ of it.
   power / class-resource / cast rings for player and target, meant to REPLACE EllesmereUI's player
   and target frames outright (EUI keeps ToT/focus/pet/boss via its per-unit *hidden* source). Its
   own repo, not Portraits: the owner — "they're not necessarily going to be linked in any fashion".
-  Not clickable unit buttons yet; that and auras are milestones (BACKLOG item 12).
+  Not clickable unit buttons yet. Auras, texts, class color and the shield wash are BUILT
+  (2026-09-19, second session); what remains is BACKLOG item 12, and the tab's layout
+  compaction is item 13.
 - **★ DISTRIBUTION: SYMLINKS FOR THE OWNER, CURSEFORGE IF EVER PUBLIC — the WoWup path is RETIRED**
   (the owner, 2026-09-19). Every suite addon on his client is a symlink into `~/<repo>`; WoWup's
   GitHub install "doesn't work very well" (Build Barn and Loot Advisor both moved to CurseForge over
@@ -175,12 +178,17 @@ config), no minimap button, no floating panel. Each mode keeps its own size/posi
 (`cfg.layouts[mode]`); the in-combat 2D stand-in wears the 2D set. The Gp mark is
 `Media/ui/logo.png`, composed from the family G and GB's b flipped.
 
-**`~/GloomsUnitFrames`** — local git, no remote, symlinked into AddOns. Hard-deps the Hub; two files —
-the ENGINE (`GloomsUnitFrames.lua`: the arc renderer of FINDINGS §18, `GloomsUnitFramesDB`,
-rings per unit, the cast/kick logic, a small API + `/gu debug`) and the **Unit Frames** tab
-(`GloomsUnitFrames_Tab.lua`, `SKIN_NEEDS = 4`, order 50, a GB-style accordion). `/gu` →
-`ToggleWindow("unitframes")`. Art in `Media/art/` is GENERATED (Python/PIL, the scripts were
-throwaway): `disc.png` + its ramp companion, the two half-plane masks per sweep direction, the two
+**`~/GloomsUnitFrames`** — local git, no remote, symlinked into AddOns. Hard-deps the Hub; four
+files — the ENGINE (`GloomsUnitFrames.lua`: the arc renderer of FINDINGS §18, `GloomsUnitFramesDB`,
+rings per unit in 16-level bands, class/reaction color, the shield wash of §19, the cast/kick
+logic, a small API + `/gu debug` / `/gu probe` / `/gu gate` / `/gu auras`), the **TEXT pieces**
+(`GloomsUnitFrames_Text.lua`: shortcode templates → one `SetFormattedText`), the **AURA groups**
+(`GloomsUnitFrames_Auras.lua`: `AuraContainer` groups + the "This spell" slots, Hub shapes and
+effects — FINDINGS §20) and the **Unit Frames** tab (`GloomsUnitFrames_Tab.lua`, `SKIN_NEEDS = 4`,
+order 50, a GB-style accordion: Position · Layer · Visibility · Texts · Auras · one section per
+ring). `/gu` → `ToggleWindow("unitframes")`. Art in `Media/art/` is GENERATED (Python/PIL, the
+scripts were throwaway): `disc.png` + its ramp companion and `disc-ramp-10…90.png` (the ramp at
+narrower fade widths, for the shield wash), the two half-plane masks per sweep direction, the two
 "lead" masks, `hole.png`, `cap.png`. The Gu mark is still the Hub's logo — a real mark is owed.
 
 ⚠ **`VibeOverlayDB` / `VibeOverlayDBChar` keep their names on purpose.** WoW keys SavedVariables off

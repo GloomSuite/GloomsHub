@@ -1408,3 +1408,122 @@ seconds), which is what drives the interrupt-return tick.
   angle. Fixed; the remaining seams were the alpha rules above.
 - ~~*"A cast ring must be a Cooldown swipe (full circle from 12 o'clock)."*~~ **KILLED** for the
   player — times are plain. Still the only fallback for a fully secret target cast.
+
+### ▶ AMENDED 2026-09-19 (late) — three more sinks, all `TESTED` on the live client
+| Sink | Result |
+|---|---|
+| `AbbreviateNumbers(secret[, cfg])` | **works** — "845K" / "14M", and "845.3K" with a one-decimal breakpoint config. It is Blizzard's, engine-side; EllesmereUI's 845K is this. |
+| `FontString:SetFormattedText("%s", secret)` with a secret STRING (`UnitName`) or a secret non-integer (`UnitEffectiveLevel`) | **works** — the text system in Gloom's Unit Frames is one `SetFormattedText` per piece, every shortcode an argument |
+| **`Frame:SetAlpha(secret)`** — a FRAME, not a texture | **works, and the zero rule holds**: a plain `SetAlpha(0)` followed by `SetAlpha(secret)` leaves the frame visible iff the secret is non-zero (probe `/gu gate`: three squares, A and B on with a shield, C — gated by a secret that IS zero — never drawn) |
+| `C_CurveUtil` curve `:Evaluate(secret)` | **refused** — "Secret values are only allowed during untainted execution for this argument" |
+
+The last two are the whole basis of §19.
+
+---
+
+## §19 — Absorbs on 12.1: no arc is possible, but presence is ✅ `TESTED` 2026-09-19
+
+**The question.** Gloom's Unit Frames wanted an absorb ARC on the health ring the way Blizzard's and
+EUI's bars show a shield. Every straight bar gets it for free — `StatusBar:SetMinMaxValues(0, max)`
++ `SetValue(absorb)` both take secrets and the engine sizes the fill — but an arc needs an ANGLE,
+and the only door from a secret to an angle is a percent function evaluating a curve engine-side.
+
+### ▶ `TESTED` — every door to an absorb ANGLE is shut (the owner ran each on the live client)
+1. **No absorb-percent function exists.** `for k,v in pairs(_G) … k:find("Absorb")` lists exactly
+   two functions: `UnitGetTotalAbsorbs`, `UnitGetTotalHealAbsorbs`. Both return a SECRET number for
+   the player (`issecretvalue` → true, in a city, out of combat).
+2. **A curve object will not evaluate a secret itself.** `curve:Evaluate(0.5)` → 0.5;
+   `curve:Evaluate(UnitGetTotalAbsorbs("player"))` → refused (the §18 amendment above). So even the
+   player's PLAIN max health cannot be turned into a curve over the secret absorb amount.
+3. **`UnitHealthPercent`'s second argument does not fold absorbs in.** With a 292K shield on 845K
+   health and health at ~34%: `with 34 / without 34` (rendered as text at the top of the screen —
+   the first attempt at full health read `100 / 100` and proved nothing, because a with-shield
+   percent would clamp there).
+
+**So an absorb arc has no honest source on this client.** The shield is available as a NUMBER
+(`[absorb]` on any text piece, abbreviated by `AbbreviateNumbers`) and as PRESENCE (below). **Do not
+re-chase the arc without a new API** — a `UnitGetTotalAbsorbsPercent`-shaped function, or a curve
+that evaluates secrets, is the only thing that would reopen it.
+
+### ▶ `TESTED` — the PRESENCE gate (shipped as the health ring's "shield wash")
+A secret alpha of ZERO is ignored (§18) — but "ignored" means "keeps its last opacity". So:
+`frame:SetAlpha(0)` (plain) then `frame:SetAlpha(UnitGetTotalAbsorbs(unit))` (secret, clamped to 1
+when large) leaves the frame **visible iff shielded, and no number ever reaches Lua.** Measured with
+`/gu gate` (three squares; the one gated by a secret zero — heal-absorbs — never appeared). Shipped
+as a copy of the health arc carrying only the gradient-ramp layer, under a gate frame and an
+opacity frame, its fade fitted to the arc's chord (`Media/art/disc-ramp-10…90.png` are the ramp at
+narrower fade widths; the disc shape is baked in, so width cannot be a texcoord). ⚠ `OBSERVED` only:
+the wash switching OFF on the ring itself — the owner is permanently shielded (Soul Leech), so the
+off state was seen on probe square C, not on the ring. The mechanism is the same call.
+
+### `KILLED` — do not revive these
+- ~~*"`UnitHealthPercent(unit, true, curve)` — the `true` means predicted/with absorbs."*~~ **KILLED**:
+  34 / 34 with a third of max health in shield.
+- ~~*"Evaluate the curve in Lua for the player, whose max health is plain."*~~ **KILLED**: the curve
+  refuses the secret argument.
+- ~~*"Read the absorb off a StatusBar the engine sized."*~~ Never tried and not needed: reading a
+  driven bar back would be reading the secret. Not a door.
+
+---
+
+## §20 — Aura GROUPS on a unit frame: what an aura button's children can and cannot do ✅ `TESTED` 2026-09-19
+
+**Context.** §1 built GA's per-spell duration bars on `AuraContainer` SLOTS. Gloom's Unit Frames
+needed the LIST form — a unit's buffs/debuffs as icons — which is `AddAuraGroup` with the engine's
+flow layout. EllesmereUI's `AuraKit` is the reference for that form; the notes below are what
+building it against our own frames established, all on the live client, owner at the keyboard.
+
+### ▶ `TESTED` — the group API as it works on 12.1
+- `C_AddOns.LoadAddOn("Blizzard_AuraContainer")`, then `CreateFrame("AuraContainer", nil, parent,
+  "CustomAuraContainerTemplate")`, `SetSize(1,1)` (the engine resizes it), flow layout via
+  `SetFlowLayoutAnchorPoint(point)`, `SetFlowLayoutGrowthDirection(h, v)` — **ENUMS**
+  (`AnchorUtil.FlowDirection.Right/Left/Up/Down`), a string is "horizontalDirection must be valid"
+  — and `SetFlowLayoutMaximumLineSize(px)` (a SIZE, not a count). Then
+  `AddAuraGroup(key, filterString, { maxFrameCount, candidateFilters, sortMethod, sortDirection,
+  initializeFrame, layout = { elementWidth, elementHeight, elementSpacing, lineSpacing } })`, and
+  **`SetUnit(unit)` LAST** (event registration is evaluated then and needs the group in place),
+  then `UpdateAllAuras()`.
+- Filter vocabulary that works: tokens in the string (`HELPFUL|PLAYER`, `HARMFUL|CROWD_CONTROL`,
+  `RAID`, `RAID_IN_COMBAT`, `RAID_PLAYER_DISPELLABLE`, `BIG_DEFENSIVE`, `EXTERNAL_DEFENSIVE`,
+  `CANCELABLE`, negated with `!`), booleans in `candidateFilters` (`isFromPlayerOrPlayerPet`,
+  `isBossAura`, `isRoleAura`, `isPriorityAura`, `isStealable`, `canApplyAura`), sets
+  (`includeDispelTypes`, `excludeDispelTypes`, `includeSpellIDs`, `excludeSpellIDs`) and
+  `maxDuration = math.huge` for "has a duration". **Owner-verified: `maxDuration` drops permanent
+  buffs**; `PLAYER` narrows to own casts (the target group). The rest go through the identical path
+  and are `UNTESTED` individually.
+- Sorting: `sortMethod = Enum.UnitAuraSortRule.ExpirationOnly` (4) with `sortDirection`
+  `Normal` (0) = soonest-expiring first, `Reverse` = last. **Owner-verified.** (BigWigs' aura plugin
+  documents the numbers.)
+- A group's filter string is FIXED at declaration; a filter change is a fresh container. Creation
+  in combat is legal per EUI (build 68914+) — **`UNTESTED` by us.**
+- A TARGET container still needs `UpdateAllAuras()` on `PLAYER_TARGET_CHANGED` (§1 point 2 holds).
+
+### ▶ `TESTED` — what lives under the button is half ours
+Inside `initializeFrame` we create the icon texture, a `Cooldown` (`CooldownFrameTemplate`), a
+carrier frame with two FontStrings, and a host frame, all children of the button, and bind them
+with `SetIcon`, `SetDurationCooldown`, `SetApplicationCount`, `SetDurationText`. Afterwards:
+1. **`IsShown()` / `IsVisible()` on a child FRAME of the button return a SECRET boolean** — a
+   boolean test on it errors ("attempt to perform boolean test on a secret boolean value"). The
+   same for the container's children. "Is this aura showing" is aura data.
+2. **No script on a child frame ever runs.** `OnShow`, `OnHide` and even `OnUpdate` set on the host
+   from `initializeFrame` fired **zero** times across many show/hide cycles of the button. The
+   engine does not tell addon frames under its button anything. (Whether `SetScript` is refused or
+   the handler is skipped was not distinguished; the effect is the same.)
+3. **Region WRITES stay legal**: `AddMaskTexture` on our icon, `SetSwipeTexture` on our Cooldown,
+   `SetVertexColor`/`SetAlpha` on our textures — all fine at any time, which is what §1 said.
+4. **`GetNumMaskTextures()` on our texture is PLAIN**, which is what makes a verified mask bind
+   possible under the button.
+
+**Consequences shipped:** the shape mask and the Hub effect are started AT WIRING TIME with no
+trigger and simply live under the button, which the engine hides and shows; the Hub's
+`Effects.lua` modules now treat a secret `IsShown` as shown and VERIFY their deferred mask bind
+through `GetNumMaskTextures`, retrying every 0.5 s while active (the "Hosts under a Blizzard
+AuraButton" block; behaviour on a plain visible host is unchanged). The icon's own shape mask does
+the same. The `/gu auras` diagnostic reports counts only — it may not test a child's `IsShown`.
+
+### `KILLED` — do not revive these
+- ~~*"Hook the button's OnShow to start the glow."*~~ **KILLED** — a button call after the window,
+  and even our own child frame's scripts never fire.
+- ~~*"Poll `host:IsVisible()` from outside."*~~ **KILLED** — secret boolean.
+- ~~*"Use `OnUpdate` on the host as the show signal, since it only runs while visible."*~~ **KILLED**
+  — it never ran at all under the button.

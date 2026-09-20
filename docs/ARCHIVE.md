@@ -1453,3 +1453,52 @@ versions drift by design (SUITE-STATE, locked decisions).
   in WTF, so rollback is just moving this folder back and re-enabling.
 
 Both were identity-scanned and are clean. The "do not delete" rule stays in SUITE-STATE's hazards.
+
+---
+
+## Closed 2026-09-19 (late night) — Gloom's Unit Frames, second session
+
+Backlog item 12's milestone list as it stood at the start of the evening, and how each closed:
+
+### Class color for the health fill — SHIPPED
+`UnitIsPlayer` → `C_ClassColor.GetClassColor(class)` (accepts a secret token, its channels go to
+`SetVertexColor`); NPCs take `FACTION_BAR_COLORS[reaction]`, tapped grey. A secret DECISION
+(player-or-not, which reaction) falls back to the ring's own color. Owner-verified against his
+nameplate colors. **Gradient wins over it** — the owner's call; the switch hides in gradient mode.
+
+### Text — SHIPPED as a system, not a slot
+The owner asked for "multiple data texts, shortcodes, each individually controllable in font, size,
+color and z, no practical limit". `GloomsUnitFrames_Text.lua`: a template compiles once into a
+format string + one reader per shortcode; each refresh is one `SetFormattedText` whose arguments
+may be secret. Abbreviation via `AbbreviateNumbers` (engine-side — EUI's 845K). The old "center
+text" migrated into piece 1 (`[hp:pct]`). Owner-QA'd on player and target the same evening.
+
+### Combat indicator — covered by the text system
+`[combat]`, `[resting]`, `[pvp]`, `[leader]`, `[mark]`, `[status]` are markers on any text piece.
+No separate indicator built.
+
+### The absorb arc — CLOSED as impossible (FINDINGS §19); the shield WASH shipped instead
+Three doors measured shut in one sitting: no absorb-percent function; `curve:Evaluate` refuses a
+secret; `UnitHealthPercent`'s flag does not include absorbs (34 / 34 with a 292K shield). The wash
+uses the plain-zero-then-secret `Frame:SetAlpha` gate (probe `/gu gate`), a ramp-only copy of the
+arc fitted to the arc's chord, with nine narrower ramp images generated for the fade width.
+
+### Auras on the frames — SHIPPED (FINDINGS §20)
+`GloomsUnitFrames_Auras.lua`: `AuraContainer` GROUPS (EUI's AuraKit as the reference), any number
+per unit; Buffs / Debuffs with a two-column tri-state class filter, only/never spell lists, timed-
+only, engine sort (expiring first/last); Hub silhouettes on every icon with the swipe following;
+and the **This spell** kind the owner asked for ("a debuff cast on ME by a raid boss — GA can't do
+that"): one aura by ID, a Hub shape + Hub effect with the effect's schema-driven settings, re-tuned
+live. Getting the effect to run under the button took the three measurements in §20 and a
+secret-tolerant, self-verifying mask bind in the Hub's `Effects.lua`.
+
+### Ring level bands widened 8 → 16
+For the shield copy's pieces. Rings now sit at 1–64; text pieces default to level 70 (the old
+default 40 migrated once via `tc.lv16`).
+
+### Two working-practice notes from the evening
+- A `/run` over 255 characters does nothing, again (§17's lesson) — both absorb probes moved into
+  the addon as `/gu probe`, `/gu gate`, `/gu auras`. Keep diagnostics in the addon.
+- The Claude session separated shell output with `echo ======`; zsh treats a word beginning with
+  `=` as a command lookup and the app flagged every such read as failed. Harmless, and not a
+  problem with the files — noted so nobody chases it.

@@ -473,6 +473,12 @@ Shared textures in `Media\art\effects\`.
   skipping an unchanged winner; GA via a signature of module + shape + merged params. FINDINGS §14.
 - **HOLLOW vs MASKED:** `breathe`, `burst` and `rimflash` draw the shape's `rim` art directly, so
   they have no centre and can overlay a live action button. The other five mask to the shape.
+- **★ HOSTS UNDER A BLIZZARD AURA BUTTON are supported (2026-09-19, for Gloom's Unit Frames).**
+  The masked modules' deferred bind treats a secret `IsShown` as shown and VERIFIES the bind via
+  `GetNumMaskTextures`, retrying every 0.5 s while the instance is active — so `Start` may be
+  called at wiring time on a host that has not drawn yet, and the effect appears when the engine
+  shows the button. No `VERSION` bump: the contract is unchanged and a plain visible host behaves
+  as before. FINDINGS §20 has the measurements.
 
 ### Consumers
 | Consumer | uses |
@@ -481,6 +487,8 @@ Shared textures in `Media\art\effects\`.
 | `GloomsBars/Anims.lua` | wiring only — modules come from §8 |
 | `GloomsAuras/Displays.lua` | `ApplyShape` (§7) and `ApplyEffects` (§8) |
 | `GloomsAuras/Config.lua` | the shape picker and the schema-driven settings popup |
+| `GloomsUnitFrames/GloomsUnitFrames_Auras.lua` | `ShapeAsset`/`GrowAnchor` on every aura icon (§7); `Effects` on the "This spell" slot buttons (§8) |
+| `GloomsUnitFrames/GloomsUnitFrames_Tab.lua` | the shape dropdown and a schema-driven effect-settings block |
 
 ⚠ **These are ENGINE-level dependencies, so they must DEGRADE, never error** — CONTRACTS §6's rule
 still holds. `GB:HandAsset` returns a path for any non-nil key even against an ancient Hub;

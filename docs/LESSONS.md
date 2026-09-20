@@ -356,6 +356,30 @@ design, not a gap in his understanding** — the naming genuinely lied.
 
 ## WoW client behaviour
 
+- **★★ NEVER TRUTH-TEST A SECRET; CARRY A PLAIN `ok` IN FRONT OF IT.** On 2026-09-19 the first
+  draft of the class-color code did `cr and {cr, cg, cb} or default` on a channel that can be
+  secret — a boolean test on a secret is a Lua error, and it only fires on the identity-restricted
+  unit you were not testing on. EllesmereUI's shape is the right one: functions that may return a
+  secret return `ok, r, g, b` with `ok` PLAIN, callers branch on `ok` and hand `r, g, b` straight to
+  a setter. The same rule killed `host:IsVisible()` under an aura button (FINDINGS §20): the
+  answer was a secret boolean, and the `if` threw.
+- **★★ UNDER A BLIZZARD AURA BUTTON, YOUR FRAMES ARE DEAF.** A child frame you create inside
+  `initializeFrame` never runs a script — not `OnShow`, not `OnHide`, not even `OnUpdate` (FINDINGS
+  §20, measured at zero events). Your REGIONS stay writable. So anything that must happen "when
+  the aura appears" cannot be triggered; it has to be set up at wiring time and simply live under
+  the button, with the engine's show/hide doing the rest. The Hub's effects were reworked to verify
+  their own mask bind for exactly this (a bind on a not-yet-drawn texture fails silently, so
+  `GetNumMaskTextures` is the check and a 0.5 s retry the cure).
+- **★ A SECRET ZERO IS IGNORED — WHICH MAKES A PRESENCE GATE.** The §18 trap ("alpha 0 from a secret
+  keeps the last opacity") is also a tool: plain `SetAlpha(0)` then `SetAlpha(secretAmount)` shows
+  a frame iff the amount is non-zero, with no number ever reaching Lua. The shield wash is built
+  on it (FINDINGS §19). Test the OFF state with a secret that IS zero — a permanently shielded
+  Warlock never sees it on the real ring.
+- **★ THE SHAPE OF THE DOOR DECIDES THE FEATURE, NOT THE SECRECY OF THE VALUE.** A straight bar
+  gets an absorb fill for free (`StatusBar` takes secrets and the engine sizes it); an arc needs an
+  angle, and the only secret→angle door is a percent function evaluating a curve — which absorbs
+  were never given (§19). Before promising a display, ask which SINK will draw it and whether the
+  value has a road to that sink; "EUI shows it" only proves EUI's sink exists.
 - **★★ A SETTER THAT ACCEPTS A SECRET MAY STILL DO NOTHING — the picture is the test, never
   `pcall`.** On 2026-09-19 (FINDINGS §18) three setters took a secret without complaint and ignored
   it: `SetPoint` (region lands at 0,0), `SetAlpha` on a texture carrying `SetGradient` (stays

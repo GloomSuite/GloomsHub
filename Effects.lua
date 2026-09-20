@@ -77,6 +77,40 @@ end
 -- then attach the mask AND reveal together in the deferred callback.
 local PRIME_ALPHA = 0.02
 
+-- ── Hosts under a Blizzard AuraButton (Gloom's Unit Frames, 2026-09-19) ──────
+-- A frame created as a child of an engine aura button inherits its restriction:
+-- IsShown()/IsVisible() on it (and on our textures under it) answer with a
+-- SECRET boolean, and no addon script on it ever runs. The modules' deferred
+-- "bind the mask after the first render" step therefore (a) treats a secret
+-- visibility as shown, and (b) VERIFIES the bind through GetNumMaskTextures and
+-- retries every half second while the instance is active — because Start may
+-- run while the button is still hidden, and a never-rendered texture rejects
+-- the mask silently (§2). On a plain, visible host the first attempt succeeds
+-- and nothing about GB's or GA's behaviour changes.
+local issecretvalue = _G.issecretvalue
+local function Shown(r)
+  local v = r:IsShown()
+  if issecretvalue and issecretvalue(v) then return true end
+  return v
+end
+local function Bind(tex, mask)
+  tex:AddMaskTexture(mask)
+  if tex.GetNumMaskTextures then
+    local n = tex:GetNumMaskTextures()
+    if not (issecretvalue and issecretvalue(n)) and n == 0 then return false end
+  end
+  return true
+end
+-- Run `fn` after the next render and, while `active[inst]` holds, again every
+-- 0.5s until it returns true.
+local function Settle(inst, active, fn)
+  local function attempt()
+    if not active[inst] then return end
+    if not fn() then C_Timer.After(0.5, attempt) end
+  end
+  C_Timer.After(0, attempt)
+end
+
 local SHINE_TEX = EFFECT_ART .. "shine.png"
 local shineInst = {}    -- [host] = { frame, mask, texs, masked, n, w, dir, phase }
 local shineActive = {}  -- set of running instances
@@ -142,15 +176,17 @@ function Shine:Start(host, icon, key, p)
   inst.w = w
   inst.frame:Show()
   shineActive[inst] = true; shineDriver:Show()
-  C_Timer.After(0, function()   -- attach the mask + REVEAL after the first render (§2 defers the mask)
-    if not inst.frame:IsShown() then return end
+  Settle(inst, shineActive, function()   -- attach the mask + REVEAL after the first render (§2 defers the mask)
+    if not Shown(inst.frame) then return false end
+    local done = true
     for i = 1, inst.n do
       local tex = inst.texs[i]
-      if tex and tex:IsShown() then
-        if not inst.masked[i] then tex:AddMaskTexture(inst.mask); inst.masked[i] = true end
-        tex:SetAlpha(1)
+      if tex and Shown(tex) then
+        if not inst.masked[i] then inst.masked[i] = Bind(tex, inst.mask) end
+        if inst.masked[i] then tex:SetAlpha(1) else done = false end
       end
     end
+    return done
   end)
 end
 
@@ -243,15 +279,17 @@ function March:Start(host, icon, key, p)
   inst.w = w
   inst.frame:Show()
   marchActive[inst] = true; marchDriver:Show()
-  C_Timer.After(0, function()   -- attach the mask + REVEAL after the first render (§2 defers the mask)
-    if not inst.frame:IsShown() then return end
+  Settle(inst, marchActive, function()   -- attach the mask + REVEAL after the first render (§2 defers the mask)
+    if not Shown(inst.frame) then return false end
+    local done = true
     for i = 1, inst.n do
       local tex = inst.texs[i]
-      if tex and tex:IsShown() then
-        if not inst.masked[i] then tex:AddMaskTexture(inst.mask); inst.masked[i] = true end
-        tex:SetAlpha(1)
+      if tex and Shown(tex) then
+        if not inst.masked[i] then inst.masked[i] = Bind(tex, inst.mask) end
+        if inst.masked[i] then tex:SetAlpha(1) else done = false end
       end
     end
+    return done
   end)
 end
 
@@ -357,11 +395,11 @@ function Sheen:Start(host, icon, key, p)
   inst.tex:SetAlpha(PRIME_ALPHA); inst.tex:Show()
   inst.frame:Show()
   sheenActive[inst] = true; sheenDriver:Show()
-  C_Timer.After(0, function()   -- attach the mask, then let the driver reveal (kills the 1st-trigger flash)
-    if inst.frame:IsShown() and inst.tex:IsShown() then
-      if not inst.masked then inst.tex:AddMaskTexture(inst.mask); inst.masked = true end
-      inst.ready = true
-    end
+  Settle(inst, sheenActive, function()   -- attach the mask, then let the driver reveal (kills the 1st-trigger flash)
+    if not (Shown(inst.frame) and Shown(inst.tex)) then return false end
+    if not inst.masked then inst.masked = Bind(inst.tex, inst.mask) end
+    if inst.masked then inst.ready = true end
+    return inst.masked
   end)
 end
 
@@ -470,12 +508,15 @@ function Sparkle:Start(host, icon, key, p)
   inst.n = n
   inst.frame:Show()
   sparkleActive[inst] = true; sparkleDriver:Show()
-  C_Timer.After(0, function()   -- attach each sparkle's mask after its first render (§2)
-    if not inst.frame:IsShown() then return end
+  Settle(inst, sparkleActive, function()   -- attach each sparkle's mask after its first render (§2)
+    if not Shown(inst.frame) then return false end
+    local done = true
     for i = 1, inst.n do
       local sp = inst.sparks[i]
-      if sp and sp.tex:IsShown() and not sp.masked then sp.tex:AddMaskTexture(inst.mask); sp.masked = true end
+      if sp and Shown(sp.tex) and not sp.masked then sp.masked = Bind(sp.tex, inst.mask) end
+      if sp and not sp.masked then done = false end
     end
+    return done
   end)
 end
 
@@ -794,11 +835,11 @@ function Radar:Start(host, icon, key, p)
   inst.tex:Show(); inst.tex:SetAlpha(PRIME_ALPHA)   -- prime near-invisible; revealed once the mask binds
   inst.frame:Show()
   radarActive[inst] = true; radarDriver:Show()
-  C_Timer.After(0, function()   -- attach the mask + REVEAL after the first render (§2 defers the mask)
-    if inst.frame:IsShown() and inst.tex:IsShown() then
-      if not inst.masked then inst.tex:AddMaskTexture(inst.mask); inst.masked = true end
-      inst.tex:SetAlpha(1)
-    end
+  Settle(inst, radarActive, function()   -- attach the mask + REVEAL after the first render (§2 defers the mask)
+    if not (Shown(inst.frame) and Shown(inst.tex)) then return false end
+    if not inst.masked then inst.masked = Bind(inst.tex, inst.mask) end
+    if inst.masked then inst.tex:SetAlpha(1) end
+    return inst.masked
   end)
 end
 
