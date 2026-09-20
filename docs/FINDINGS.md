@@ -1390,9 +1390,31 @@ seconds), which is what drives the interrupt-return tick.
    ARTWORK sublevels did not guarantee order across textures carrying different masks (the
    boundary spoke), and two rings on the same levels interleave their pieces.
 10. **The player's cast** is PLAIN — `UnitCastingInfo` name/start/end, the duration object's total
-    and remaining — so the cast ring is clock arithmetic per frame. Whether a TARGET's cast goes
-    secret on a restricted map is `UNTESTED`; the engine falls back to the duration object and
-    hides the ring if even the total is secret.
+    and remaining — so the cast ring is clock arithmetic per frame. **A TARGET's cast on a
+    restricted map is SECRET in every part — name, start, end AND the duration object's total**
+    (`TESTED` in a delve, 2026-09-20, via `/gu casttrace`). The ring still draws it: the duration
+    object evaluates a curve over its own 0..1 FRACTION engine-side —
+    **`d:EvaluateElapsedPercent(curve)`** (a cast filling) / **`d:EvaluateRemainingPercent(curve)`**
+    (a channel draining) — so the very percent curves `UnitHealthPercent` takes serve unchanged and
+    no total is ever needed. (OPie's cooldown spiral uses the same door; EUI's cast bar gets it for
+    free through `StatusBar:SetTimerDuration`, which a masked arc cannot use.) Owner-verified: the
+    ring fills in step with EUI's nameplate bar, and the interrupt-state RECOLOUR works under
+    secrecy (`notInterruptible` goes through `EvaluateColorValueFromBoolean`). What does NOT work
+    there is the mid-cast tint and the kick tick — both need the cast's real clock to place a mark,
+    and `KickExtras` keeps its `st.plain` guard. Name and level text stayed readable in a pull.
+11. **The evaluators' optional second argument is validated to 0..1.**
+    `d:EvaluateRemainingDuration(curve, 0.004)` passes; `d:EvaluateRemainingDuration(curve, 4.79)`
+    (an angle in radians as the "default") is **"bad argument #3"** (`TESTED` 2026-09-20 — 73× on
+    the kick tick's first outing on a class with an interrupt; the Warlock had none, so it never
+    ran). A rotation evaluation takes NO second argument; alpha evaluations may keep theirs.
+12. **`Texture:SetVertexColor(r, g, b, 1)` lands the 4th value as the layer's OPACITY** on 12.1
+    (`OBSERVED` 2026-09-20 via `/gu debug target`: after the cast ring's per-tick recolour, the
+    EMPTY second chunk's base read `alpha=1.000` while its grad/mid/low sat at the gate's 0.004 —
+    the one layer recoloured per frame was the one lit, and its 1.5° lead overlap drew as an orange
+    slice at the chunk boundary). `arc:SetColor` now passes three values, and `CastTick` recolours
+    BEFORE the geometry pass so the gate is the last writer; the slice is gone (`TESTED`). The
+    ordering fix and the argument fix landed together, so which one alone would have sufficed is
+    not established — keep both.
 
 ### `KILLED` — do not revive these
 - ~~*"Health is secret in instances"*~~ (backlog item 12's old wording) — **KILLED**: secret on a
@@ -1407,7 +1429,13 @@ seconds), which is what drives the interrupt-return tick.
   not a wedge (the polygon never passed through the centre) — measured by sampling the PNG by
   angle. Fixed; the remaining seams were the alpha rules above.
 - ~~*"A cast ring must be a Cooldown swipe (full circle from 12 o'clock)."*~~ **KILLED** for the
-  player — times are plain. Still the only fallback for a fully secret target cast.
+  player — times are plain. ~~*Still the only fallback for a fully secret target cast.*~~ **KILLED
+  2026-09-20** — the duration object's percent evaluators (point 10) draw the secret cast on the
+  ring's own curves. The swipe is never needed.
+- ~~*"If even the target's TOTAL is secret the ring must hide."*~~ **KILLED 2026-09-20** — the total
+  IS secret in a delve, and the ring draws anyway (point 10). The hiding was a guess about the API.
+- ~~*"The slice at the chunk boundary is the seam work coming undone."*~~ **KILLED 2026-09-20** — the
+  gate held on three of four layers; the fourth was being re-lit by the per-tick recolour (point 12).
 
 ### ▶ AMENDED 2026-09-19 (late) — three more sinks, all `TESTED` on the live client
 | Sink | Result |
@@ -1513,6 +1541,19 @@ with `SetIcon`, `SetDurationCooldown`, `SetApplicationCount`, `SetDurationText`.
    `SetVertexColor`/`SetAlpha` on our textures — all fine at any time, which is what §1 said.
 4. **`GetNumMaskTextures()` on our texture is PLAIN**, which is what makes a verified mask bind
    possible under the button.
+
+5. **Layout writes under the button are REFUSED while auras are secret** — `SetSize` on our
+   texture from an effect driver in a delve fight: *"Attempt to access forbidden object from code
+   tainted by an AddOn"*, 2,000+ times a fight (`TESTED` 2026-09-20, Breathe). This is §1's
+   forbidden window reaching our own children: `SetAlpha` / `SetVertexColor` (point 3) survive,
+   `SetSize` does not, `SetPoint` presumably not (`SUSPECTED` — same class of write; Sheen has not
+   been run there), `SetRotation` unknown (`UNTESTED` — the Park helper announces it if it fails).
+   **Consequence:** `Effects.lua` PARKS an instance whose layout write is refused until
+   `PLAYER_REGEN_ENABLED` and says so once per module per session — the effect pauses for the
+   fight instead of storming BugSack. The real fix is engine `AnimationGroup`s for the size /
+   position modules (Hub BACKLOG). Also measured: a Hub effect was being started on EVERY button of
+   a Buffs/Debuffs group carrying a stale `effect` field (six Breathe instances); effects are now
+   This-spell only, as designed.
 
 **Consequences shipped:** the shape mask and the Hub effect are started AT WIRING TIME with no
 trigger and simply live under the button, which the engine hides and shows; the Hub's

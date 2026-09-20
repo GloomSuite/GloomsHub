@@ -109,14 +109,15 @@ shipper — its `Skin.lua` IS the lib body (embedding a copy in each tool via `.
 externals is Phase G work). `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are Hub-side aliases of the
 same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Phase E**.
 
-**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 8) — the whole API; nothing else is public:**
+**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 9) — the whole API; nothing else is public:**
 - `Skin.COLOR` — `purple · heroic · green · red · orange` (each `{r,g,b,hex}`), `dark`, `rim`
   (both `{r,g,b,a}`), `text`, `mute` (`{r,g,b}`). The §1 literals.
 - `Skin.FONT` — `title · head · body · bodyM · label` → font files under
   `Interface\AddOns\GloomsHub\Media\fonts\` (pre-warmed paths; see the warm-list contract).
 - `Skin.MEDIA` — `"Interface\AddOns\GloomsHub\Media\"` (the permanent Hub path — locked).
 - `Skin.UI` — the stateless widget factory:
-  - `UI.CARET` (caret art path) · `UI.CARET_DOWN` (rotation radians for "open")
+  - `UI.CARET` (caret art path) · `UI.CARET_DOWN` (rotation radians for "open") · `UI.COG` (the
+    sub-settings gear, white, tint it — MINOR 9)
   - `UI.setFont(fs, path, size, flags?)` → **`true` if the requested face applied, `false` if the
     stock fallback was used** (MINOR 5). ★ **`SetFont` RAISES on a missing asset — it does not
     return false** (FINDINGS §2/§5), so this helper `pcall`s and can never raise, whatever it is
@@ -283,6 +284,30 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     `Media.lua` uses it to name a broken catalog entry in chat. ⚠ **Do not gate LSM registration
     on it** — a font added this session with a restart pending may fail the probe while being
     perfectly valid (fonts load at launch), and dropping a good font is worse than the warning.
+  - **`UI.grid(parent, yTop, opts?)` → the TWO-COLUMN placer (MINOR 9).** The owner, 2026-09-19:
+    EUI "compacts the settings panels into dropdowns and side-by-side display, whereas you tend to
+    just stack things endlessly." `g:cell(h, build)` → a half-width Frame (two per line; a
+    one-column grid — `opts.cols = 1`, a popover's stack — makes every cell a row) ·
+    `g:row(h, build)` → full width · `g:gap(px)` · `g:endLine()` · `g:show(frame, on)` hides a
+    cell and the line collapses when empty · `g:layout()` restacks and returns / sets `g.height`.
+    Cells anchor by the parent's edges and centre, so they follow its width with no numbers of
+    their own; widgets inside keep their 18px insets, so the outer margin is the family's and the
+    two columns get a 36px gutter for free (`opts.gutter` widens it). **A tab's `refresh` calls
+    `g:layout()` and re-reads `g.height`** — the grid moves, the accordion follows. First consumer:
+    the Unit Frames tab, every section body.
+  - **`UI.popover(opts)` → a small anchored panel for a control's SUB-SETTINGS (MINOR 9)**, and
+    **`UI.cog(parent, opts)` → the gear that opens one** (purple, orange while open; `opts.tip =
+    { title, body }`). `opts = { owner, w, title, build(content) → contentHeight, onOpen(content)
+    → newHeight?, onClose? }`. The family plate with the colour picker's purple rim and NO scrim
+    (you are judging the thing it changes), hanging off the owner's bottom-right, clamped to the
+    screen; built lazily once. Closes on any outside click (a full-screen catcher at FULLSCREEN
+    level 0, the panel at level 5), on its owner hiding, or when another popover opens.
+    ★ **Layering, fixed on purpose:** the dropdown flyout's catcher was raised to level 20 so a
+    list opened INSIDE a popover dismisses cleanly; the colour picker (FULLSCREEN_DIALOG) floats
+    over both. A control inside a popover that changes something the grid also shows (GU's
+    interrupt popover carries the ring's Color) must repaint the grid's copy itself — nothing
+    links them. Consumers: the Unit Frames tab (shield tint · interrupt colouring · effect
+    settings · aura filters · the shortcode list).
 - **NOT exported (deliberate):** `makeSection` — each tab's accordion closes over its own
   scroll/relayout/one-open state, so the Media tab and the Bars tab each keep a local copy of
   the small pattern. Revisit at Phase D if GA shows a clean shared shape; adding it then is a
@@ -395,6 +420,8 @@ end
 | `GloomsAuras/Config.lua` | MINOR **6** — calls `UI.colorPicker` directly (its `MakeColor` swatch) |
 | `GloomsOverlays/GloomsOverlays_Editor.lua` | MINOR **4** — calls `UI.tabHeader` |
 | `GloomsOverlays/GloomsOverlays_Preview.lua` | MINOR **3** — the drawer needs nothing newer |
+| `GloomsPortraits/GloomsPortraits_Tab.lua` | MINOR **4** — calls `UI.tabHeader` |
+| `GloomsUnitFrames/GloomsUnitFrames_Tab.lua` | MINOR **9** — calls `UI.grid` / `UI.popover` / `UI.cog` (bumped 2026-09-20, in the commit that first called them) |
 
 ★ Note the table is **not uniform, and that is correct** — each file declares what IT
 actually uses. MINOR 4 landed as the first live exercise of this gate: `UI.tabHeader` was
@@ -402,7 +429,7 @@ added and the two files that call it were bumped **in the same commit**. GA foll
 same discipline on 2026-07-25 when its layout rework adopted `UI.tabHeader` — gate bumped
 in the commit that first called it, which is the only maintenance this gate ever needs.
 
-Hub currently ships **MINOR 8** (`Skin.lua`).
+Hub currently ships **MINOR 9** (`Skin.lua`, 2026-09-20).
 
 ⚠ **This line was stale for three weeks** — it still said MINOR 6 after 7 shipped on 2026-08-15, and
 was only caught on 09-08. It is the line a session reads to decide whether a `SKIN_NEEDS` bump is

@@ -111,6 +111,34 @@ local function Settle(inst, active, fn)
   C_Timer.After(0, attempt)
 end
 
+-- ── Layout writes under a Blizzard AuraButton IN COMBAT ──────────────────
+-- SetSize / SetPoint on a texture under an engine aura button are REFUSED
+-- while auras are secret ("Attempt to access forbidden object", measured in a
+-- delve 2026-09-20 — 2,000+ errors a fight from Breathe alone); alpha and
+-- colour writes are not (FINDINGS §20). Until the size/position modules are
+-- re-driven through engine AnimationGroups (Hub BACKLOG), a refused write
+-- PARKS that instance: its driver skips it until PLAYER_REGEN_ENABLED, so the
+-- effect pauses for the fight instead of storming BugSack, and says so ONCE
+-- per module per session — a paused effect must never pass for a working one.
+local parked = {}
+local parkedSaid = {}
+local function Park(inst, moduleLabel, fn, ...)
+  local ok = pcall(fn, ...)
+  if ok then return true end
+  inst.parked = true; parked[inst] = true
+  if not parkedSaid[moduleLabel] then
+    parkedSaid[moduleLabel] = true
+    print(("|cff936bffGloom's Hub:|r the %s effect is paused for this fight — the game refuses its "
+      .. "size/position writes under an aura button in combat. It resumes when combat ends."):format(moduleLabel))
+  end
+  return false
+end
+local unpark = CreateFrame("Frame"); unpark:RegisterEvent("PLAYER_REGEN_ENABLED")
+unpark:SetScript("OnEvent", function()
+  for inst in pairs(parked) do inst.parked = nil end
+  wipe(parked)
+end)
+
 local SHINE_TEX = EFFECT_ART .. "shine.png"
 local shineInst = {}    -- [host] = { frame, mask, texs, masked, n, w, dir, phase }
 local shineActive = {}  -- set of running instances
@@ -118,10 +146,12 @@ local shineActive = {}  -- set of running instances
 local shineDriver = CreateFrame("Frame"); shineDriver:Hide()
 shineDriver:SetScript("OnUpdate", function(_, dt)
   for inst in pairs(shineActive) do
-    inst.phase = (inst.phase + dt * inst.w) % (2 * math.pi)   -- inst.w is SIGNED (spin carries direction)
-    local step = (2 * math.pi) / inst.n
-    for i = 1, inst.n do
-      if inst.texs[i] then inst.texs[i]:SetRotation(inst.phase + (i - 1) * step) end
+    if not inst.parked then
+      inst.phase = (inst.phase + dt * inst.w) % (2 * math.pi)   -- inst.w is SIGNED (spin carries direction)
+      local step = (2 * math.pi) / inst.n
+      for i = 1, inst.n do
+        if inst.texs[i] and not Park(inst, "Shine Chase", inst.texs[i].SetRotation, inst.texs[i], inst.phase + (i - 1) * step) then break end
+      end
     end
   end
 end)
@@ -218,10 +248,12 @@ local marchActive = {}  -- set of running instances
 local marchDriver = CreateFrame("Frame"); marchDriver:Hide()
 marchDriver:SetScript("OnUpdate", function(_, dt)
   for inst in pairs(marchActive) do
-    inst.phase = (inst.phase + dt * inst.w) % (2 * math.pi)   -- inst.w is SIGNED (spin carries direction)
-    local step = (2 * math.pi) / inst.n
-    for i = 1, inst.n do
-      if inst.texs[i] then inst.texs[i]:SetRotation(inst.phase + (i - 1) * step) end
+    if not inst.parked then
+      inst.phase = (inst.phase + dt * inst.w) % (2 * math.pi)   -- inst.w is SIGNED (spin carries direction)
+      local step = (2 * math.pi) / inst.n
+      for i = 1, inst.n do
+        if inst.texs[i] and not Park(inst, "Marching Lines", inst.texs[i].SetRotation, inst.texs[i], inst.phase + (i - 1) * step) then break end
+      end
     end
   end
 end)
@@ -324,7 +356,9 @@ local SHEEN_SWEEP_FRAC = 0.42      -- portion of the cycle that is the actual sw
 local sheenDriver = CreateFrame("Frame"); sheenDriver:Hide()
 sheenDriver:SetScript("OnUpdate", function(_, dt)
   for inst in pairs(sheenActive) do
-    if not inst.ready then
+    if inst.parked then
+      -- refused in combat under an aura button; resumes at regen
+    elseif not inst.ready then
       -- priming: leave the tiny prime alpha untouched so the texture renders for the
       -- mask attach (§2); the C_Timer flips ready once the mask is bound.
     elseif not inst.period then
@@ -334,8 +368,9 @@ sheenDriver:SetScript("OnUpdate", function(_, dt)
       local ph = (inst.t % inst.period) / inst.period
       if ph < SHEEN_SWEEP_FRAC then
         local p = ph / SHEEN_SWEEP_FRAC          -- 0..1 across the sweep
-        inst.tex:SetPoint("CENTER", inst.icon, "CENTER", inst.dir * (-1 + 2 * p) * inst.travel, 0)
-        inst.tex:SetAlpha(1)
+        if Park(inst, "Sheen Sweep", inst.tex.SetPoint, inst.tex, "CENTER", inst.icon, "CENTER", inst.dir * (-1 + 2 * p) * inst.travel, 0) then
+          inst.tex:SetAlpha(1)
+        end
       else
         inst.tex:SetAlpha(0)                     -- pause between gleams
       end
@@ -450,9 +485,9 @@ sparkleDriver:SetScript("OnUpdate", function(_, dt)
     local rate = inst.rate or 1
     for i = 1, inst.n do
       local sp = inst.sparks[i]
-      if sp and sp.masked then    -- animate only once masked (per-sparkle prime → reveal, no flash)
+      if sp and sp.masked and not inst.parked then    -- animate only once masked (per-sparkle prime → reveal, no flash)
         sp.t = sp.t + dt * rate
-        if sp.t >= sp.life then sparkleRespawn(inst, sp) end
+        if sp.t >= sp.life and not Park(inst, "Sparkles", sparkleRespawn, inst, sp) then break end
         sp.tex:SetAlpha(math.sin(math.pi * (sp.t / sp.life)))   -- 0 → peak → 0 twinkle envelope
       end
     end
@@ -549,11 +584,14 @@ local BREATHE_LOW = 0.55   -- alpha floor as a fraction of peak (dims on the out
 local breatheDriver = CreateFrame("Frame"); breatheDriver:Hide()
 breatheDriver:SetScript("OnUpdate", function(_, dt)
   for inst in pairs(breatheActive) do
-    inst.phase = (inst.phase + dt * inst.speed * BREATHE_RATE) % (2 * math.pi)
-    local b = 0.5 - 0.5 * math.cos(inst.phase)          -- smooth 0 → 1 → 0 breath
-    local scale = 1 + inst.depth * b
-    inst.tex:SetSize(inst.baseW * scale, inst.baseH * scale)   -- centred anchor → scales about the icon
-    inst.tex:SetAlpha(inst.peak * (BREATHE_LOW + (1 - BREATHE_LOW) * b))
+    if not inst.parked then
+      inst.phase = (inst.phase + dt * inst.speed * BREATHE_RATE) % (2 * math.pi)
+      local b = 0.5 - 0.5 * math.cos(inst.phase)          -- smooth 0 → 1 → 0 breath
+      local scale = 1 + inst.depth * b
+      if Park(inst, "Breathe", inst.tex.SetSize, inst.tex, inst.baseW * scale, inst.baseH * scale) then   -- centred anchor → scales about the icon
+        inst.tex:SetAlpha(inst.peak * (BREATHE_LOW + (1 - BREATHE_LOW) * b))
+      end
+    end
   end
 end)
 
@@ -627,14 +665,16 @@ local BURST_REACH_MAX = 1.2   -- (reach param caps here) — expansion beyond th
 local burstDriver = CreateFrame("Frame"); burstDriver:Hide()
 burstDriver:SetScript("OnUpdate", function(_, dt)
   for inst in pairs(burstActive) do
-    inst.cyclePhase = (inst.cyclePhase + dt * inst.speed / BURST_BASE) % 1
-    for i = 1, inst.n do
-      local tex = inst.texs[i]
-      if tex then
-        local p = (inst.cyclePhase + (i - 1) / inst.n) % 1   -- staggered progress 0..1
-        local scale = 1 + inst.reach * p
-        tex:SetSize(inst.baseW * scale, inst.baseH * scale)  -- centred → expands about the icon
-        tex:SetAlpha(inst.peak * (1 - p))                    -- fades out as it grows
+    if not inst.parked then
+      inst.cyclePhase = (inst.cyclePhase + dt * inst.speed / BURST_BASE) % 1
+      for i = 1, inst.n do
+        local tex = inst.texs[i]
+        if tex then
+          local p = (inst.cyclePhase + (i - 1) / inst.n) % 1   -- staggered progress 0..1
+          local scale = 1 + inst.reach * p
+          if not Park(inst, "Burst Ring", tex.SetSize, tex, inst.baseW * scale, inst.baseH * scale) then break end  -- centred → expands about the icon
+          tex:SetAlpha(inst.peak * (1 - p))                    -- fades out as it grows
+        end
       end
     end
   end
@@ -790,8 +830,10 @@ local RADAR_MIN_REV = 1.4   -- sec/revolution at |spin| = 1
 local radarDriver = CreateFrame("Frame"); radarDriver:Hide()
 radarDriver:SetScript("OnUpdate", function(_, dt)
   for inst in pairs(radarActive) do
-    inst.phase = (inst.phase + dt * inst.w) % (2 * math.pi)   -- inst.w is SIGNED (spin carries direction)
-    inst.tex:SetRotation(inst.phase)
+    if not inst.parked then
+      inst.phase = (inst.phase + dt * inst.w) % (2 * math.pi)   -- inst.w is SIGNED (spin carries direction)
+      Park(inst, "Radar Sweep", inst.tex.SetRotation, inst.tex, inst.phase)
+    end
   end
 end)
 

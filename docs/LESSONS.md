@@ -258,6 +258,24 @@ design, not a gap in his understanding** — the naming genuinely lied.
 
 ## Verification & evidence
 
+- **★ "Owner-QA'd" means QA'd on the class he was playing. Say which paths that class cannot reach.**
+  On 2026-09-20 three bugs in the cast ring's interrupt colouring surfaced in one evening — an
+  evaluator argument out of range, a tint painted onto empty geometry, a recolour undoing the alpha
+  gate — because the code had been "owner-QA'd" on a Warlock, who has no interrupt, so `KickExtras`
+  had never executed. Each was a first-run bug, not a regression, and the owner read them as the seam
+  work coming undone. When a feature is gated on class/spec/talent (an interrupt, a resource, a
+  pet), the handoff must name it as `UNTESTED` until a character that has it has run it.
+- **★ A control that "does nothing" is usually a callback that DIED.** The colour picker applies
+  live through `set()`; `set()` re-lays the frame out; the layout was throwing on an unrelated nil
+  (the shield arc refreshed before it existed) — so the swatch never got told to repaint and the
+  owner reported "I cannot change the colour." Before diagnosing a UI control, ask for BugSack
+  from the moment of the click: an error inside the apply path presents exactly like a dead control.
+- **When a measurement is too fast to take by hand, make the addon take it.** A delve mob's cast is
+  two seconds; `/gu debug target` could not be timed against it and the owner rightly gave up.
+  A trace that prints on CHANGE (`/gu casttrace`: one chat line per route change) answered in one
+  pull what three attempts at manual timing could not. Same family as "keep diagnostics in the
+  addon, a `/run` over 255 chars does nothing" — the diagnostic must also fit the event's timescale.
+
 - **Check what a tag POINTS AT, not just that it exists.** GB's published `v0.2.0` looked current
   and sat on a pre-Phase-C commit three phases stale.
 - **A cross-cutting fact restated in a second repo WILL go stale.** Release state was copied into

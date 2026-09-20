@@ -6,14 +6,14 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-09-19, late night (**Gloom's Unit Frames grew its second layer in one
-session** — class/reaction color on the health fill, the shield WASH (presence, not amount — FINDINGS
-§19 closes the absorb arc for good), a free-form TEXT system of placeable shortcode pieces, and
-AURA GROUPS on the frames: filtered lists with engine sort, Hub silhouettes on every icon, and a
-"This spell" highlight that runs a Hub effect while one aura is up — FINDINGS §20 records what an
-aura button's children can and cannot do. Ring level bands are 16 wide now. **The owner's next job
-is item 13, the tab's layout compaction, "immediately".** ⚠ `GloomSuite/GloomsUnitFrames` still
-does NOT exist on GitHub — two commits, local only.)
+**Last updated:** 2026-09-20, early morning (**the Unit Frames tab went two-column** — `UI.grid` /
+`UI.popover` / `UI.cog` are Hub toolkit MINOR 9 — and **the delve measurements are done**: a
+target's cast is secret in every part and the ring draws it anyway through the duration object's
+percent evaluators (FINDINGS §18.10). Three latent cast-ring bugs surfaced on the owner's Rogue —
+the first class with an interrupt — and were fixed (§18.11–12). Effects under an aura button in
+combat are PARKED, not fixed (§20.5). **The owner ruled GU's account-wide config wrong: it goes
+profile-based, item 14, before anything else.** ⚠ `GloomSuite/GloomsUnitFrames` still does NOT
+exist on GitHub — three commits, local only. A frustrating session; start the next one clean.)
 ---
 
 ## Open items
@@ -185,62 +185,89 @@ kept and banked, so this is now safe to do as its own small change with its own 
 
 ---
 
-### 12 · Gloom's Unit Frames — what is left after the second session
-**Repo:** `~/GloomsUnitFrames` (sixth tool, LOCAL git only) · **Size:** small pieces + measurements · **Evidence:** everything shipped is owner-QA'd 2026-09-19
+### 12 · Gloom's Unit Frames — what is left
+**Repo:** `~/GloomsUnitFrames` (sixth tool, LOCAL git only) · **Size:** small pieces · **Evidence:** everything shipped is owner-QA'd, the delve pass 2026-09-20
 
-**Built and owner-QA'd (both sessions):** the four rings and everything FINDINGS §18 describes ·
-class color for players / reaction color for NPCs on the health fill (solid mode; a gradient wins) ·
-the shield wash while an absorb is present (§19) · **Texts** — any number of pieces per unit, a
-template of words and `[shortcodes]` (name, level, class, hp/hpmax/pct, absorb, power, shards, cast,
-status markers, threat…), each with font/size/outline/color/class-color/offset/align/max-width/layer
-· **Auras** — any number of groups per unit: Buffs / Debuffs with engine filters (tri-state classes,
-only-these / never-these spell lists, timed-only), engine sort, icon size/spacing/per-row/grow,
-countdown + stacks, swipe, a Hub SHAPE on every icon; and **This spell** — one aura by ID with a Hub
-shape + Hub effect and the effect's full schema-driven settings.
+**Done since the second session:** EUI's player/target frames are hidden and the owner lives on
+these (2026-09-20) · the delve measurements — see FINDINGS §18.10 (cast), name/level readable in a
+pull, interrupt recolour under secrecy.
 
 **Left, in order:**
-1. **Flip EUI's player/target frames to *hidden*** (EUI per-unit source) and live on these — the
-   owner decides when. Recommended before any more feature work: it surfaces what is actually missed.
-2. **Delve measurements**, next time he is in one: does a TARGET's cast time go secret (engine
-   falls back to the duration object, hides if the total is secret); do the target's level /
-   classification / name stay readable in a pull (`[level]` shows `??` logic only when plain); does
-   the shield wash switch OFF (only ever seen off on the probe square — §19).
-3. **Aura filter classes** beyond timed-only and cast-by-you — same engine path, `UNTESTED`
+1. **The shield wash switching OFF** — still only ever seen on the probe square (§19). Watch for it
+   the next time a shield lands in a fight.
+2. **Aura filter classes** beyond timed-only and cast-by-you — same engine path, `UNTESTED`
    individually; whichever bites first gets checked then. Also `UNTESTED`: creating a container in
    combat (a Show-kind change mid-fight rebuilds one).
+3. **The mid-cast tint and kick tick under secrecy** — they need the cast's real clock and stay off
+   for an instanced target (the ring only recolours there). Design question, not a bug: is a
+   secret-safe version wanted? `EvaluateRemainingPercent` on the KICK's duration could place the
+   tick if the cast's total were known — it is not. Park unless he asks.
 4. **Death Knight runes** — not a power type; the resource ring skips DKs. Only if he rolls one.
 5. **Create the GitHub repo** `GloomSuite/GloomsUnitFrames` when he says (public, org-owned, private
-   membership — Hub `CLAUDE.md` PRIVACY).
+   membership — Hub `CLAUDE.md` PRIVACY). Three sessions of work on one disk.
+6. **The Gu mark** in the tab header is still the Hub's logo.
 
-**Read first:** `~/GloomsUnitFrames/CLAUDE.md` · [FINDINGS.md](FINDINGS.md) §18 (the renderer), §19
-(absorbs), §20 (aura buttons) · the header comments of `GloomsUnitFrames_Text.lua` and
-`GloomsUnitFrames_Auras.lua`
+**Read first:** `~/GloomsUnitFrames/CLAUDE.md` · [FINDINGS.md](FINDINGS.md) §18 (the renderer, incl.
+10–12), §19 (absorbs), §20 (aura buttons)
 
 ---
 
-### 13 · The Unit Frames tab's layout — compact it the way EUI lays out settings ★ NEXT
-**Repo:** `~/GloomsUnitFrames` (the tab); possibly a new `LibGloomSkin` row widget in `~/GloomsHub` · **Size:** a session · **Evidence:** owner request, 2026-09-19
+### 13 · The Unit Frames tab — the tidy pass after the compaction
+**Repo:** `~/GloomsUnitFrames` (the tab) · **Size:** an hour, once he has a mock · **Evidence:** landed and owner-QA'd 2026-09-20 — "a little messy, we can clean up later"
 
-> "EUI is far easier to use, because they've managed to compact the settings panels into dropdowns
-> and side-by-side display, whereas you tend to just stack things endlessly." — the owner. He wants
-> this done **immediately, next session**, before any more aura work.
+The compaction shipped: every section body is a `UI.grid` (two cells per line), the deep clusters
+sit behind `UI.cog` popovers (shield tint · interrupt colouring · effect settings · aura filters),
+one-line conditionals appear inline under their switch (gradient end, drain shift, breakpoint), the
+shortcode list is a popover that inserts on click. What is left is the LOOK — spacing, which pairs
+sit together, label widths — and **the owner said he might make a mock**; ask for it before
+touching anything. Do not redesign the mechanism.
 
-The tab is a single column, one control per row: the Health ring section alone is ~990 px, the
-Auras editor ~730 px plus its filter block. EUI's shape (his screenshots this session): two columns
-of label + control, sub-settings behind a cog that opens a small popover, filters as a dropdown
-with Show/Hide check columns. What to do:
-- A **two-column row** primitive (label left, control right, two per line) — if it is built as a
-  `LibGloomSkin` widget it serves every tab and needs a MINOR bump + `SKIN_NEEDS` in the same commit
-  (CONTRACTS §6); if it stays local to the GU tab, no contract moves. Recommend the widget.
-- **Popovers for sub-settings** (the `UI.flyout` / dropdown machinery is the precedent): a ring's
-  shield-wash block, a text piece's font/outline/shadow, an aura group's filters and effect params.
-- Keep the accordion; the per-section stacking is what has to go, not the sections.
-- The Auras filter block already went two-column with tri-state buttons — use it as the seed, and
-  the rings' "Color" / "Shift" / "Shield" groups as the first targets.
+**Read first:** `~/GloomsUnitFrames/GloomsUnitFrames_Tab.lua` (the header comment explains the
+three tiers) · [CONTRACTS.md](CONTRACTS.md) §4 (`UI.grid` / `UI.popover` / `UI.cog`)
 
-**Read first:** `~/GloomsUnitFrames/GloomsUnitFrames_Tab.lua` (whole file — it is the deliverable)
-· [CONTRACTS.md](CONTRACTS.md) §4 and §6 if a widget is added · the owner's EUI screenshots are not
-on disk; ask him to show the panel again if the shape is unclear.
+---
+
+### 14 · Gloom's Unit Frames goes PROFILE-BASED ★ NEXT
+**Repo:** `~/GloomsUnitFrames` (+ nothing in the Hub — `UI.profileBlock` exists) · **Size:** a session · **Evidence:** owner decision 2026-09-20
+
+> "This should be a profile-based system, like it is for literally every other module in this
+> suite. What an odd choice you made to do it this way." — the owner, on discovering his Warlock's
+> "This spell" group running on his Rogue.
+
+`GloomsUnitFramesDB` is ONE account-wide config (the first session copied Portraits). Rings are
+arguably shared; aura groups, "This spell" and `[shards]`-style texts are class things, and the
+owner wants the whole tool per-character like Bars / Auras / Overlays. What to build:
+- `UI.profileBlock` in the rail (CONTRACTS §4), character-bound like GB: one profile per character,
+  **New = the factory look, Copy = a full duplicate**, Rename, Delete (which prints where the
+  character landed). Same `api` shape as GB's — read `~/GloomsBars/Config.lua`'s block for the
+  plumbing and FINDINGS §11 for the login-binding trap GB hit.
+- **Migration:** the existing account-wide config becomes the first profile (call it "Default"),
+  bound to every character that logs in until he makes another — nothing he built is lost.
+- The tab's `Cfg()` / `RingCfg()` / `TextList()` / `AuraList()` already go through `GU:Config(which)`,
+  so the tab needs the block and little else; the engine's `db[which]` reads are the surface to
+  re-point.
+
+**Read first:** `~/GloomsUnitFrames/CLAUDE.md` (the Shape section) · `GU:Config` and the `db` setup
+in `~/GloomsUnitFrames/GloomsUnitFrames.lua` · the `profileBlock` entry in [CONTRACTS.md](CONTRACTS.md)
+§4 · GB's block in `~/GloomsBars/Config.lua` · [FINDINGS.md](FINDINGS.md) §11
+
+---
+
+### 15 · Effects under an aura button must ANIMATE in combat, not pause
+**Repo:** `~/GloomsHub` (`Effects.lua`) · **Size:** a session, with GU as the test bed · **Evidence:** `TESTED` 2026-09-20 (FINDINGS §20.5)
+
+In a fight, every layout write under an engine aura button is refused — `SetSize` proven, `SetPoint`
+presumed, `SetRotation` unknown. Seven of the eight modules move or resize their texture per frame;
+only Rim Flash is alpha-only. Tonight's stopgap PARKS a refused instance until regen and says so once
+per module — honest, but the highlight goes still exactly when it matters. The fix: drive those
+modules through engine **`AnimationGroup`s** (Scale for Breathe / Burst, Translation for Sheen,
+Rotation for Shine / Marching / Radar) created and `:Play()`ed at wiring time, looping, so nothing
+is called in combat. Keep the plain-host path (GB, GA) byte-for-byte — the "GB looks identical"
+promise — by switching only hosts the "under a Blizzard AuraButton" block already detects.
+
+**Read first:** the "Layout writes under a Blizzard AuraButton IN COMBAT" block and the "Hosts under
+a Blizzard AuraButton" block in `~/GloomsHub/Effects.lua` · [FINDINGS.md](FINDINGS.md) §20 ·
+[CONTRACTS.md](CONTRACTS.md) §8
 
 ---
 
@@ -265,9 +292,13 @@ on disk; ask him to show the panel again if the shape is unclear.
   `SetGradient` ignores a secret alpha; a secret alpha of exactly ZERO is ignored everywhere;
   `SetPoint` accepts a secret and drops it. The engine's gradient is a ramp *layer*, "empty" is
   geometry, and nothing is positioned by a value.
-- **"A cast ring could use the Cooldown swipe"** — not needed: the player's cast times are PLAIN
-  (§18). The swipe is the fallback only if a target's total duration is secret, and then the ring
-  hides rather than lie.
+- **"A cast ring could use the Cooldown swipe"** — **never needed** (2026-09-20): the player's times
+  are plain, and a target's fully secret cast draws through the duration object's percent
+  evaluators on the ring's own curves (§18.10). Do not reach for the swipe.
+- **"The cast ring hides when a target's total is secret"** — **KILLED 2026-09-20**, §18.10. The
+  total is secret in every delve cast and the ring draws anyway.
+- **Gloom's Unit Frames staying account-wide** — **RULED WRONG by the owner, 2026-09-20.** Item 14.
+  Do not argue for it, and do not build any more GU features on the account-wide shape.
 - **"Rings over 180° can be one piece"** — **NO.** Masks only subtract; two chunks, overlapped by a
   hard-edged start mask. §18.
 

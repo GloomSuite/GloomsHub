@@ -9,7 +9,7 @@
 -- change it THERE and every consumer in the same session.
 -- ============================================================
 
-local MAJOR, MINOR = "LibGloomSkin-1.0", 8   -- MINOR 8 (2026-09-08): UI.WarmFonts takes an optional onVerified callback — the trustworthy "still dead after a second draw" answer
+local MAJOR, MINOR = "LibGloomSkin-1.0", 9   -- MINOR 9 (2026-09-19): UI.grid (two-column placer), UI.popover + UI.cog (sub-settings behind a cog) — the compaction pass
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if lib then
@@ -65,6 +65,7 @@ lib.UI = UI
 
 UI.CARET = lib.MEDIA .. "ui\\caret.png"   -- right-pointing source art
 UI.CARET_DOWN = -math.pi / 2              -- rotation for "open"
+UI.COG = lib.MEDIA .. "ui\\cog.png"       -- the sub-settings cog (MINOR 9); white, tint it
 
 -- ★ SetFont RAISES on a missing font asset — it does NOT return false. Proven
 -- in-client 2026-07-26 (FINDINGS §2): pcall(fs.SetFont, fs, "<dead path>", 14, "")
@@ -409,6 +410,7 @@ local function flyoutFrame()
   if flyout then return flyout end
   local catcher = CreateFrame("Button", nil, UIParent)
   catcher:SetFrameStrata("FULLSCREEN"); catcher:SetAllPoints(UIParent); catcher:Hide()
+  catcher:SetFrameLevel(20)   -- above a popover's catcher (0) and panel (5), so a list opened inside one closes on its own
   local fly = CreateFrame("Frame", nil, catcher)
   fly:SetFrameStrata("FULLSCREEN_DIALOG")
   UI.skinPlate(fly); UI.addEdges(fly, COLOR.rim, 1)
@@ -1564,6 +1566,208 @@ function UI.tabHeader(parent, opts)
 
   h.bottom = divY
   return h
+end
+
+-- ------------------------------------------------------------
+-- UI.grid (MINOR 9) — the two-column placer. The owner, 2026-09-19: EUI "compacts
+-- the settings panels into dropdowns and side-by-side display, whereas you tend
+-- to just stack things endlessly." A grid lays cells two per line (label +
+-- control each), full-width rows where a control needs the room, and restacks
+-- when a cell is hidden — no gaps, no fixed y arithmetic in the tab.
+--
+--   local g = UI.grid(parent, yTop, { cols = 2, gutter = 0, x = 0, rightInset = 0 })
+--                     cols = 1 makes every cell a full row (a popover's stack).
+--   g:cell(h, build)  → a half-width Frame; build(cell) fills it. Two per line.
+--   g:row(h, build)   → a full-width Frame (a half-filled line is closed first).
+--   g:gap(px)         → vertical space.
+--   g:endLine()       → close a half-filled line (the next cell starts a new one).
+--   g:show(f, on)     → hide/show a cell or row; a line whose cells are all
+--                       hidden collapses. Call g:layout() afterwards.
+--   g:layout()        → restack; sets g.height (yTop → bottom, positive).
+--
+-- Cells anchor by the parent's edges and centre, so they follow the parent's
+-- width with no numbers of their own. Widgets inside a cell keep their usual
+-- insets (sliderRow's 18px), so the outer margin is the family's and the two
+-- columns get a 36px gutter for free. Set `gutter` to widen it.
+-- ------------------------------------------------------------
+function UI.grid(parent, yTop, opts)
+  opts = opts or {}
+  local g = { parent = parent, top = yTop or 0, lines = {}, height = 0, cols = opts.cols or 2,
+              gutter = opts.gutter or 0, x = opts.x or 0, rightInset = opts.rightInset or 0 }
+  local open   -- the current half-filled line, if any
+
+  local function newLine() local l = { cells = {}, h = 0 }; g.lines[#g.lines + 1] = l; return l end
+  local function place(f, l, col)
+    f:ClearAllPoints()
+    local y = l.y or 0
+    if col == "full" then
+      f:SetPoint("TOPLEFT", parent, "TOPLEFT", g.x, y)
+      f:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -g.rightInset, y)
+    elseif col == 1 then
+      f:SetPoint("TOPLEFT", parent, "TOPLEFT", g.x, y)
+      f:SetPoint("TOPRIGHT", parent, "TOP", -g.gutter / 2, y)
+    else
+      f:SetPoint("TOPLEFT", parent, "TOP", g.gutter / 2, y)
+      f:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -g.rightInset, y)
+    end
+  end
+
+  function g:cell(h, build)
+    if self.cols == 1 then return self:row(h, build) end   -- a one-column grid: every cell is a row
+    local l = open
+    if not l then l = newLine(); open = l end
+    local f = CreateFrame("Frame", nil, parent)
+    f:SetHeight(h); f.gridH, f.gridLine = h, l
+    l.cells[#l.cells + 1] = f
+    if #l.cells == 2 then open = nil end
+    if build then build(f) end
+    return f
+  end
+  function g:row(h, build)
+    open = nil
+    local l = newLine()
+    local f = CreateFrame("Frame", nil, parent)
+    f:SetHeight(h); f.gridH, f.gridLine, f.gridFull = h, l, true
+    l.cells[1] = f
+    if build then build(f) end
+    return f
+  end
+  function g:gap(px) open = nil; local l = newLine(); l.gap = px end
+  function g:endLine() open = nil end   -- the next cell starts a new line even if this one is half full
+  function g:show(f, on)
+    f.gridHidden = not on
+    f:SetShown(on and true or false)
+  end
+  function g:layout()
+    local y = self.top
+    for _, l in ipairs(self.lines) do
+      if l.gap then
+        y = y - l.gap
+      else
+        local h, any = 0, false
+        for _, f in ipairs(l.cells) do
+          if not f.gridHidden then any = true; if f.gridH > h then h = f.gridH end end
+        end
+        l.y = y
+        for i, f in ipairs(l.cells) do
+          place(f, l, f.gridFull and "full" or i)
+          f:SetShown(not f.gridHidden)
+        end
+        if any then y = y - h end
+      end
+    end
+    self.height = self.top - y
+    return self.height
+  end
+  return g
+end
+
+-- ------------------------------------------------------------
+-- UI.popover (MINOR 9) — a small anchored panel for a control's SUB-SETTINGS:
+-- the shield tint behind the health ring's "Tint while shielded", an effect's
+-- own parameters behind its dropdown. The family plate with the color picker's
+-- purple rim (no scrim: you are judging the thing it changes), hanging off its
+-- owner's bottom-right corner, clamped to the screen. Closes on any click
+-- outside it (a full-screen catcher, as the dropdown flyout), on its owner
+-- hiding, or when another popover opens. Built lazily, once, on first open.
+--
+--   local p = UI.popover({ owner = <frame>, w = 300, title = "SHIELD TINT",
+--                          build = function(content) … return contentHeight end,
+--                          onOpen = function(content) … end })   -- refresh, each open;
+--                                        -- may return a new content height
+--   p:open() · p:close() · p:toggle() · p:isOpen() · p.frame (nil until first open)
+--
+-- Layering: the catcher sits at FULLSCREEN level 0 and the panel just above
+-- it; the dropdown flyout's catcher is raised above BOTH, so a list opened from
+-- inside a popover dismisses cleanly, and the color picker (FULLSCREEN_DIALOG)
+-- floats over everything as it already does.
+-- ------------------------------------------------------------
+local POP_TITLE_H, POP_PAD = 30, 10
+local popCatcher, popOpen
+
+local function popCatcherFrame()
+  if popCatcher then return popCatcher end
+  local c = CreateFrame("Button", nil, UIParent)
+  c:SetFrameStrata("FULLSCREEN"); c:SetFrameLevel(0); c:SetAllPoints(UIParent); c:Hide()
+  c:SetScript("OnClick", function() if popOpen then popOpen:close() end end)
+  c:SetScript("OnHide", function() if popOpen then popOpen:close() end end)
+  popCatcher = c
+  return c
+end
+
+function UI.popover(opts)
+  opts = opts or {}
+  local p = { opts = opts }
+
+  local function build()
+    local c = popCatcherFrame()
+    local f = CreateFrame("Frame", nil, c)
+    f:SetFrameStrata("FULLSCREEN"); f:SetFrameLevel(5)
+    f:EnableMouse(true); f:SetClampedToScreen(true)
+    UI.skinPlate(f)
+    UI.addEdges(f, { r = COLOR.purple.r, g = COLOR.purple.g, b = COLOR.purple.b, a = 0.55 }, 1)
+    f.title = UI.newText(f, FONT.head, 12, COLOR.purple, "LEFT")
+    f.title:SetPoint("TOPLEFT", 14, -10); f.title:SetText((opts.title or ""):upper())
+    local div = UI.hLine(f); div:SetPoint("TOPLEFT", 10, -POP_TITLE_H + 2); div:SetPoint("TOPRIGHT", -10, -POP_TITLE_H + 2)
+    f.content = CreateFrame("Frame", nil, f)
+    f.content:SetPoint("TOPLEFT", 0, -POP_TITLE_H); f.content:SetPoint("TOPRIGHT", 0, -POP_TITLE_H)
+    local h = opts.build and opts.build(f.content) or 100
+    f.content:SetHeight(h)
+    f:SetSize(opts.w or 300, POP_TITLE_H + h + POP_PAD)
+    p.frame = f
+    if opts.owner then
+      opts.owner:HookScript("OnHide", function() if popOpen == p then p:close() end end)
+    end
+    return f
+  end
+
+  function p:isOpen() return popOpen == self end
+  function p:close()
+    if popOpen ~= self then return end
+    popOpen = nil
+    if self.frame then self.frame:Hide() end
+    popCatcherFrame():Hide()
+    if opts.onClose then opts.onClose(self.frame and self.frame.content) end
+  end
+  function p:open()
+    if popOpen and popOpen ~= self then popOpen:close() end
+    local f = self.frame or build()
+    if opts.onOpen then
+      local h = opts.onOpen(f.content)   -- may return a new content height
+      if h then f.content:SetHeight(h); f:SetHeight(POP_TITLE_H + h + POP_PAD) end
+    end
+    f:ClearAllPoints()
+    if opts.owner then f:SetPoint("TOPRIGHT", opts.owner, "BOTTOMRIGHT", 0, -4)
+    else f:SetPoint("CENTER") end
+    popOpen = self
+    popCatcherFrame():Show(); f:Show()
+  end
+  function p:toggle() if self:isOpen() then self:close() else self:open() end end
+  return p
+end
+
+-- UI.cog (MINOR 9) — the little gear that opens a popover of sub-settings; sits
+-- beside the control it belongs to. `opts` are UI.popover's, with the cog as
+-- the owner. Purple at rest, orange while its popover is open. Returns the
+-- button, with `.popover`.
+function UI.cog(parent, opts)
+  local b = CreateFrame("Button", nil, parent)
+  b:SetSize(16, 16)
+  local tex = b:CreateTexture(nil, "ARTWORK"); tex:SetAllPoints(); tex:SetTexture(UI.COG)
+  local function paint(hover)
+    local c = (b.popover and b.popover:isOpen() or hover) and COLOR.orange or COLOR.purple
+    tex:SetVertexColor(c.r, c.g, c.b)
+  end
+  opts = opts or {}; opts.owner = b
+  local inner = opts.onClose
+  opts.onClose = function(...) paint(false); if inner then inner(...) end end
+  b.popover = UI.popover(opts)
+  b:SetScript("OnClick", function() b.popover:toggle(); paint(false) end)
+  b:SetScript("OnEnter", function() paint(true) end)
+  b:SetScript("OnLeave", function() paint(false) end)
+  if opts.tip then UI.attachTip(b, opts.tip[1], opts.tip[2]) end
+  paint(false)
+  return b
 end
 
 end   -- if lib

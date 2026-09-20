@@ -1502,3 +1502,47 @@ default 40 migrated once via `tc.lv16`).
 - The Claude session separated shell output with `echo ======`; zsh treats a word beginning with
   `=` as a command lookup and the app flagged every such read as failed. Harmless, and not a
   problem with the files — noted so nobody chases it.
+
+---
+
+## Closed 2026-09-20 (early morning) — Gloom's Unit Frames, third session: the compaction and the delve
+
+### Item 13 (the compaction) — LANDED; the tidy pass stays open as the new item 13
+The owner: EUI "compacts the settings panels into dropdowns and side-by-side display, whereas you
+tend to just stack things endlessly." Answered in the Hub toolkit (MINOR 9): `UI.grid` (two cells
+per line, full rows, restacks on hide), `UI.popover` (a rimmed panel off its owner, catcher-closed,
+resizable per open) and `UI.cog` (the gear that opens one), plus `Media/ui/cog.png`. The GU tab
+was rewritten on them — every section body a grid; the deep clusters (shield tint, interrupt
+colouring, effect settings, aura filters) behind cogs; one-line conditionals inline; the shortcode
+list a popover that inserts on click; the strata / show-condition / fill-direction choices as
+dropdowns. The Health ring section went from ~990 px to ~400. QA'd on the live client: "a little
+messy, but we can clean up later" — hence the tidy pass, pending his mock.
+
+### Item 12.1 — EUI's player/target frames hidden
+Already done by the owner before the session; he lives on the rings now.
+
+### Item 12.2 — the delve measurements: all three answered
+- **A target's cast is secret in every part** (name, start, end, total) — and the ring draws it
+  through `EvaluateElapsedPercent` / `EvaluateRemainingPercent` (FINDINGS §18.10). The
+  "hide if the total is secret" fallback was a guess and is KILLED.
+- **Name and level stay readable in a pull** (owner-verified by eye).
+- **Interrupt recolouring works under secrecy**; the mid-cast tint and tick do not (they need the
+  clock) — recorded as a design question in item 12.
+- The shield wash switching OFF was not observed (no shield landed) — stays in item 12.
+
+### Three latent cast-ring bugs, all first seen on the owner's Rogue
+The Warlock has no interrupt, so `KickExtras` had never run: (1) an angle passed as the evaluator's
+"default" — refused, the modifier is 0..1 (§18.11); (2) the interrupt tint painted onto pieces the
+fill had not reached (now gated per piece); (3) `SetVertexColor`'s alpha argument re-lighting the
+empty chunk's base after the gate (§18.12) — the "slice at 12 o'clock" that looked like the seam
+work coming undone and was not. Plus the health ring's unconfigured shield copy being refreshed
+with no target (`alphaPts` nil), which was also what made the colour picker look broken.
+
+### Effects under an aura button in combat — PARKED, not fixed (item 15)
+`Effects.lua`'s `Park` helper: a refused layout write pauses that instance until regen and says so
+once per module. Hub effects are also now started only on This-spell groups (a stale `effect` on a
+Buffs group had six Breathe instances running).
+
+### QA tools added to the addon
+`/gu casttrace` (prints the target's cast route as it changes — the delve measurement that could
+not be timed by hand) and a `cast=` line in `/gu debug target`.

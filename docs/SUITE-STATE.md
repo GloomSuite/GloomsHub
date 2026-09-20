@@ -9,12 +9,14 @@
 > **Keep this file short enough to re-read.** If it passes ~180 lines, move the settled history to
 > [ARCHIVE.md](ARCHIVE.md). A document nobody re-reads is a document nobody corrects.
 
-**Last updated:** 2026-09-19, late night (**six tools**: Gloom's Unit Frames has rings, texts and
-aura groups, all owner-QA'd — local repo only, NOT yet on GitHub; Gloom's Portraits is on `master`,
-tagged `v1.0.0` for stage 1 only. Hub/Bars/Auras at `v1.4.0`, Overlays at `v1.3.0`; LibGloomSkin
-at MINOR 8; the Hub's `Effects.lua` gained a secret-tolerant mask bind on `master`, untagged.
+**Last updated:** 2026-09-20, early morning (**six tools**: Gloom's Unit Frames has rings, texts,
+aura groups and a two-column tab, all owner-QA'd, its cast ring proven in a delve — local repo
+only, NOT yet on GitHub; Gloom's Portraits is on `master`, tagged `v1.0.0` for stage 1 only.
+Hub/Bars/Auras at `v1.4.0`, Overlays at `v1.3.0`; **LibGloomSkin at MINOR 9** (`UI.grid` /
+`UI.popover` / `UI.cog`) on `master`, untagged, as is the Hub `Effects.lua` Park stopgap.
 **Distribution decision recorded: symlinks for the owner, CurseForge if ever public, the WoWup path
-retired.**)
+retired.** **Locked 2026-09-20: Gloom's Unit Frames goes PROFILE-BASED** — the account-wide config
+was the owner's call to overturn; BACKLOG item 14.)
 
 ---
 
@@ -128,8 +130,9 @@ of it.
 
 **`~/GloomsHub`** — symlinked into AddOns. `Core.lua` (namespace, `GloomsHubDB`, ST copy-migration,
 the permanent compat shim, `/gh` probe) · `Skin.lua` (**the body of `LibGloomSkin-1.0`**, LibStub-
-registered, **MINOR 8** — tokens, toolkit, `WarmFonts`/`RegisterWarmPairs`, **the suite's own colour
-picker + its "in use" palette**; `GloomsHub.COLOR/.FONT/
+registered, **MINOR 9** — tokens, toolkit, `WarmFonts`/`RegisterWarmPairs`, **the suite's own colour
+picker + its "in use" palette**, **the two-column `UI.grid` and the `UI.cog` → `UI.popover`
+sub-settings panel** (2026-09-20); `GloomsHub.COLOR/.FONT/
 .UI/.MEDIA` are aliases) · **`Shapes.lua`** (the suite's silhouette catalog — 21 shapes,
 `GloomsHub:ShapeAsset/ShapeInfo/GrowAnchor`) · **`Effects.lua`** (the eight shaped animation
 modules + `GloomsHub.Effects`) · `Shell.lua` (the Suite window: `RegisterTab`/`Open`/`FocusTab`/
@@ -181,12 +184,15 @@ config), no minimap button, no floating panel. Each mode keeps its own size/posi
 **`~/GloomsUnitFrames`** — local git, no remote, symlinked into AddOns. Hard-deps the Hub; four
 files — the ENGINE (`GloomsUnitFrames.lua`: the arc renderer of FINDINGS §18, `GloomsUnitFramesDB`,
 rings per unit in 16-level bands, class/reaction color, the shield wash of §19, the cast/kick
-logic, a small API + `/gu debug` / `/gu probe` / `/gu gate` / `/gu auras`), the **TEXT pieces**
+logic — a target's secret cast drawn from the duration object's percent evaluators (§18.10) —
+a small API + `/gu debug` / `/gu probe` / `/gu gate` / `/gu auras` / `/gu casttrace`), the **TEXT pieces**
 (`GloomsUnitFrames_Text.lua`: shortcode templates → one `SetFormattedText`), the **AURA groups**
 (`GloomsUnitFrames_Auras.lua`: `AuraContainer` groups + the "This spell" slots, Hub shapes and
-effects — FINDINGS §20) and the **Unit Frames** tab (`GloomsUnitFrames_Tab.lua`, `SKIN_NEEDS = 4`,
-order 50, a GB-style accordion: Position · Layer · Visibility · Texts · Auras · one section per
-ring). `/gu` → `ToggleWindow("unitframes")`. Art in `Media/art/` is GENERATED (Python/PIL, the
+effects — FINDINGS §20; Hub effects on This-spell groups only) and the **Unit Frames** tab
+(`GloomsUnitFrames_Tab.lua`, `SKIN_NEEDS = 9`, order 50, a GB-style accordion whose bodies are
+`UI.grid`s with cogs for the deep clusters: Position · Layer · Visibility · Texts · Auras · one
+section per ring). ⚠ `GloomsUnitFramesDB` is still ONE account-wide config — wrong by the
+owner's ruling, item 14 replaces it with per-character profiles. `/gu` → `ToggleWindow("unitframes")`. Art in `Media/art/` is GENERATED (Python/PIL, the
 scripts were throwaway): `disc.png` + its ramp companion and `disc-ramp-10…90.png` (the ramp at
 narrower fade widths, for the shield wash), the two half-plane masks per sweep direction, the two
 "lead" masks, `hole.png`, `cap.png`. The Gu mark is still the Hub's logo — a real mark is owed.
@@ -207,10 +213,6 @@ collision.
   copy of the pre-rename Overlays source; git never held it) and
   `~/Desktop/StoneTweaks-retired-2026-07-24` (the rollback for the Hub's media half). Details in
   [ARCHIVE.md](ARCHIVE.md).
-- **The dev symlinks and a WoWup install target the SAME folder names.** If an install QA is ever
-  re-run on this machine, move the symlinks aside first and restore after — **and uninstall in
-  WoWup BEFORE restoring them**, because WoWup's Remove deletes the folder it manages and could
-  follow a symlink into live source.
 - **Every suite addon points at its normal repo on BOTH the retail and PTR clients**, so an edit is
   live on both. Remember that before editing during PTR work.
 - **★ `~/GloomsBars/IconsHD/` is the ONLY copy of the owner's hand-authored action-bar icons.** It is
