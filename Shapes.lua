@@ -114,12 +114,10 @@ end
 -- adds the border clearance, distributed by aspect so an elongated shape grows
 -- proportionally rather than smearing along its long axis.
 --
--- ⚠ TWIN, and they must not drift: GloomsBars/Skin.lua has an identical local
--- `hgAnchor`, which is still the one its own layout engine uses. This copy is the
--- canonical one and serves GloomsHub.Effects' modules. GB's should be collapsed into
--- a delegation, but that means editing its geometry engine, so it is deliberately
--- NOT part of the migration whose whole promise is "GB looks identical" — it is on
--- the backlog instead. If you change the formula, change BOTH.
+-- THE one copy (since 2026-09-20). GloomsBars' `hgAnchor` — its layout engine's
+-- anchor for every icon / plate / border mask and glow — delegates here, as do
+-- GloomsHub.Effects' modules and Gloom's Auras. Change the formula and every
+-- shaped thing in the suite moves together; there is no second copy to keep in step.
 function GloomsHub:GrowAnchor(tex, icon, grow)
     grow = grow or 0
     local w, h = icon:GetWidth(), icon:GetHeight()

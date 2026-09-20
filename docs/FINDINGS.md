@@ -62,6 +62,23 @@ live stack count, and coexist with ArcUI loaded. Implementation is `~/GloomsAura
    `/reload`, creation succeeded while `InCombatLockdown()` was still false, in the window before
    combat re-registers. `/ga auradur` prints `containers created IN COMBAT` if it ever happens.
 
+### ▶ `TESTED` 2026-09-20 — why `ApplyConfig` / `ApplyStyle` ran hot (backlog item 4), and the fix
+Counters keyed by caller (`/ga hot on` … `/ga hot`, off by default — `debugstack` per call is not
+free), on the owner's Warlock (12 displays, 4 bars): **login = 4 whole-profile passes** (48
+`ApplyConfig` via `GetOrCreate`, which re-applies even when the frame exists; `RefreshAll` calls it
+for every display and `Discover` calls `RefreshAll`); **one tab edit = ~4 applies of the one aura**;
+**a 30 s dummy fight = 1,165 `ApplyStyle` calls from `UpdateBar`** (per UNIT_AURA per shown bar via
+`RefeedBars`, plus every `RefreshDisplays`) and 48 more `ApplyConfig` (4 Blizzard viewer
+`RefreshLayout`s → 4 Discovers). The 1,165 were the real heat: `UpdateBar` re-ATTACHES the bar on
+every feed and Attach's retarget path CLEARED the style fingerprint — so out of combat every feed
+repainted the bar, and in combat every feed queued a deferral (August's "600 deferrals").
+`/ga auradur` before: `attach=1646 retarget=1643 applied=27 skipped=0 deferred=1628 threw=11`.
+**Fix:** the guard keys on the painted BUTTON + style, recorded by both `WireButton` and
+`ApplyStyle` on the slot, and the fingerprint check runs BEFORE the combat deferral; the retarget
+path no longer clears anything. After: `applied=0 skipped=3227 deferred=0 threw=0`, bars drain and
+a colour change applies (owner-QA'd). The 11 throws vanished with the redundant repaints — cause
+never identified (`OBSERVED`); a real throw now announces itself in chat once per display.
+
 ### ▶ `TESTED` 2026-08-12 — the CDM does not recover an already-applied aura after a `/reload`
 **This is a Blizzard limitation, not a GA bug, and it is NOT fixable through the presence mirror.**
 Measured over **52 re-poll passes** after a mid-combat reload with four DoTs live on the target:
@@ -423,10 +440,11 @@ for launch buys nothing.* That is why §3 was fixed and shipped immediately.
 - **GB's ~40 `hooksecurefunc` calls** against the Forbidden Aspects lockdown. The bar-layout hooks
   are now proven ALIVE (measured 2026-07-26); the **skinning** hooks were never exercised beyond a
   normal login — **and §8 is the first real symptom out of that gap.**
-- **Real instanced content** (dungeon / M+ / raid). All testing was open-world on a training dummy.
-  Combat alone was enough to trigger §1, so instanced content is `SUSPECTED` to be no better — but
-  "expected" is not "verified."
-- **Overlays and the Hub shell** got a smoke test only (tabs open, window renders).
+- ~~**Real instanced content** (dungeon / M+ / raid).~~ **CLOSED 2026-09-20 on owner evidence:**
+  weeks of live raiding with GA and GB, nothing amiss — *"I would have been squawking to you."* No
+  scripted instance test was run; the real-world record is the better one. (GU's own delve pass
+  is §18.10.)
+- ~~**Overlays and the Hub shell** got a smoke test only.~~ Same closure — daily use since August.
 
 ### PTR setup — done 2026-07-25, **and it has since DRIFTED**
 `_ptr_` is **12.1.0.68914** (`wowt`); retail is 12.0.7.68887. `_ptr_/Interface/AddOns/` has the four
@@ -995,7 +1013,19 @@ spell sitting idle. For a spell the CDM never bound — or one the player has no
 **Workaround that works today:** the display's `SPELL / TALENT KNOWN` visibility field
 (`IsSpellKnown` / `IsPlayerSpell` — both *do* respect talents).
 
-⚠ **The engine fix is NOT safe to write blind.** Hero talents *replace* spells (the owner's own
+### ▶ `TESTED` 2026-09-20 — the automatic known-check is DISPROVED; the list warns instead
+`/ga known` on the owner's Warlock (Affliction): the **Corruption Progress Bar** — bound
+(`bound=yes`) and draining correctly for weeks — answers `IsSpellKnown=no`, `IsPlayerSpell=no`,
+`IsSpellKnownOrOverridesKnown=no`, because it is keyed on the DEBUFF's ID (146739), not the cast
+(172). Any automatic known-check would have hidden both Corruption bars on the spot. The Wither
+(replaced-spell) case did not need testing after that. **Verdict: no engine fix.** The owner's
+Spell / Talent Known condition stands; the Auras list now draws an orange `!` on an aura whose
+cooldown trigger (ready / castable / on cooldown / charges) points at a spell the CDM has NOT bound
+and which carries no Spell-Known or Specialization rule — for `cd_castable` only while
+`IsSpellUsable` currently says yes, since the usable half is a real answer (Shadowburn on
+Affliction: usable=false, aura correctly hidden, no mark). Informational only.
+
+⚠ **The engine fix was NOT safe to write blind — and now it is proven unsafe.** Hero talents *replace* spells (the owner's own
 "Immolate/Wither" display is one), and if `IsPlayerSpell` reports `false` for a base spell that was
 overridden rather than removed, an automatic known-check would silently hide auras that currently
 work. That needs a trace before anything is built on it. Backlog item 6.
@@ -1133,8 +1163,9 @@ red Recolor over it that renders as flat red (0.9×1, 0.2×0, 0.6×0), which is 
 nil for everything built in the tab, and `CDM:DisplaySpellID(cfg)` is the resolver.* That is now
 **three** separate sites that made the same mistake — treat any new `cfg.spellID` read as suspect.
 
-⚠ **Not fixed, on purpose.** See backlog item 9: the fix is the parked auto-icon feature and the
-owner has not decided it.
+✅ **FIXED 2026-09-20 — the owner ruled:** a texture-less aura shows its spell's icon (resolved
+through `CDM:DisplaySpellID`), an explicit texture pick always wins. The same resolver went into
+the list rows, whose `?` icons for tab-built auras had the same cause. **Four** sites, all fixed.
 
 ### KILLED by this session
 - ~~"The shape mask is not attaching / the crop does nothing"~~ — **KILLED.** It was `roundsq1`
@@ -1555,12 +1586,37 @@ with `SetIcon`, `SetDurationCooldown`, `SetApplicationCount`, `SetDurationText`.
    a Buffs/Debuffs group carrying a stale `effect` field (six Breathe instances); effects are now
    This-spell only, as designed.
 
-**Consequences shipped:** the shape mask and the Hub effect are started AT WIRING TIME with no
-trigger and simply live under the button, which the engine hides and shows; the Hub's
-`Effects.lua` modules now treat a secret `IsShown` as shown and VERIFY their deferred mask bind
-through `GetNumMaskTextures`, retrying every 0.5 s while active (the "Hosts under a Blizzard
-AuraButton" block; behaviour on a plain visible host is unchanged). The icon's own shape mask does
-the same. The `/gu auras` diagnostic reports counts only — it may not test a child's `IsShown`.
+6. **★ On the PLAYER, a HARMFUL group or slot IGNORES `includeSpellIDs` — and `excludeSpellIDs`**
+   (`TESTED` 2026-09-20, the owner's DK in Silvermoon, out of combat, aura data plain). A slot
+   filtered to Burning Rush (111400) showed **Void Breach** (1253798 — permanent, self-sourced,
+   `isBossAura`/`isPriorityAura`/`isRaid` all false, no dispel type). Then, each on its own reload
+   with a fresh filter table: HARMFUL slot created FIRST → still shown; the slots replaced by
+   `AddAuraGroup(maxFrameCount = 1)` → still shown; `maxDuration = math.huge` added → Void Breach
+   gone but **Blood Draw** (374609, a timed 120 s self-debuff) shown in a group filtered to Death
+   and Decay (43265). Then the same ID in a Debuffs group's `excludeSpellIDs` — container rebuilt
+   (the exclude set is in the rebuild signature) — **Void Breach stayed**. Meanwhile the HELPFUL
+   side of the same container filtered correctly (nothing shown for an ID no buff carries), and
+   GA's HARMFUL slots on the TARGET have filtered by ID for weeks (§1). **Cause unknown** — the
+   engine's buttons expose nothing readable (no fields, a secret `IsShown`), so which aura a
+   button holds cannot be read back; only the picture can be. **Consequence:** GU's "This spell"
+   kind was REMOVED by the owner, and the tab greys the spell-list boxes on a player Debuffs group.
+   The class tokens and booleans are a different mechanism and NOT implicated (timed and
+   cast-by-you proven; the rest still `UNTESTED`). ⚠ Also measured on the way: `AuraData.spellId`
+   (lower-case d) is the field — a probe reading `spellID` printed nil for every aura and was
+   briefly mis-read as "12.1 strips spell IDs". It does not.
+7. **The shape-mask bind THROWS when a button is wired mid-combat** (`TESTED` 2026-09-20, the DK's
+   first pull: 20× "calling 'AddMaskTexture' on bad self … forbidden object" as Bone Shield /
+   Hemostasis buttons were created in the fight). Point 3's "region writes stay legal" holds for
+   a button wired OUT of combat; a button whose `initializeFrame` runs IN combat is forbidden from
+   the start. GU's retry now waits for regen and is pcall-wrapped.
+
+**Consequences shipped:** the shape mask is started AT WIRING TIME with no trigger and simply lives
+under the button, which the engine hides and shows, VERIFYING its bind through `GetNumMaskTextures`
+and retrying every 0.5 s while active — out of combat only (point 7). ~~The Hub effect the same~~ —
+**the Hub-effect-under-a-button path has NO consumer since 2026-09-20** (it existed for the
+This-spell kind, point 6): `Effects.lua`'s "Hosts under a Blizzard AuraButton" block and its Park
+stopgap (point 5) remain, harmless and idle, and BACKLOG 15 is closed as moot. The `/gu auras`
+diagnostic reports counts only — it may not test a child's `IsShown`.
 
 ### `KILLED` — do not revive these
 - ~~*"Hook the button's OnShow to start the glow."*~~ **KILLED** — a button call after the window,
@@ -1568,3 +1624,12 @@ the same. The `/gu auras` diagnostic reports counts only — it may not test a c
 - ~~*"Poll `host:IsVisible()` from outside."*~~ **KILLED** — secret boolean.
 - ~~*"Use `OnUpdate` on the host as the show signal, since it only runs while visible."*~~ **KILLED**
   — it never ran at all under the button.
+- ~~*"The HARMFUL slot shares its filter table with the HELPFUL one and the engine mutates it."*~~
+  **KILLED 2026-09-20** — a fresh table per slot changed nothing.
+- ~~*"The SECOND slot on a container ignores its filter."*~~ **KILLED** — HARMFUL first, same result.
+- ~~*"A slot ignores it but a group would not."*~~ **KILLED** — `AddAuraGroup(maxFrameCount = 1)`, same.
+- ~~*"Hostile-sourced auras on the player are what 12.1 hides, so the filter cannot evaluate."*~~
+  **KILLED** — Void Breach and Blood Draw are `sourceUnit = player`, `isFromPlayerOrPlayerPet = true`.
+- ~~*"Void Breach is a priority / boss / raid aura that bypasses candidate filters."*~~ **KILLED** —
+  every flag false, no dispel type; and Blood Draw is an ordinary timed self-debuff.
+- ~~*"Only permanent debuffs get through."*~~ **KILLED** — Blood Draw is timed.

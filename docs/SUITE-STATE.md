@@ -9,14 +9,14 @@
 > **Keep this file short enough to re-read.** If it passes ~180 lines, move the settled history to
 > [ARCHIVE.md](ARCHIVE.md). A document nobody re-reads is a document nobody corrects.
 
-**Last updated:** 2026-09-20, early morning (**six tools**: Gloom's Unit Frames has rings, texts,
-aura groups and a two-column tab, all owner-QA'd, its cast ring proven in a delve — local repo
-only, NOT yet on GitHub; Gloom's Portraits is on `master`, tagged `v1.0.0` for stage 1 only.
-Hub/Bars/Auras at `v1.4.0`, Overlays at `v1.3.0`; **LibGloomSkin at MINOR 9** (`UI.grid` /
-`UI.popover` / `UI.cog`) on `master`, untagged, as is the Hub `Effects.lua` Park stopgap.
-**Distribution decision recorded: symlinks for the owner, CurseForge if ever public, the WoWup path
-retired.** **Locked 2026-09-20: Gloom's Unit Frames goes PROFILE-BASED** — the account-wide config
-was the owner's call to overturn; BACKLOG item 14.)
+**Last updated:** 2026-09-20, evening (**six tools, six public repos**: `GloomSuite/GloomsUnitFrames`
+was created and pushed today. Gloom's Unit Frames is PROFILE-BASED (`GloomsUnitFramesDB` v2),
+draws DK runes, previews aura groups, and **no longer has a "This spell" kind** — the owner removed
+it when the engine proved unable to filter the player's DEBUFFS by spell ID (FINDINGS §20.6).
+Gloom's Portraits `v1.0.0` (stage 1), stage 2 untagged. Hub/Bars/Auras at `v1.4.0`, Overlays at
+`v1.3.0`; **LibGloomSkin at MINOR 10** (edit-box Tab / Shift-Tab + Up / Down stepping; profileBlock
+`api.users` → the delete gate) on `master`, untagged. **Distribution: symlinks for the owner,
+CurseForge if ever public, the WoWup path retired.**)
 
 ---
 
@@ -24,11 +24,12 @@ was the owner's call to overturn; BACKLOG item 14.)
 
 **The 7-phase plan is complete and QA'd. Six addons: the Hub and five tools.** GloomsHub is the
 shared base; Bars, Auras, Overlays, **Portraits** and **Unit Frames** each mount a tab in its window
-and hard-depend on it. StoneTweaks is retired; five suite repos are public under the **`GloomSuite`**
-org (Build Barn stayed with `HandofDevastation`); **`GloomsUnitFrames` is a local git repo with no
-remote yet** — the owner says when it goes up. **Hub, Bars and Auras are at `v1.4.0`; Overlays at `v1.3.0`;
-Portraits at `v1.0.0`** with stage 2 on `master` untagged. Versions drift by design — do not "level"
-them. What's left is in [BACKLOG.md](BACKLOG.md).
+and hard-depend on it. StoneTweaks is retired; **all six suite repos are public under the
+`GloomSuite` org** (Build Barn stayed with `HandofDevastation`); `GloomsUnitFrames` went up on
+2026-09-20, verified anonymously (author `Gloom`, no linked account). **Hub, Bars and Auras are at
+`v1.4.0`; Overlays at `v1.3.0`; Portraits at `v1.0.0`** with stage 2 on `master` untagged; Unit
+Frames untagged. Versions drift by design — do not "level" them. What's left is in
+[BACKLOG.md](BACKLOG.md).
 
 **★ Patch 12.1 went LIVE on 2026-08-11, and every suite TOC declares `## Interface: 120100`**
 (bumped 2026-08-12; the number was read off the installed addon set, not assumed).
@@ -74,8 +75,11 @@ of it.
   and target frames outright (EUI keeps ToT/focus/pet/boss via its per-unit *hidden* source). Its
   own repo, not Portraits: the owner — "they're not necessarily going to be linked in any fashion".
   Not clickable unit buttons yet. Auras, texts, class color and the shield wash are BUILT
-  (2026-09-19, second session); what remains is BACKLOG item 12, and the tab's layout
-  compaction is item 13.
+  (2026-09-19); profiles, DK runes and the aura-group preview followed (2026-09-20). **The "This
+  spell" kind is GONE (2026-09-20)** — the engine ignores spell-ID filters on the player's debuffs
+  (FINDINGS §20.6), and a highlight that cannot single out a debuff was "effectively useless" (the
+  owner). Do not rebuild it on `includeSpellIDs`. What remains is BACKLOG item 12 (watching) and
+  the tab's tidy pass, item 13.
 - **★ DISTRIBUTION: SYMLINKS FOR THE OWNER, CURSEFORGE IF EVER PUBLIC — the WoWup path is RETIRED**
   (the owner, 2026-09-19). Every suite addon on his client is a symlink into `~/<repo>`; WoWup's
   GitHub install "doesn't work very well" (Build Barn and Loot Advisor both moved to CurseForge over
@@ -130,11 +134,13 @@ of it.
 
 **`~/GloomsHub`** — symlinked into AddOns. `Core.lua` (namespace, `GloomsHubDB`, ST copy-migration,
 the permanent compat shim, `/gh` probe) · `Skin.lua` (**the body of `LibGloomSkin-1.0`**, LibStub-
-registered, **MINOR 9** — tokens, toolkit, `WarmFonts`/`RegisterWarmPairs`, **the suite's own colour
+registered, **MINOR 10** — tokens, toolkit, `WarmFonts`/`RegisterWarmPairs`, **the suite's own colour
 picker + its "in use" palette**, **the two-column `UI.grid` and the `UI.cog` → `UI.popover`
-sub-settings panel** (2026-09-20); `GloomsHub.COLOR/.FONT/
+sub-settings panel**, **every edit box's Tab / Shift-Tab ring and Up / Down stepping, the
+profile-delete gate** (2026-09-20); `GloomsHub.COLOR/.FONT/
 .UI/.MEDIA` are aliases) · **`Shapes.lua`** (the suite's silhouette catalog — 21 shapes,
-`GloomsHub:ShapeAsset/ShapeInfo/GrowAnchor`) · **`Effects.lua`** (the eight shaped animation
+`GloomsHub:ShapeAsset/ShapeInfo/GrowAnchor` — **the ONE grow-anchor; GB's `hgAnchor` delegates
+to it since 2026-09-20**) · **`Effects.lua`** (the eight shaped animation
 modules + `GloomsHub.Effects`) · `Shell.lua` (the Suite window: `RegisterTab`/`Open`/`FocusTab`/
 `ToggleWindow` + `/gloom`) · `Media.lua` (LSM registration — `RegisterAll` at the Hub's
 ADDON_LOADED, `VerifyFonts` at PLAYER_ENTERING_WORLD — `ResolveAssetPath`, `ListMedia`, the
@@ -181,18 +187,21 @@ config), no minimap button, no floating panel. Each mode keeps its own size/posi
 (`cfg.layouts[mode]`); the in-combat 2D stand-in wears the 2D set. The Gp mark is
 `Media/ui/logo.png`, composed from the family G and GB's b flipped.
 
-**`~/GloomsUnitFrames`** — local git, no remote, symlinked into AddOns. Hard-deps the Hub; four
-files — the ENGINE (`GloomsUnitFrames.lua`: the arc renderer of FINDINGS §18, `GloomsUnitFramesDB`,
-rings per unit in 16-level bands, class/reaction color, the shield wash of §19, the cast/kick
-logic — a target's secret cast drawn from the duration object's percent evaluators (§18.10) —
-a small API + `/gu debug` / `/gu probe` / `/gu gate` / `/gu auras` / `/gu casttrace`), the **TEXT pieces**
-(`GloomsUnitFrames_Text.lua`: shortcode templates → one `SetFormattedText`), the **AURA groups**
-(`GloomsUnitFrames_Auras.lua`: `AuraContainer` groups + the "This spell" slots, Hub shapes and
-effects — FINDINGS §20; Hub effects on This-spell groups only) and the **Unit Frames** tab
-(`GloomsUnitFrames_Tab.lua`, `SKIN_NEEDS = 9`, order 50, a GB-style accordion whose bodies are
-`UI.grid`s with cogs for the deep clusters: Position · Layer · Visibility · Texts · Auras · one
-section per ring). ⚠ `GloomsUnitFramesDB` is still ONE account-wide config — wrong by the
-owner's ruling, item 14 replaces it with per-character profiles. `/gu` → `ToggleWindow("unitframes")`. Art in `Media/art/` is GENERATED (Python/PIL, the
+**`~/GloomsUnitFrames`** — `GloomSuite/GloomsUnitFrames`, `master`, symlinked into AddOns. Hard-deps
+the Hub; four files — the ENGINE (`GloomsUnitFrames.lua`: the arc renderer of FINDINGS §18,
+`GloomsUnitFramesDB` **v2 = `{ profiles = { [name] = { player, target } }, charProfiles }`** — the
+engine's `db` is the ACTIVE profile, an unbound character lands on "Default", the v1 account-wide
+config became that profile — rings per unit in 16-level bands, class/reaction color, the shield
+wash of §19, DK runes counted via `GetRuneCooldown` (`UnitPowerPercent` does not take them), the
+cast/kick logic — a target's secret cast drawn from the duration object's percent evaluators
+(§18.10) — a small API + `/gu debug` / `/gu probe` / `/gu gate` / `/gu auras` / `/gu casttrace`),
+the **TEXT pieces** (`GloomsUnitFrames_Text.lua`: shortcode templates → one `SetFormattedText`),
+the **AURA groups** (`GloomsUnitFrames_Auras.lua`: Buffs / Debuffs `AuraContainer` groups with
+class filters and Hub shapes — FINDINGS §20; the sample-icon PREVIEW while the tab's Auras section
+is open) and the **Unit Frames** tab (`GloomsUnitFrames_Tab.lua`, `SKIN_NEEDS = 10`, order 50: the
+PROFILE block above UNITS in the rail, then a GB-style accordion whose bodies are `UI.grid`s with
+cogs for the deep clusters: Position · Layer · Visibility · Texts · Auras · one section per ring).
+`/gu` → `ToggleWindow("unitframes")`. Art in `Media/art/` is GENERATED (Python/PIL, the
 scripts were throwaway): `disc.png` + its ramp companion and `disc-ramp-10…90.png` (the ramp at
 narrower fade widths, for the shield wash), the two half-plane masks per sweep direction, the two
 "lead" masks, `hole.png`, `cap.png`. The Gu mark is still the Hub's logo — a real mark is owed.

@@ -19,6 +19,59 @@
 
 ---
 
+# THE CLEARING SESSION — 2026-09-20, twelve backlog items closed
+
+**Closed on owner evidence, no code:** **1** (GA's Corruption / UA bars — "using it for weeks",
+stacks included) · **2** (the 12.1 sweep on live — weeks of raiding with GA and GB, nothing
+amiss) · **5** (GB's profile rework — New / Rename-unchanged / outer spaces / Delete all clicked
+right; **circles confirmed** as the New look) · **7** (GA's PLAYER POWER condition — Combo Points
+≥ 5 on a Rogue, on a display and on a group; the failure he hit first was the value box committing
+on Enter only, fixed).
+
+**Closed with code:**
+- **14 — GU goes profile-based.** `GloomsUnitFramesDB` v2: a library of `{ player, target }`
+  profiles + per-character bindings; the v1 config became "Default", which every unbound
+  character lands on. The engine's `db` local is the active profile so nothing else changed;
+  `ApplyLayout` re-points rings, texts, auras and the cast holder. Migration and every API run
+  offline against a copy of his real saved data before the reload. Owner-QA'd the same day.
+- **12.5 — `GloomSuite/GloomsUnitFrames` created** (`gh repo create`, public, org-owned, default
+  branch set to `master` to match the siblings), three commits pushed, verified anonymously:
+  author `Gloom <gloom@handofdevastation.invalid>`, no linked account, empty public member list.
+- **12.4 — DK runes.** `Enum.PowerType.Runes` gives the count (6) but `UnitPowerPercent` does not
+  take runes; `GetRuneCooldown` readiness fed as a plain fraction does, on `RUNE_POWER_UPDATE`.
+  `PowerBarColor.RUNES` is a generic grey — the ring uses the class red.
+- **8** — `CDM:Debug` resolves through `DisplaySpellID`; seven of eight displays now FOUND. The one
+  NOT FOUND (Stealth Active, 257621) is genuinely keyed to an ID the Cooldown Manager does not list.
+- **9** — texture-less auras show their spell's icon, explicit texture wins (the owner's ruling);
+  the list rows too.
+- **10** — GB's `hgAnchor` delegates to `GloomsHub:GrowAnchor`; bodies diffed identical first.
+- **4** — measured and fixed; FINDINGS §1. The instrument (`/ga hot`) stays, off by default.
+- **6** — the engine known-check DISPROVED by `/ga known` (a working Corruption bar answers
+  `known=no` three ways); replaced by the list-row `!` mark. FINDINGS §12.
+- **15** — closed as MOOT: the Hub effect under an aura button had one consumer, GU's This-spell
+  kind, and the owner removed it (below).
+
+**Removed:** **GU's "This spell" kind.** Six measurements on the DK (FINDINGS §20.6) showed the
+engine ignores spell-ID includes AND excludes on the player's harmful auras, through slots and
+groups alike; the owner: *"It needs to be able to track specific DEBUFFS to be of any value.
+Buffs aren't useful."* The kind, its tab controls, the effect settings popover and the
+effect-under-a-button machinery are gone; saved groups of that kind are dropped at load.
+
+**Also shipped:** Hub MINOR 10 — Tab / Shift-Tab between visible edit boxes, Up / Down (Shift ×10)
+stepping, the profile-delete gate naming the characters on a profile (GB, GA, GU) · a suite sweep
+of Enter-only setting boxes (three in GA fixed; the rest are button-driven and correct) · GU's
+aura-group PREVIEW (sample icons while the Auras section is open) · GU's spell-list boxes render
+"Name (ID)" and are greyed on a player Debuffs group · the shape-mask bind waits for regen instead
+of throwing 20× when a button is wired mid-fight · GU's unit rows lost their ring summary (it
+collided with the name; "what is it even for?").
+
+**Owner rulings recorded:** circles for GB's New profile · a settings box commits when you leave
+it, never Enter-only · **for GU only**, a change made mid-combat need only apply after combat
+(he corrected a suite-wide reading of that) · "don't ask about the handoff ritual again" (the
+propose-once rule, memory).
+
+---
+
 # MOVED OUT OF SUITE-STATE — 2026-09-19 evening (the sound catalog + two shipped GA features)
 
 Pure history that had been sitting in the file people re-read. The mechanisms are documented where

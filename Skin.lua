@@ -9,7 +9,7 @@
 -- change it THERE and every consumer in the same session.
 -- ============================================================
 
-local MAJOR, MINOR = "LibGloomSkin-1.0", 9   -- MINOR 9 (2026-09-19): UI.grid (two-column placer), UI.popover + UI.cog (sub-settings behind a cog) — the compaction pass
+local MAJOR, MINOR = "LibGloomSkin-1.0", 10  -- MINOR 10 (2026-09-20): flatEditBox keyboard — Tab / Shift-Tab between visible boxes, Up / Down step a number (Shift ×10), `stepper` hook; profileBlock `api.users` → the delete confirmation names the characters on it
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if lib then
@@ -179,6 +179,42 @@ end
 
 -- Flat text input (the family pattern): no Blizzard template, faint purple
 -- fill + brighter fill on focus, no border.
+--
+-- KEYBOARD (MINOR 10, the owner 2026-09-20). Every box the lib makes joins
+-- one registry, so no tab wires anything:
+--   Tab / Shift-Tab  → focus the next / previous box that is VISIBLE and
+--     shares this box's top-level frame (the Suite window, or an open popover
+--     / dialog — each is its own ring), ordered by screen position, top to
+--     bottom then left to right; wraps. Losing focus is what commits a box's
+--     value in every consumer, so tabbing away applies. The box tabbed into
+--     selects its text, so typing replaces.
+--   Up / Down → step the number in the box by 1 (Shift: 10). Default: edits
+--     the TEXT only (the consumer's Enter / focus-lost commit applies it).
+--     A consumer that wants the value applied LIVE while the box keeps focus
+--     sets `e.stepper = function(e, delta) … end` and owns the whole step
+--     (clamp, apply, refresh the text). A box whose text is not a number
+--     ignores the arrows.
+local editBoxes = setmetatable({}, { __mode = "k" })
+
+local function topLevel(f)
+  local p = f:GetParent()
+  while p and p ~= UIParent do f = p; p = f:GetParent() end
+  return f
+end
+
+local function tabRing(from)
+  local root, ring = topLevel(from), {}
+  for e in pairs(editBoxes) do
+    if e:IsVisible() and e:IsEnabled() and e:GetTop() and topLevel(e) == root then ring[#ring + 1] = e end
+  end
+  table.sort(ring, function(a, b)
+    local ta, tb = a:GetTop(), b:GetTop()
+    if math.abs(ta - tb) > 2 then return ta > tb end
+    return a:GetLeft() < b:GetLeft()
+  end)
+  return ring
+end
+
 function UI.flatEditBox(parent, w, h)
   local e = CreateFrame("EditBox", nil, parent)
   e:SetSize(w, h); e:SetAutoFocus(false)
@@ -188,6 +224,24 @@ function UI.flatEditBox(parent, w, h)
   bg:SetColorTexture(COLOR.purple.r, COLOR.purple.g, COLOR.purple.b, 0.10)
   e:SetScript("OnEditFocusGained", function() bg:SetColorTexture(COLOR.purple.r, COLOR.purple.g, COLOR.purple.b, 0.22) end)
   e:SetScript("OnEditFocusLost",  function() bg:SetColorTexture(COLOR.purple.r, COLOR.purple.g, COLOR.purple.b, 0.10) end)
+  e:SetScript("OnTabPressed", function(self)
+    local ring = tabRing(self)
+    local n = #ring
+    if n < 2 then return end
+    local at = 1
+    for i, b in ipairs(ring) do if b == self then at = i; break end end
+    local nxt = ring[((at - 1 + (IsShiftKeyDown() and -1 or 1)) % n) + 1]
+    self:ClearFocus()          -- commits, via the consumer's focus-lost hook
+    nxt:SetFocus(); nxt:HighlightText()
+  end)
+  e:SetScript("OnArrowPressed", function(self, key)
+    if key ~= "UP" and key ~= "DOWN" then return end
+    local delta = (key == "UP" and 1 or -1) * (IsShiftKeyDown() and 10 or 1)
+    if self.stepper then self.stepper(self, delta); return end
+    local v = tonumber(self:GetText())
+    if v then self:SetText(tostring(v + delta)); self:SetCursorPosition(#self:GetText()) end
+  end)
+  editBoxes[e] = true
   return e
 end
 
@@ -601,6 +655,9 @@ function UI.confirm(bodyText, onYes, acceptLabel, titleText)
   confirmDlg.onYes = onYes
   confirmDlg.title:SetText(titleText or "Are you sure?")
   confirmDlg.body:SetText(bodyText or "")
+  -- The plate grows with its body (a profile delete may list the characters
+  -- using it): 46 above the text, 14 under it, the 26px buttons, 16 below.
+  confirmDlg:SetHeight(math.max(144, 46 + confirmDlg.body:GetStringHeight() + 14 + 26 + 16))
   confirmDlg.yes.text:SetText(acceptLabel or "Delete")
   confirmDlg:Show(); confirmDlg:Raise(); scrimShow(confirmDlg)
   return confirmDlg
@@ -1334,11 +1391,35 @@ function UI.profileBlock(parent, w, api)
       after(api.rename(name))
     end)
   end)
+  -- The delete gate (the owner, 2026-09-20: "the following characters are
+  -- using this profile, are you sure?"). `api.users(name)` returns the keys of
+  -- every character bound to it — "Name-Realm" or "Name - Realm", the tool's
+  -- own format; this trims each to the character's name and leaves out the
+  -- character you are on, who is always on the active profile.
+  local function others(name)
+    if not api.users then return nil end
+    local me, out = UnitName("player"), {}
+    for _, key in ipairs(api.users(name) or {}) do
+      local char = tostring(key):match("^%s*([^-]-)%s*%-") or tostring(key)
+      if char ~= me then out[#out + 1] = char end
+    end
+    table.sort(out)
+    return out
+  end
   bDel:SetScript("OnClick", function()
     local active = api.active()
     if not active then return end
-    UI.confirm(("Delete the %s \"%s\"?  This can't be undone."):format(noun, active),
-      function() after(api.delete()) end)
+    local list = others(active)
+    local body
+    if list and #list > 0 then
+      local names = #list == 1 and list[1]
+        or (table.concat(list, ", ", 1, #list - 1) .. " and " .. list[#list])
+      body = ("Delete the %s \"%s\"?\n\nBesides this character, it's in use by |cffffffff%s|r — %s fall back to another %s.\n\nThis can't be undone.")
+        :format(noun, active, names, #list == 1 and "that character will" or "they'll", noun)
+    else
+      body = ("Delete the %s \"%s\"?  This can't be undone."):format(noun, active)
+    end
+    UI.confirm(body, function() after(api.delete()) end)
   end)
 
   local tips = api.tips or {}

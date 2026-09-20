@@ -109,7 +109,7 @@ shipper — its `Skin.lua` IS the lib body (embedding a copy in each tool via `.
 externals is Phase G work). `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are Hub-side aliases of the
 same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Phase E**.
 
-**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 9) — the whole API; nothing else is public:**
+**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 10) — the whole API; nothing else is public:**
 - `Skin.COLOR` — `purple · heroic · green · red · orange` (each `{r,g,b,hex}`), `dark`, `rim`
   (both `{r,g,b,a}`), `text`, `mute` (`{r,g,b}`). The §1 literals.
 - `Skin.FONT` — `title · head · body · bodyM · label` → font files under
@@ -133,7 +133,18 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
   - `UI.flatButton(parent, w, h, color, label?, textSize?)` → Button with `.text`, `:SetActive(on)`,
     `:SetBase(alpha)` — ★ purple/heroic when off, ORANGE when active, for EVERY flatButton
   - `UI.makeToggle(parent, get, set)` → 40×20 sliding switch, `:refresh()`
-  - `UI.flatEditBox(parent, w, h)` → EditBox (faint purple fill, brighter on focus)
+  - `UI.flatEditBox(parent, w, h)` → EditBox (faint purple fill, brighter on focus).
+    ★ **KEYBOARD (MINOR 10, the owner 2026-09-20):** every box the lib makes joins one registry.
+    **Tab / Shift-Tab** focus the next / previous box that is visible and shares this box's
+    top-level frame (the Suite window, or an open popover / dialog — each its own ring), ordered
+    top-to-bottom then left-to-right, wrapping; the box tabbed into selects its text. Leaving a
+    box is what commits it in every consumer, so Tab applies. **Up / Down** step a number in the
+    box by 1 (**Shift: 10**). Default: the TEXT only (the consumer's Enter / focus-lost commit
+    applies it). A consumer wanting the value applied LIVE while the box keeps focus sets
+    `e.stepper = function(e, delta) … end` and owns the step (clamp, apply, refresh) — an older
+    lib ignores the field, so setting it needs no gate bump (GU's `cNum`, GA's power box).
+    ⚠ **Consumer rule (LESSONS):** a box that STORES a setting commits on focus-lost, never
+    Enter-only; Escape restores the stored value before it clears focus.
   - `UI.sliderRow(parent, yTop, label, min, max, step, get, set, fmt?, sub?)` →
     `{ refresh, setEnabled, SetShown }` (44px row; ~15px taller with `sub`)
   - `UI.colorSwatch(parent, get, set, withAlpha?, label?)` → `{ swatch, refresh }` — get/set
@@ -239,7 +250,8 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     whitespace** before calling back, once, for every consumer — a stray space made a second
     profile that looked identical to the first in the dropdown. A consumer that still trims
     its own name (GA's Core does) is harmless, just redundant.
-  - `UI.confirm(body, onYes, acceptLabel?, titleText?)` — the skinned yes/no modal
+  - `UI.confirm(body, onYes, acceptLabel?, titleText?)` — the skinned yes/no modal; **its plate
+    grows with the body** (MINOR 10 — a profile delete may list several characters)
     (MINOR 3). ★ **Every destructive action uses this.** A self-arming "click twice to
     confirm" button is NOT acceptable: once armed there is no way to back out
     (the owner 2026-07-24 — GB's old `confirmable` had exactly that trap and is retired).
@@ -251,7 +263,14 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     buttons out 3-across (GB's preset block). Returns `{ frame, refresh, note, height }`.
     `api` = `noun · names() · active() · switch(v) · create(name) · copy(name)? ·
     rename(name) · delete()` (each mutator → `ok, err`; `err` shows in the note line)
-    `· onChange()? · title? · accent? · tips{dropdown,new,copy,rename,delete}?`
+    `· users(name)? · onChange()? · title? · accent? · tips{dropdown,new,copy,rename,delete}?`
+    ★ **`users(name)` (MINOR 10, the owner 2026-09-20) → the DELETE GATE:** returns the keys of
+    every character bound to that profile (the tool's own format, `Name-Realm` or `Name - Realm`;
+    the block trims to the name and drops the character you are on). When any remain, the
+    confirmation lists them — *"Besides this character, it's in use by A, B and C — they'll fall
+    back to another profile"* — so a shared profile is never deleted blind. GB, GA and GU supply
+    it from their account-wide maps; Overlays cannot (per-character SavedVariables) and keeps the
+    plain confirmation. Omitting it needs no gate bump.
     ★ **`accent` (MINOR 7)** recolours the block's four buttons; defaults to `COLOR.heroic`.
     It exists because GB's rail carries TWO of these blocks and, in one colour stacked
     together, they read as the same control — the owner could not tell which scope a button
@@ -372,7 +391,8 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
 ## 6. The shared-toolkit VERSION GATE — **every tool must carry one**
 
 **The problem it solves.** `LibGloomSkin-1.0` lives in the Hub and **grows** — MINOR 2 added
-`addEdges`, MINOR 3 added `dropdown`/`flyout`/`nameDialog`/`confirm`/`profileBlock`. Every tool
+`addEdges`, MINOR 3 added `dropdown`/`flyout`/`nameDialog`/`confirm`/`profileBlock`, MINOR 10 the
+edit-box keyboard ring. Every tool
 calls into it. But **`## Dependencies: GloomsHub` only checks that the Hub is PRESENT, never that
 it is NEW ENOUGH** — WoW's TOC dependency system has no version constraint at all.
 

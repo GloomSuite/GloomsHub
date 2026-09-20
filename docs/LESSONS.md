@@ -256,8 +256,43 @@ over the file in `WTF/Account/<ACCOUNT>/SavedVariables/`), it is ground truth, a
 turned a UI-wording question into a real bug fix. **His confusion was a correct signal about the
 design, not a gap in his understanding** — the naming genuinely lied.
 
+## ★★ A filter that silently passes EVERYTHING looks exactly like a filter that works — on a quiet character
+
+GU's "This spell" highlight was owner-QA'd on the Warlock with Burning Rush, and it looked right:
+the icon appeared with the buff and vanished without it. The HARMFUL half of the same control had
+never filtered anything — but the Warlock never had a debuff on himself in a city, so an unfiltered
+slot showed nothing, which is what a correctly filtered one shows too. The DK's first login had a
+permanent zone debuff on him and the broken half lit up at once (FINDINGS §20.6).
+
+**When you verify a filter, verify it with something it must REJECT present.** "Shows the right
+thing when the right thing is there" is half a test; the other half is "shows nothing when only
+wrong things are there", and it needs a wrong thing on screen. Ask what the QA character could not
+have had, and go get one — a different class, a zone effect, a mob's bleed.
+
+## ★★ A settings box commits when you LEAVE it — Enter-only is a bug, not a style
+
+GA's PLAYER POWER value box committed on Enter only. The owner typed 5, clicked away, and the box
+kept reading 5 over a stored 1 — the aura fired at any combo point, and he found out in a fight.
+There was no indication that Enter was required, and he reasonably assumed "type it and close the
+window" was enough. Two more Enter-only setting boxes were found in the same sweep.
+
+**Every box that stores a setting commits on focus-lost** — click, Tab, closing the window — so
+what the box shows IS what is saved. Enter just clears focus. Escape restores the stored value
+BEFORE it clears focus, so an abandoned edit does not commit. Boxes that feed a button (a name
+dialog, an "add" form, a nudge step read at click time) are the only Enter-driven ones. The Hub's
+`flatEditBox` (MINOR 10) gives every box Tab / Shift-Tab and Up / Down so the pattern has a home;
+GU's `cNum` shows the live-stepping hook.
+
 ## Verification & evidence
 
+- **★ `AuraData.spellId` — lower-case d.** A probe reading `d.spellID` printed `nil` for every aura
+  on the player and was written up, for ten minutes, as "12.1 strips spell IDs from aura data". It
+  does not. Print the field list before concluding a field is absent.
+- **★ An accumulating diagnostic counter must say WHAT it counts.** `/ga auradur`'s
+  `deferred=1628` read as "1,628 style changes waited for combat to end"; it was 1,628 feeds that
+  had nothing to change and were logged before the change-check ran. A counter incremented before
+  the cheap "is there anything to do" test measures call volume, not work — label it that way or
+  move the test first.
 - **★ "Owner-QA'd" means QA'd on the class he was playing. Say which paths that class cannot reach.**
   On 2026-09-20 three bugs in the cast ring's interrupt colouring surfaced in one evening — an
   evaluator argument out of range, a tint painted onto empty geometry, a recolour undoing the alpha

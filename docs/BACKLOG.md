@@ -6,209 +6,40 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-09-20, early morning (**the Unit Frames tab went two-column** — `UI.grid` /
-`UI.popover` / `UI.cog` are Hub toolkit MINOR 9 — and **the delve measurements are done**: a
-target's cast is secret in every part and the ring draws it anyway through the duration object's
-percent evaluators (FINDINGS §18.10). Three latent cast-ring bugs surfaced on the owner's Rogue —
-the first class with an interrupt — and were fixed (§18.11–12). Effects under an aura button in
-combat are PARKED, not fixed (§20.5). **The owner ruled GU's account-wide config wrong: it goes
-profile-based, item 14, before anything else.** ⚠ `GloomSuite/GloomsUnitFrames` still does NOT
-exist on GitHub — three commits, local only. A frustrating session; start the next one clean.)
+**Last updated:** 2026-09-20, evening (**a clearing session — twelve items closed.** GU went
+PROFILE-BASED (item 14, owner-QA'd), `GloomSuite/GloomsUnitFrames` now EXISTS on GitHub, the
+profile delete gate names the characters on a profile (Hub MINOR 10, with Tab / Shift-Tab and
+Up / Down on every edit box), GA's `ApplyConfig` heat was measured and fixed, the silent-yes engine
+fix was DISPROVED by trace and replaced with a list-row mark, texture-less auras show their spell's
+icon, `hgAnchor` has one copy, DK runes work. **GU's "This spell" kind was REMOVED by the owner**:
+the engine ignores spell-ID filters on the PLAYER's DEBUFFS (FINDINGS §20.6), so it could never
+single out a debuff. What is left is bigger — start fresh.)
 ---
 
 ## Open items
 
-### 1 · Finish GA's bar coverage — Corruption + UA, and confirm the UI route
-**Repo:** `~/GloomsAuras` · **Size:** small · **Evidence:** `UNTESTED` (code written, never run)
-
-The duration engine is **built and owner-QA'd** — Agony and Haunt drain correctly on 12.1 with
-stack counts, and the whole Bar section exists in the Auras tab. What is left is coverage:
-
-- **Corruption and Unstable Affliction have no bars at all.** They are texture displays.
-- **The last change of the session was never tested.** `CDM:DisplaySpellID` now resolves a
-  display's spell from its first TRIGGER when there is no `cfg.spellID`, which is the shape of
-  every display built in the Auras tab. It is wired into five call sites (`AuraDuration:Attach`,
-  `CandidateSpellIDs`, `BarSource`, `BarStackValue`, the `cd_dur` feed). **Before this, a bar
-  created in the UI could never get a duration** — `/ga bar <spellID>` was the only working route,
-  and the owner has said he will never use a command.
-
-**The test:** + New Aura → Bar Aura → set its Aura Trigger to Corruption → cast it. The bar should
-fill and drain with no slash command anywhere. Then the same for UA.
-
-**Read first:** `~/GloomsAuras/docs/HANDOFF.md` (the 2026-08-12 block) · [FINDINGS.md](FINDINGS.md) §1
-
----
-
-### 2 · The rest of the 12.1 exposure sweep — now on LIVE
-**Repo:** mostly `~/GloomsBars`, some Hub · **Size:** testing, then triage · **Evidence:** `UNTESTED`
-
-**12.1 went live 2026-08-11.** Everything below was written against the PTR.
-
-- **Real instanced content** — dungeon / M+ / raid. Every test so far, across three sessions, has
-  been open-world on a training dummy. Aura secrecy covers encounters, M+ and PvP, not just combat,
-  and nobody has tested whether `AddAuraSlot` behaves the same under encounter secrecy.
-- **GB's skinning hooks** — the *layout* hooks are proven alive (all 40, measured 2026-07-26). The
-  skinning side is still untested.
-- **Overlays and the Hub shell** got a smoke test only (tabs open, window renders).
-- ~~Stacks under secrecy~~ — **SOLVED 2026-08-12.** See FINDINGS §1.
-
-⚠ **The old "check the PTR addon list, it has drifted" warning is RETIRED.** FINDINGS §4 records
-the truth: EllesmereUI **is** the owner's UI, the one colliding module has been off since July, and
-telling him to disable things is how a session wastes his evening. Read §4 before touching the client.
-
-**Read first:** [FINDINGS.md](FINDINGS.md) §4
-
----
-
-### 3 · GA's `/ga probe` leaks frames on charge spells
-**Repo:** `~/GloomsAuras` · **Size:** one small fix · **Evidence:** `TESTED`
-
-`CDM.lua`'s charge-spell probe creates two fresh `CooldownFrameTemplate` frames per capture with no
-`SetSize`/`SetDrawEdge`/`SetDrawBling`, so each click paints a screen-wide gold wedge and parks two
-more frames. `_ProbeShadows` already pools correctly — copy it.
-
-⚠ **The owner has explicitly deprioritised this** (2026-08-12): it is a dev diagnostic, it cannot
-bite a Warlock, and he does not want to hear about it unless it affects normal play. Fix it silently
-if you are in the file; do not raise it.
-
-**Read first:** `~/GloomsAuras/docs/HANDOFF.md`
-
----
-
-### 4 · Why does `ApplyConfig` run so hot?
-**Repo:** `~/GloomsAuras` · **Size:** unknown, probably small · **Evidence:** `OBSERVED`
-
-`AuraDuration:ApplyStyle` was seen firing **dozens of times for a single user action**, and 600
-deferrals accumulated in one short combat. A redundant-push guard now absorbs it, but the guard
-treats the symptom — the underlying question of why `ApplyConfig`/`UpdateBar` re-run that often was
-never established. Worth knowing before anything else expensive is hung off that path.
-
-**Read first:** `~/GloomsAuras/docs/HANDOFF.md`
-
----
-
-### 5 · Finish verifying GB's profile rework
-**Repo:** `~/GloomsBars` (+ Hub's `Skin.lua`) · **Size:** ten minutes of clicking · **Evidence:** `UNTESTED`
-
-The 2026-08-15 rework is **shipped and partly owner-QA'd**. Confirmed in game: the rail layout, the
-factory look on a new character's first login, and no data loss across a reload. What was NOT
-exercised:
-
-- **The New button itself.** It calls the same `GB:DefaultPreset()` that Gloomhill's login proved
-  works, so this is likely fine — but nobody has clicked it. Expect circles.
-- **Rename with the name unchanged** — should now be a silent no-op, not "already exists".
-- **A name typed with a leading/trailing space** — should be trimmed (this is in the Hub's shared
-  `nameDialog`, so it affects GA and Overlays too).
-- **Delete** — should print which profile the character landed on.
-
-⚠ **One open DESIGN question the owner has not answered:** he said a new profile should look "like
-the default UI", and what it produces is **GB's** default — circles. Blizzard's stock buttons are
-square. Circles were kept (round icons are the addon's whole point) and it is a one-line change in
-`GB:DefaultPreset()` if he wants otherwise. **Ask; do not change it unprompted.**
-
-**Read first:** `~/GloomsBars/docs/HANDOFF.md` (the 2026-08-15 block) · [FINDINGS.md](FINDINGS.md) §11
-
----
-
-### 6 · The "silent yes" — an untracked or untalented spell reports `cd_ready = true`
-**Repo:** `~/GloomsAuras` · **Size:** small, but needs a trace FIRST · **Evidence:** `TESTED`
-
-Unknown ⇒ READY turns "show when ready" into "show always" for a spell the CDM never bound. The
-owner's Soul Fire display does it today. **He has a working workaround** (the `SPELL / TALENT KNOWN`
-field) and chose it over an engine fix, so this is not urgent.
-
-⚠ **Do not write the automatic known-check blind** — hero talents REPLACE spells, and if
-`IsPlayerSpell` returns false for an overridden base spell it would hide auras that work today.
-Trace that first.
-
-**Read first:** [FINDINGS.md](FINDINGS.md) §12
-
----
-
-### 7 · GA's PLAYER POWER load condition has never been run
-**Repo:** `~/GloomsAuras` · **Size:** ten minutes of clicking · **Evidence:** `UNTESTED`
-
-Built 2026-08-24; nobody has clicked it. **The test:** an aura with Power = Soul Shards, *at least*,
-5 — hidden at 0-4, appears at 5, gone when you spend one. Works as a group load rule too.
-
-⚠ Power is not secret, but the read stays `issecretvalue`-guarded per this repo's standing rule.
-
-**Read first:** [FINDINGS.md](FINDINGS.md) §12
-
----
-
-### 8 · `/ga debug` contradicts `/ga trace`
-**Repo:** `~/GloomsAuras` · **Size:** one small fix · **Evidence:** `TESTED`
-
-`CDM:Debug` keys off `cfg.spellID`, which is `nil` for every display built in the Auras tab, so it
-reports `NOT FOUND` for all of them while `trace` resolves them fine. It sent a session down the
-wrong path on 2026-08-24. Use `DisplaySpellID(cfg)` — the same fix `alertOff` already carries a
-warning about.
-
-**Read first:** `CDM:Debug` in `~/GloomsAuras/CDM.lua`
-
----
-
-### 9 · An aura with no texture draws the magenta panel, not its spell's icon
-**Repo:** `~/GloomsAuras` · **Size:** two lines, but the DESIGN question is the real work · **Evidence:** `TESTED`
-
-`Displays:ApplyConfig` resolves its icon fallback with `C_Spell.GetSpellTexture(cfg.spellID or spellID)`.
-For every display built in the Auras tab `cfg.spellID` is nil and `spellID` is the display KEY (a
-string like `"d18"`), so the lookup fails and it draws the deliberate magenta "no art" panel.
-Measured 2026-08-25; FINDINGS §14. **Same root cause as item 8**, and the same call fixes it:
-`CDM:DisplaySpellID(cfg)`.
-
-⚠ **Do not just make the change.** Wiring that resolver in IS the parked "auto-icon a new aura from
-its first trigger" feature, which the owner has never decided on, and its open question is still
-open: *does an explicit texture pick set `cfg.texture`, so the auto-icon only ever fills the unset
-case?* **Ask before building.** On 2026-08-25 he pushed back on the premise itself — he did not want
-a trigger's icon appearing as artwork he had not chosen. The workaround he actually wanted was
-"Effects only", which shipped that day.
-
-**Read first:** [FINDINGS.md](FINDINGS.md) §14 · the "Deferred" block in `~/GloomsAuras/docs/HANDOFF.md`
-
----
-
-### 10 · `hgAnchor` exists twice, knowingly
-**Repo:** `~/GloomsBars` (+ Hub's `Shapes.lua`) · **Size:** small, but it is GB's geometry engine · **Evidence:** `TESTED` (verified identical 2026-08-25)
-
-The grown-rect anchor every shaped glow and effect depends on is defined in BOTH
-`GloomsBars/Skin.lua` (local `hgAnchor`, 6 call sites) and `GloomsHub/Shapes.lua`
-(`GloomsHub:GrowAnchor`). They were verified line-for-line identical by script when the second was
-created, and ⚠ comments at both ends say they must not drift.
-
-It was left duplicated deliberately: collapsing GB's into a delegation means editing its layout
-geometry during a migration whose entire QA promise was "GB looks identical". That promise has been
-kept and banked, so this is now safe to do as its own small change with its own test.
-
-**Read first:** `GloomsHub:GrowAnchor` in `Shapes.lua` · `hgAnchor` in `~/GloomsBars/Skin.lua`
-
----
-
 ### 12 · Gloom's Unit Frames — what is left
-**Repo:** `~/GloomsUnitFrames` (sixth tool, LOCAL git only) · **Size:** small pieces · **Evidence:** everything shipped is owner-QA'd, the delve pass 2026-09-20
+**Repo:** `~/GloomsUnitFrames` (on GitHub since 2026-09-20) · **Size:** watching, then small pieces · **Evidence:** everything shipped is owner-QA'd
 
-**Done since the second session:** EUI's player/target frames are hidden and the owner lives on
-these (2026-09-20) · the delve measurements — see FINDINGS §18.10 (cast), name/level readable in a
-pull, interrupt recolour under secrecy.
+**Done 2026-09-20:** profiles (item 14) · the GitHub repo · DK runes (via `GetRuneCooldown`, class
+red) · the aura-group PREVIEW (sample icons from the spellbook while the Auras section is open) ·
+the shape-mask bind no longer errors when a button is wired mid-fight · the spell-list boxes
+round-trip by ID and are greyed where the engine ignores them.
 
 **Left, in order:**
-1. **The shield wash switching OFF** — still only ever seen on the probe square (§19). Watch for it
-   the next time a shield lands in a fight.
-2. **Aura filter classes** beyond timed-only and cast-by-you — same engine path, `UNTESTED`
-   individually; whichever bites first gets checked then. Also `UNTESTED`: creating a container in
-   combat (a Show-kind change mid-fight rebuilds one).
-3. **The mid-cast tint and kick tick under secrecy** — they need the cast's real clock and stay off
-   for an instanced target (the ring only recolours there). Design question, not a bug: is a
-   secret-safe version wanted? `EvaluateRemainingPercent` on the KICK's duration could place the
-   tick if the cast's total were known — it is not. Park unless he asks.
-4. **Death Knight runes** — not a power type; the resource ring skips DKs. Only if he rolls one.
-5. **Create the GitHub repo** `GloomSuite/GloomsUnitFrames` when he says (public, org-owned, private
-   membership — Hub `CLAUDE.md` PRIVACY). Three sessions of work on one disk.
-6. **The Gu mark** in the tab header is still the Hub's logo.
+1. **The shield wash switching OFF** — still only ever seen on the probe square (§19). The owner
+   will watch for it in the next raid.
+2. **Aura filter CLASSES** beyond timed-only and cast-by-you (boss, dispellable, the dispel types,
+   CC…) — same engine path, `UNTESTED` individually; he will use them in the real world and report.
+   ⚠ Spell-ID lists on a PLAYER Debuffs group are DEAD (§20.6) — that is not one of these.
+3. **The aura PREVIEW's alignment** — it reproduces the engine's flow rules (icon rect, spacing,
+   wrap, growth, anchor corner) with our own textures; nobody has yet compared it against a live
+   group pixel-for-pixel. If it is off, it is a one-number correction in `LayoutAuraPreview`.
+4. **The mid-cast tint and kick tick under secrecy** — off for an instanced target by design
+   (the cast's clock is secret). Park unless he asks.
+5. **The Gu mark** in the tab header is still the Hub's logo. Art, not code.
 
-**Read first:** `~/GloomsUnitFrames/CLAUDE.md` · [FINDINGS.md](FINDINGS.md) §18 (the renderer, incl.
-10–12), §19 (absorbs), §20 (aura buttons)
+**Read first:** `~/GloomsUnitFrames/CLAUDE.md` · [FINDINGS.md](FINDINGS.md) §18–§20
 
 ---
 
@@ -216,64 +47,52 @@ pull, interrupt recolour under secrecy.
 **Repo:** `~/GloomsUnitFrames` (the tab) · **Size:** an hour, once he has a mock · **Evidence:** landed and owner-QA'd 2026-09-20 — "a little messy, we can clean up later"
 
 The compaction shipped: every section body is a `UI.grid` (two cells per line), the deep clusters
-sit behind `UI.cog` popovers (shield tint · interrupt colouring · effect settings · aura filters),
-one-line conditionals appear inline under their switch (gradient end, drain shift, breakpoint), the
-shortcode list is a popover that inserts on click. What is left is the LOOK — spacing, which pairs
-sit together, label widths — and **the owner said he might make a mock**; ask for it before
-touching anything. Do not redesign the mechanism.
+sit behind `UI.cog` popovers, one-line conditionals appear inline under their switch, the shortcode
+list is a popover that inserts on click. What is left is the LOOK — spacing, which pairs sit
+together, label widths — and **the owner said he might make a mock**; ask for it before touching
+anything. Do not redesign the mechanism. Two things he called confusing today, worth folding in:
+the filter popover differs by kind (now titled "FILTERS — BUFFS / DEBUFFS"), and the rail's PROFILE
+block sits above UNITS with nothing separating the two.
 
 **Read first:** `~/GloomsUnitFrames/GloomsUnitFrames_Tab.lua` (the header comment explains the
 three tiers) · [CONTRACTS.md](CONTRACTS.md) §4 (`UI.grid` / `UI.popover` / `UI.cog`)
 
 ---
 
-### 14 · Gloom's Unit Frames goes PROFILE-BASED ★ NEXT
-**Repo:** `~/GloomsUnitFrames` (+ nothing in the Hub — `UI.profileBlock` exists) · **Size:** a session · **Evidence:** owner decision 2026-09-20
-
-> "This should be a profile-based system, like it is for literally every other module in this
-> suite. What an odd choice you made to do it this way." — the owner, on discovering his Warlock's
-> "This spell" group running on his Rogue.
-
-`GloomsUnitFramesDB` is ONE account-wide config (the first session copied Portraits). Rings are
-arguably shared; aura groups, "This spell" and `[shards]`-style texts are class things, and the
-owner wants the whole tool per-character like Bars / Auras / Overlays. What to build:
-- `UI.profileBlock` in the rail (CONTRACTS §4), character-bound like GB: one profile per character,
-  **New = the factory look, Copy = a full duplicate**, Rename, Delete (which prints where the
-  character landed). Same `api` shape as GB's — read `~/GloomsBars/Config.lua`'s block for the
-  plumbing and FINDINGS §11 for the login-binding trap GB hit.
-- **Migration:** the existing account-wide config becomes the first profile (call it "Default"),
-  bound to every character that logs in until he makes another — nothing he built is lost.
-- The tab's `Cfg()` / `RingCfg()` / `TextList()` / `AuraList()` already go through `GU:Config(which)`,
-  so the tab needs the block and little else; the engine's `db[which]` reads are the surface to
-  re-point.
-
-**Read first:** `~/GloomsUnitFrames/CLAUDE.md` (the Shape section) · `GU:Config` and the `db` setup
-in `~/GloomsUnitFrames/GloomsUnitFrames.lua` · the `profileBlock` entry in [CONTRACTS.md](CONTRACTS.md)
-§4 · GB's block in `~/GloomsBars/Config.lua` · [FINDINGS.md](FINDINGS.md) §11
-
----
-
-### 15 · Effects under an aura button must ANIMATE in combat, not pause
-**Repo:** `~/GloomsHub` (`Effects.lua`) · **Size:** a session, with GU as the test bed · **Evidence:** `TESTED` 2026-09-20 (FINDINGS §20.5)
-
-In a fight, every layout write under an engine aura button is refused — `SetSize` proven, `SetPoint`
-presumed, `SetRotation` unknown. Seven of the eight modules move or resize their texture per frame;
-only Rim Flash is alpha-only. Tonight's stopgap PARKS a refused instance until regen and says so once
-per module — honest, but the highlight goes still exactly when it matters. The fix: drive those
-modules through engine **`AnimationGroup`s** (Scale for Breathe / Burst, Translation for Sheen,
-Rotation for Shine / Marching / Radar) created and `:Play()`ed at wiring time, looping, so nothing
-is called in combat. Keep the plain-host path (GB, GA) byte-for-byte — the "GB looks identical"
-promise — by switching only hosts the "under a Blizzard AuraButton" block already detects.
-
-**Read first:** the "Layout writes under a Blizzard AuraButton IN COMBAT" block and the "Hosts under
-a Blizzard AuraButton" block in `~/GloomsHub/Effects.lua` · [FINDINGS.md](FINDINGS.md) §20 ·
-[CONTRACTS.md](CONTRACTS.md) §8
-
----
-
 ## Not open — recorded so nobody re-raises them
 
 > Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
+
+- **GU's "This spell" aura kind (one aura by spell ID, wearing a Hub effect)** — **REMOVED by the
+  owner 2026-09-20.** On the player, the engine ignores `includeSpellIDs` AND `excludeSpellIDs` on
+  HARMFUL auras — measured through a slot and a group, in either creation order, with a fresh filter
+  table, against a permanent zone debuff (Void Breach) and a timed self-debuff (Blood Draw); the
+  HELPFUL side and GA's HARMFUL slots on the TARGET filter correctly (FINDINGS §20.6). *"It needs
+  to be able to track specific DEBUFFS to be of any value."* The Hub-effect-under-a-button machinery
+  went with it, which is why **item 15 (Effects animating in combat) is CLOSED as moot** — nothing
+  in the suite runs an effect under an aura button any more. The tab greys the spell-list boxes on a
+  player Debuffs group and says why. **Do not rebuild it on the same engine call.** The "boss debuff
+  on me" job is a Debuffs group with the *Boss debuffs* class filter.
+- **An automatic "is the spell known?" check to fix the silent yes (item 6)** — **DISPROVED by trace
+  2026-09-20**, FINDINGS §12: a bound, WORKING Corruption bar answers `known=no` on all three calls
+  (it is keyed on the debuff's ID). Any known-check would hide working auras. The owner's
+  Spell / Talent Known condition stands, and the Auras list now marks an aura whose cooldown trigger
+  points at an UNBOUND spell (the `!` next to the eye) so the next Soul Fire warns before it fires.
+- **"Why does GA's `ApplyConfig` run so hot?" (item 4)** — **ANSWERED and FIXED 2026-09-20**,
+  FINDINGS §1 addendum: `UpdateBar` re-attached on every feed and cleared the style fingerprint, so
+  every UNIT_AURA repainted every shown bar (1,165 pushes in a 30s dummy fight). The guard now keys
+  on the painted BUTTON + style; after the fix, 3,227 skipped / 0 deferred. `/ga hot on` is the
+  instrument, off by default.
+- **A texture-less aura drawing magenta (item 9)** — **RULED and FIXED 2026-09-20**: it shows its
+  spell's icon; an explicit texture always wins. Same resolver in the list rows.
+- **`hgAnchor` in two places (item 10)** — **COLLAPSED 2026-09-20.** GB delegates to the Hub's
+  `GrowAnchor`; the bodies were diffed identical first, the owner looked, nothing moved.
+- **Items 1, 2, 5, 7, 8** — all **CLOSED 2026-09-20** on owner evidence (bars, raids for weeks,
+  GB's profile clicks, the power condition on a Rogue incl. a group, `/ga debug`). ARCHIVE has it.
+- **Settings changing MID-COMBAT, in GU** — the owner, 2026-09-20: *"People don't do that.
+  Whether it updates mid-fight doesn't matter, as long as a change does at least go through after
+  combat ends."* **Said for GU only — he corrected a suite-wide reading.** Do not QA GU's
+  container rebuilds in combat; do make sure a refused write is replayed at regen.
 
 - **"An absorb ARC on the health ring"** — **NOT POSSIBLE, measured 2026-09-19**, FINDINGS §19:
   no absorb-percent function exists, a curve refuses to evaluate a secret, and `UnitHealthPercent`'s
@@ -297,8 +116,9 @@ a Blizzard AuraButton" block in `~/GloomsHub/Effects.lua` · [FINDINGS.md](FINDI
   evaluators on the ring's own curves (§18.10). Do not reach for the swipe.
 - **"The cast ring hides when a target's total is secret"** — **KILLED 2026-09-20**, §18.10. The
   total is secret in every delve cast and the ring draws anyway.
-- **Gloom's Unit Frames staying account-wide** — **RULED WRONG by the owner, 2026-09-20.** Item 14.
-  Do not argue for it, and do not build any more GU features on the account-wide shape.
+- **Gloom's Unit Frames staying account-wide** — **RULED WRONG by the owner and REPLACED 2026-09-20.**
+  Profiles ship (`GloomsUnitFramesDB` v2: a library + per-character bindings; the old config became
+  "Default", which every unbound character lands on). Do not argue for the old shape.
 - **"Rings over 180° can be one piece"** — **NO.** Masks only subtract; two chunks, overlapped by a
   hard-edged start mask. §18.
 
