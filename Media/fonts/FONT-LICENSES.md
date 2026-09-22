@@ -1,7 +1,9 @@
 # Bundled font licenses
 
-This addon ships five font files in `Media/fonts/`. Both families are by the
-**Indian Type Foundry (ITF)**, and neither is modified in any way.
+This addon ships eight font files in `Media/fonts/`. None is modified in any way.
+
+The Suite UI (2026-09) is set in **Play** and **Michroma**; **Khand** and
+**General Sans** remain for the tools' own bar/aura text and for the transition.
 
 ---
 
@@ -38,3 +40,26 @@ Terms: <https://fontshare.com/terms>
 This file exists to satisfy that credit requirement: the fonts are identified by
 name above, and the Indian Type Foundry's ownership of the trademarks and
 copyrights is acknowledged.
+
+---
+
+## Play — SIL Open Font License 1.1
+
+`Play-Regular.ttf` · `Play-Bold.ttf`
+
+> Copyright (c) 2011, Jonas Hecksher, Playtypes, e-types AS (lasse@e-types.com),
+> with Reserved Font Name 'Play', 'Playtype', 'Playtype Sans'.
+
+Licensed under the SIL Open Font License, Version 1.1. Full text in
+[OFL-Play.txt](OFL-Play.txt). Source: <https://github.com/google/fonts/tree/main/ofl/play>
+
+---
+
+## Michroma — SIL Open Font License 1.1
+
+`Michroma-Regular.ttf`
+
+> Copyright 2011 The Michroma Project Authors (https://github.com/googlefonts/Michroma-font)
+
+Licensed under the SIL Open Font License, Version 1.1. Full text in
+[OFL-Michroma.txt](OFL-Michroma.txt). Source: <https://github.com/google/fonts/tree/main/ofl/michroma>

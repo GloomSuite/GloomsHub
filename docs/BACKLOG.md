@@ -6,65 +6,76 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-09-21 (**the shaped-bar session, and the redesign is specified.** GU's
-four displays gained BAR MODE — a StatusBar cut to a silhouette, FINDINGS §21 — with per-display
-layering, an outline in either mode, a real EUI-style absorb overlay, and the Hub got a SEPARATE
-bar-shape family (`Orb`, `Pill`, the generated `Bracket` set, the owner's `Tall crescent` set).
-Portraits got an **Off** visibility. Then the owner mocked **the whole Suite UI in Figma** —
-24 screens + a PRIMITIVES kit — and the redesign is item 16, fully briefed. **Item 13 (the tab
-tidy pass) closed as superseded by it.**)
+**Last updated:** 2026-09-21, late (**redesign STAGE 1 is done and owner-QA'd.** The Suite window
+is the mocks' 1060 × 740 light-grey shell — header wordmark, right-aligned tab pills, the tool
+banner, the profile row in the footer — `LibGloomSkin` is at **MINOR 11** with the whole
+PRIMITIVES kit (button · segments · checkbox · field · picker · section header · **the scrub
+dial** · wordmark · profile row · scrollbar), the dialogs, tooltip and colour picker are rederived
+from it, and the Unit Frames tab's **Global** section is the proof. Every un-migrated tab draws
+with a light "transition theme" so it stays usable. **Next: stage 2, item 16.**)
 ---
 
 ## Open items
 
-### 16 · ★ THE SUITE UI REDESIGN — from the owner's Figma mocks
-**Repo:** `~/GloomsHub` first (tokens, fonts, shell, `LibGloomSkin`), then every tab · **Size:** several sessions, ONE per stage · **Evidence:** the mocks exist and were read through the Figma desktop connector 2026-09-21
+### 16 · ★ THE SUITE UI REDESIGN — stage 2 next: the Unit Frames tab
+**Repo:** `~/GloomsUnitFrames` (the seven panels), `~/GloomsHub` for anything the kit still lacks · **Size:** ONE stage per session; stage 2 is a full session · **Evidence:** stage 1 owner-QA'd 2026-09-21 (the shell, the footer, the Global section, the dial after five rounds)
 
 The owner: *"I've grown to hate how it looks."* He mocked it all in Figma, file page **"GloomSuite UI"
 (node `646:144`)**: 24 screens at **1060 × 740** — Auras ×7, Bars ×10, Unit Frames ×7 — plus a
-**PRIMITIVES** frame (`674:13578`) holding every repeated control and a redesigned colour picker.
-The connector reads frames BY ID (`get_metadata` for structure, `get_screenshot`,
-`get_design_context` after loading its guidance resource); he does not need to select anything.
-Layers inside screens are mostly auto-named — the TEXT layers carry the labels, and the PRIMITIVES
-frame is the key for matching controls by shape.
+**PRIMITIVES** frame (`674:13578`). Screens by id: UnitFrames Global `660:5703` · Texts `661:5930` ·
+Auras `661:6273` · Health `670:7368` · Power `671:11794` · Class Resource `671:12526` · Cast
+`671:13312`; Bars Shape `651:2528` … Layout & Preset `660:5304`; Aura Trigger `648:376` … Load
+Conditions `651:2206` (the full list is one `get_metadata` on the page). ⚠ **The app-side Figma
+connector lists zero tools even when the server is up.** Drive the server directly:
+**`~/GloomsHub/tools/figma.py`** (its docstring has the three calls). `get_design_context` is the
+one that carries colours, fonts and pixel sizes; `get_screenshot` for the look.
 
-**Decisions already taken (do not re-ask):**
-- **Window 1060 × 740, fixed** — the shell grows first (CONTRACTS §2 allows growing, never shrinking).
-- **Light grey window** (`#c0c0c0`-ish) with the deep purple as the persisting-state colour, orange
-  for destructive actions and the scrub indicator; the nine colour chips in PRIMITIVES are the
-  palette, roles as a starting point, **not a law** — follow the mocks, flag exceptions.
-- **Fonts: Audiowide** (wordmark, section headers, the big Player/Target buttons) and **Play**
-  regular + bold (body 11 regular, labels 12 bold) — both OFL, ship them with licence files, and
-  **a new font needs a full client restart** to load. Smaller type throughout, deliberately.
-- **Button states:** dark = action, purple = persisting state (tabs, dropdowns, choices), light =
-  disabled. Hover/pressed are the assistant's to derive and should be quiet.
-- **The scrub dial replaces every slider**: tick strip + value box, drag anywhere (the whole screen
-  is the drag range), wheel steps, click-to-type; unit from context (px / ° / % / none); the
-  centre-mark variant wherever zero is meaningful (offsets, angles).
-- **No cogs, no popovers** — settings live on the panel (anything that appears only after a
-  dropdown choice is in the mocks).
+**STAGE 1 IS DONE** (2026-09-21): tokens (`COLOR.plate/ink/violet/lilac/indigo/amber/night/paper/
+dim/faint`), fonts (**Play** 11/12/14 and **Michroma** for wordmarks — ⚠ the brief said Audiowide;
+the file says Michroma, the owner confirmed), the shell, the footer profile row (`RegisterTab`'s
+`wordmark` + `profile`), the kit (CONTRACTS §4, MINOR 11), the dialogs / tooltip / picker derived
+from it, and GU's Global section as the proof. **The transition theme** — the pre-kit widgets draw
+dark text and light plates so the five un-migrated tabs stay usable on the grey window — is
+scaffolding; it goes away with stage 5.
+
+**Decisions taken (do not re-ask):**
+- **Window 1060 × 740, fixed.** Content is 1060 × 585 for a tab with a footer profile row, 1060 × 650
+  for one without (the old 860 × 626 pin still holds for those). CONTRACTS §2.
+- **The scrub dial replaces every slider** — its definition is in the `UI.dial` header comment
+  and it took five rounds to get right; **do not redesign it**: fixed ticks (2 posts + 45, 2px gaps),
+  the NEAREST TICK turns amber (the post at an end, the whole centre mark at 0), live during the
+  drag, the full range is a long throw (`dragPx` 900, Shift ×10), the box is the readout and sizes
+  itself to its widest value. Centre mark only on centred-zero ranges.
+- **Button states:** dark = action, violet = persisting state, amber = destructive, 50% = unavailable.
+- **No cogs, no popovers** — settings live on the panel.
 - **Colour SOURCES live in the picker** (class / power type / resource / reaction) — a swatch holds
   a fixed colour OR a source; the "use class colour" toggles disappear. "(Remove)" only on optional
-  colours.
-- **ONE layer control unit** everywhere in GU (rings, auras, texts): a **Global Settings** panel
-  holds the default strata + level for both units; each element inherits (in the automatic order)
-  or **overrides** with its own two numbers. The per-unit Layer section goes.
-- **Rounded corners at one radius throughout** → one nine-slice family. Dashed borders and a
-  right-click context menu are possible and may be used (`contextMenu` is not mocked — derive).
-- **A Suite SETTINGS tab** with a UI-scale control (EUI's named sizes, Tiny…Massive) — contents beyond
-  that to be found.
-- Dialogs and tooltips: **new**, derived from the kit — never the old designs.
+  colours. **Not built yet** — the picker's "Use Class Color" button and the colour chip land with
+  the first ring panel that stores a source.
+- **ONE layer control**: Global holds the default strata + level; each element inherits or
+  overrides with its own two numbers. The per-unit Layer section is gone (it merged into Global).
+- **Modals dim the Suite WINDOW only**, not the screen (the owner, 2026-09-21). The picker never dims.
+- **Text selection highlight is lilac** in every kit field.
+- **The dropdowns' LOOK is disliked** — *"I don't like how the dropdowns look, but I'm not sure what
+  to do about it"* (2026-09-21). Not a blocker; expect a change later. Do not spend time on it unasked.
+- **Copy from Target / Reset to defaults** sit at the right end of the Player / Target row — the
+  mocks do not place them; the assistant's placement, unchallenged so far.
+- Dialogs and tooltips: derived from the kit (the picker's night plate + indigo rim) — done.
 
-**Stages, one session each:** (1) Foundation — tokens, fonts, the shell at 1060 × 740, the
-primitives, and the **UnitFrames Global** panel on screen to prove the kit; (2) Unit Frames' seven
-panels; (3) Bars' ten; (4) Auras' seven; (5) Overlays, Portraits, Media from the kit alone ("same
-controls, new skin" — do not ask him to mock them). Within a session: one panel at a time — read
-it, list what is there, ask only where ambiguous, build, he `/reload`s and looks.
+**Stage 2 — the seven Unit Frames panels, in this order:** (1) finish **Global** — the "Unit Frame
+Default Font" picker needs a per-unit engine setting the text pieces fall back to; (2) **Health**
+(the shape the other rings copy: Arc | Bar and Solid | Gradient as segmented bars, dials for every
+number, the layer override, the colour chip + picker sources); (3) **Power**; (4) **Class
+Resource**; (5) **Cast**; (6) **Texts** (list + editor); (7) **Auras** (filters ON the panel).
+Within the session: read the mock, list what is on it, ask only where ambiguous, build, he
+`/reload`s and looks. **Then stages 3 (Bars ×10), 4 (Auras ×7), 5 (Overlays, Portraits, Media
+from the kit alone, plus the Suite SETTINGS tab with the UI-scale control).**
 
-**Read first:** the PRIMITIVES frame (`674:13578`) and the UnitFrames Global screen (`660:5703`)
-through the connector · [CONTRACTS.md](CONTRACTS.md) §1, §2, §4, §6 (what the toolkit and shell
-promise today, and the version gate every consumer carries) · `~/GloomsHub/Skin.lua` (the 13
-primitives and their call shapes) · `~/GloomsHub/Shell.lua`
+**Read first:** the Health screen (`670:7368`) and the Global screen (`660:5703`) through the
+server · the `★ THE KIT` section of `~/GloomsHub/Skin.lua` (every widget's header comment is its
+spec; `UI.dial`'s especially) · [CONTRACTS.md](CONTRACTS.md) §2 and §4's kit block ·
+`~/GloomsUnitFrames/CLAUDE.md` · the top of `~/GloomsUnitFrames/GloomsUnitFrames_Tab.lua` (what
+stage 1 already moved: `PROFILE_API`, `BuildTop`, `makeSection`, the Global section)
 
 ---
 
@@ -111,6 +122,11 @@ from him; each is: drop the files in, run the script, paste the rows.
 
 - **The Unit Frames tab tidy pass (item 13)** — **CLOSED 2026-09-21 as superseded**: the whole
   Suite UI is being redesigned from mocks (item 16). Do not tidy the old tab.
+- **Audiowide for the redesign's wordmarks** — **WRONG, corrected by the owner 2026-09-21**: the
+  Figma file uses **Michroma** everywhere; he had confused the two. Audiowide is not shipped.
+- **The scrub dial as a jog wheel (ticks sliding under a fixed mark)** — **built and REJECTED
+  2026-09-21**; so was the first cut (a needle riding over the ticks, hidden while dragging). The
+  owner's definition is in `UI.dial`'s header. Do not rebuild either.
 - **Offering the BUTTON shape catalog to a unit frame** — **RULED OUT by the owner 2026-09-21**:
   *"they are fundamentally different things."* GU reads only the Hub's BAR-shape family
   (`GloomsHub.BAR_SHAPES`); the mechanism is shared, the lists never mix in a picker.

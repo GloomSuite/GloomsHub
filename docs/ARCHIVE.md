@@ -1640,3 +1640,16 @@ not be timed by hand) and a `cast=` line in `/gu debug target`.
 - Three rounds on the absorb stripes (stretched → aspect-matched files → tiled at file size); two
   on flips (masks refuse texcoords); one on "the wedge" — the assistant named an artefact the owner
   had never seen or called that, and sent him a command that was already in effect; LESSONS has it.
+
+## The shape catalog + animation engine move to the Hub (2026-08-25) — record, from SUITE-STATE 2026-09-21
+
+Moved out of GB so Gloom's Auras could draw the same silhouettes without a second copy of 136
+files. GB still owns which shape a button wears, its picker, the plate extension and all glow
+TRIGGERING; the Hub owns the vocabulary, the art and the renderers. GB's `HAND_SHAPES` /
+`HAND_ORDER` / `HAND_GROUPS` / `HandAsset` are unchanged aliases onto the Hub's, so its ~25 call
+sites never moved, and `GB.Anims` kept its whole public surface (`Get` / `Each` / `Params` /
+`Enabled` / `Reconcile` / `Invalidate` / `PreviewReconcile`) so its `Config.lua` and `Glows.lua`
+did not change at all. Owner-QA'd: all 21 thumbnails, procs and animations identical before and
+after. ⚠ **GB's `Glows.lua` shaped halo did NOT move** — it is entangled with Blizzard's
+spell-alert hooks and has a solid centre that only works because an opaque button icon hides it.
+GA gets its glow from the HOLLOW rim-based modules instead.

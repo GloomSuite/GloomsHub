@@ -9,7 +9,7 @@
 -- change it THERE and every consumer in the same session.
 -- ============================================================
 
-local MAJOR, MINOR = "LibGloomSkin-1.0", 10  -- MINOR 10 (2026-09-20): flatEditBox keyboard — Tab / Shift-Tab between visible boxes, Up / Down step a number (Shift ×10), `stepper` hook; profileBlock `api.users` → the delete confirmation names the characters on it
+local MAJOR, MINOR = "LibGloomSkin-1.0", 11  -- MINOR 11 (2026-09-21): THE KIT — the redesign's tokens (COLOR.plate/ink/violet/…, FONT.ui/uiB/mark) and widgets (UI.button · segments · toggleBar · check · field · label · pick · sectionHeader · dial · wordmark · profileRow); the old widgets stay for tabs not yet migrated
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if lib then
@@ -33,10 +33,39 @@ lib.COLOR = {
   orange = color("ff7729"),  -- warning / accent / active state
   -- Panel base: pre-compensated so #060714 lands on screen.
   dark   = { r = 18/255, g = 19/255, b = 31/255, a = 1 },
-  rim    = { r = 1, g = 1, b = 1, a = 0.10 },
+  -- ★ THE TRANSITION (2026-09-21, redesign stage 1): the Suite window is
+  -- light grey now, and every tab not yet rebuilt from the mocks still draws
+  -- with THESE tokens — so `rim`, `text` and `mute` flipped to read on the
+  -- light plate (they were white-ish for the near-black one), `skinPlate`
+  -- paints the light plate, and the old widgets choose their text colour by
+  -- how strong their fill is. The owner could not read a word of the Unit
+  -- Frames tab's old sections otherwise, and the same went for every tool.
+  -- All of this goes away with the last migrated tab (stage 5).
+  rim    = { r = 0, g = 0, b = 0, a = 0.18 },
   -- Promoted from GB Config.lua locals (TEXT/MUTE) — now tokens.
-  text   = { r = 0.90, g = 0.92, b = 0.96 },   -- body text
-  mute   = { r = 0.55, g = 0.57, b = 0.63 },   -- hints / secondary
+  text   = { r = 0.16, g = 0.16, b = 0.19 },   -- body text
+  mute   = { r = 0.40, g = 0.40, b = 0.45 },   -- hints / secondary
+
+  -- ★ THE KIT (MINOR 11, 2026-09-21) — the redesign's palette, read off the
+  -- PRIMITIVES frame of the owner's Figma mocks (BACKLOG 16). The nine chips,
+  -- named by colour; the ROLE each plays in the mocks is the comment, and the
+  -- backlog is explicit that the roles are a starting point, not a law.
+  -- Everything above stays for the tabs that have not migrated yet.
+  plate  = color("d2d2d2"),  -- the window
+  chip   = color("d9d9d9"),  -- the lightest chip (unused in the mocks so far)
+  ink    = color("444444"),  -- ACTION buttons, field labels, dial ticks
+  violet = color("6c2fe6"),  -- PERSISTING STATE: active tab, chosen option, ON segment, section headers
+  lilac  = color("a881f8"),  -- the tool's name in a wordmark (gloomUNIT)
+  indigo = color("3b1684"),  -- an open list's plate; the picker's rim
+  amber  = color("ffa04e"),  -- DESTRUCTIVE, the dial's value tick, the highlighted list row
+  night  = color("110628"),  -- the colour picker's plate (the one dark surface left)
+  paper  = color("ffffff"),  -- inputs
+  -- The two translucent greys: #3e3e3e at 50% (a segment track, an unselected
+  -- checkbox, the X, the inactive Player/Target) and at 20% (scrollbar track,
+  -- Bars' side rail).
+  dim    = { r = 62/255, g = 62/255, b = 62/255, a = 0.5 },
+  faint  = { r = 62/255, g = 62/255, b = 62/255, a = 0.2 },
+  black  = { r = 0, g = 0, b = 0 },
 }
 
 -- The lib's assets live in the Hub's folder — a locked decision: the
@@ -51,6 +80,14 @@ lib.FONT = {
   body  = FONT_DIR .. "GeneralSans-Regular.ttf",
   bodyM = FONT_DIR .. "GeneralSans-Medium.ttf",
   label = FONT_DIR .. "GeneralSans-Semibold.ttf",
+  -- THE KIT (MINOR 11): Play for everything that is read (11 regular for
+  -- buttons and inputs, 12 bold for labels, 14 bold for section headers) and
+  -- Michroma for the wordmarks and the big Player/Target buttons. Both OFL,
+  -- licences beside the files. ⚠ A NEW FONT LOADS AT CLIENT LAUNCH — a /reload
+  -- is not enough the first time (CLAUDE.md working agreement 4).
+  ui    = FONT_DIR .. "Play-Regular.ttf",
+  uiB   = FONT_DIR .. "Play-Bold.ttf",
+  mark  = FONT_DIR .. "Michroma-Regular.ttf",
 }
 
 local COLOR, FONT = lib.COLOR, lib.FONT
@@ -66,6 +103,13 @@ lib.UI = UI
 UI.CARET = lib.MEDIA .. "ui\\caret.png"   -- right-pointing source art
 UI.CARET_DOWN = -math.pi / 2              -- rotation for "open"
 UI.COG = lib.MEDIA .. "ui\\cog.png"       -- the sub-settings cog (MINOR 9); white, tint it
+-- The kit's art (MINOR 11) — all white on transparent, tinted in place:
+UI.ROUND  = lib.MEDIA .. "ui\\round4.png"  -- 16×16, 4px corners — the ONE nine-slice (margins 5)
+UI.DOT    = lib.MEDIA .. "ui\\dot.png"     -- a disc (the checkbox's mark)
+UI.TRI    = lib.MEDIA .. "ui\\tri.png"     -- a triangle pointing DOWN; +90° = right
+UI.DIAL   = lib.MEDIA .. "ui\\dial.png"    -- the scrub dial's tick strip, 141×16 (13 used): 2 posts + 45 ticks, 2px gaps
+UI.DIAL_C = lib.MEDIA .. "ui\\dial-c.png"  -- … with the fixed centre mark (zero), tick 22 at x=69-71
+UI.PILL   = lib.MEDIA .. "ui\\pill.png"    -- 8×16 capsule (slice top/bottom 5) — the kit scrollbar
 
 -- ★ SetFont RAISES on a missing font asset — it does NOT return false. Proven
 -- in-client 2026-07-26 (FINDINGS §2): pcall(fs.SetFont, fs, "<dead path>", 14, "")
@@ -117,11 +161,14 @@ function UI.addEdges(f, cc, thick)
   return e
 end
 
--- Flat dark fill (renders #060714 on screen; the pre-compensated token above).
+-- The plate fill. ★ Since the transition (see the tokens) this is the LIGHT
+-- plate, so every pre-kit panel, menu and drawer matches the window it sits
+-- in and the flipped text tokens read on it. It used to be the near-black
+-- navy (COLOR.dark, still there for anything that wants it).
 function UI.skinPlate(f)
   local base = f:CreateTexture(nil, "BACKGROUND")
   base:SetAllPoints()
-  base:SetColorTexture(COLOR.dark.r, COLOR.dark.g, COLOR.dark.b, COLOR.dark.a or 1)
+  base:SetColorTexture(COLOR.plate.r, COLOR.plate.g, COLOR.plate.b, 1)
   return base
 end
 
@@ -153,11 +200,15 @@ function UI.flatButton(parent, w, h, cc, label, size)
   local function paint()   -- fill colour follows state: orange active, off-colour otherwise
     local c = b._active and COLOR.orange or b._offColor
     b.fill:SetColorTexture(c.r, c.g, c.b, 1); b.fill:SetAlpha(level())
+    -- The transition: white text on a strong fill, the dark text token on a
+    -- faint one (a 20% purple over the light plate is pale lavender).
+    if level() >= 0.5 then b.text:SetTextColor(1, 1, 1)
+    else b.text:SetTextColor(COLOR.text.r, COLOR.text.g, COLOR.text.b) end
   end
   b:SetScript("OnEnter", function(self) if self:IsEnabled() and not self._active then self.fill:SetAlpha(math.min(1, self._base + 0.25)) end end)
   b:SetScript("OnLeave", function(self) paint() end)
   b:SetScript("OnDisable", function(self) self.fill:SetAlpha(0.2); self.text:SetTextColor(0.5, 0.5, 0.5) end)
-  b:SetScript("OnEnable", function(self) paint(); self.text:SetTextColor(1, 1, 1) end)
+  b:SetScript("OnEnable", function(self) paint() end)
   function b:SetActive(a) self._active = a and true or false; paint() end
   function b:SetBase(a) self._base = a; paint() end
   return b
@@ -168,7 +219,7 @@ end
 function UI.makeToggle(parent, get, set)
   local t = CreateFrame("Button", nil, parent)
   t:SetSize(40, 20)
-  local track = t:CreateTexture(nil, "BACKGROUND"); track:SetAllPoints(); track:SetColorTexture(1, 1, 1, 0.10)
+  local track = t:CreateTexture(nil, "BACKGROUND"); track:SetAllPoints(); track:SetColorTexture(0, 0, 0, 0.12)   -- the transition: reads on the light plate
   local knob = t:CreateTexture(nil, "ARTWORK"); knob:SetSize(20, 20)
   knob:SetColorTexture(COLOR.purple.r, COLOR.purple.g, COLOR.purple.b, 1)
   function t:refresh() knob:ClearAllPoints(); knob:SetPoint(get() and "RIGHT" or "LEFT", 0, 0) end
@@ -222,8 +273,9 @@ function UI.flatEditBox(parent, w, h)
   e:SetTextInsets(6, 6, 0, 0)
   local bg = e:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints()
   bg:SetColorTexture(COLOR.purple.r, COLOR.purple.g, COLOR.purple.b, 0.10)
-  e:SetScript("OnEditFocusGained", function() bg:SetColorTexture(COLOR.purple.r, COLOR.purple.g, COLOR.purple.b, 0.22) end)
-  e:SetScript("OnEditFocusLost",  function() bg:SetColorTexture(COLOR.purple.r, COLOR.purple.g, COLOR.purple.b, 0.10) end)
+  e.bg = bg   -- exposed so the kit's `UI.field` can reskin the same box (MINOR 11)
+  e:SetScript("OnEditFocusGained", function(self) if self.onFocus then self.onFocus(self, true) else bg:SetColorTexture(COLOR.purple.r, COLOR.purple.g, COLOR.purple.b, 0.22) end end)
+  e:SetScript("OnEditFocusLost",  function(self) if self.onFocus then self.onFocus(self, false) else bg:SetColorTexture(COLOR.purple.r, COLOR.purple.g, COLOR.purple.b, 0.10) end end)
   e:SetScript("OnTabPressed", function(self)
     local ring = tabRing(self)
     local n = #ring
@@ -381,14 +433,28 @@ end
 -- track to jump + wheel over the bar. The thumb auto-sizes to the live scroll
 -- range via OnUpdate — which pauses while the parent is hidden. `place(sb)`
 -- lets the caller anchor + inset the bar. Returns the bar with :Sync().
-function UI.makeScrollbar(parent, scroll, place)
+-- `opts.kit` (MINOR 11) draws the KIT's scrollbar instead: an 8px faint
+-- capsule track with a 6px dim capsule thumb (the PRIMITIVES frame). Same
+-- behaviour either way — click-to-jump, drag, wheel.
+function UI.makeScrollbar(parent, scroll, place, opts)
+  local kit = opts and opts.kit
   local sb = CreateFrame("Frame", nil, parent)
-  place(sb); sb:SetWidth(4)
-  local track = sb:CreateTexture(nil, "BACKGROUND"); track:SetAllPoints(); track:SetColorTexture(1, 1, 1, 0.06)
-  local thumb = CreateFrame("Button", nil, sb); thumb:SetWidth(4); thumb:SetPoint("TOP", 0, 0)
+  place(sb); sb:SetWidth(kit and 8 or 4)
+  local track = sb:CreateTexture(nil, "BACKGROUND"); track:SetAllPoints()
+  local thumb = CreateFrame("Button", nil, sb); thumb:SetWidth(kit and 6 or 4); thumb:SetPoint("TOP", 0, 0)
   local thumbTex = thumb:CreateTexture(nil, "ARTWORK"); thumbTex:SetAllPoints()
-  local ALPHA = 0.85
-  thumbTex:SetColorTexture(COLOR.orange.r, COLOR.orange.g, COLOR.orange.b, ALPHA)
+  local ALPHA = kit and 1 or 0.85   -- the kit's alpha lives in its vertex colour; hover leaves it alone
+  if kit then
+    for _, t in ipairs({ track, thumbTex }) do
+      t:SetTexture(UI.PILL); t:SetTextureSliceMargins(0, 5, 0, 5)
+      t:SetTextureSliceMode((Enum.UITextureSliceMode and Enum.UITextureSliceMode.Stretched) or 0)
+    end
+    track:SetVertexColor(COLOR.faint.r, COLOR.faint.g, COLOR.faint.b, COLOR.faint.a)
+    thumbTex:SetVertexColor(COLOR.dim.r, COLOR.dim.g, COLOR.dim.b, COLOR.dim.a)
+  else
+    track:SetColorTexture(1, 1, 1, 0.06)
+    thumbTex:SetColorTexture(COLOR.orange.r, COLOR.orange.g, COLOR.orange.b, ALPHA)
+  end
   thumb:SetScript("OnEnter", function() thumbTex:SetAlpha(1) end)
   thumb:SetScript("OnLeave", function() thumbTex:SetAlpha(ALPHA) end)
 
@@ -510,7 +576,7 @@ function UI.dropdown(parent, w, getLabel, getOptions, getCurrent, onPick)
       if not row then
         row = CreateFrame("Button", nil, fly.child); row:SetHeight(FLY_ROW_H)
         row.hl = row:CreateTexture(nil, "BACKGROUND"); row.hl:SetAllPoints()
-        row.hl:SetColorTexture(1, 1, 1, 0.07); row.hl:Hide()
+        row.hl:SetColorTexture(0, 0, 0, 0.07); row.hl:Hide()
         row:SetScript("OnEnter", function(self) self.hl:Show() end)
         row:SetScript("OnLeave", function(self) self.hl:Hide() end)
         row.text = UI.newText(row, FONT.body, 12, COLOR.text, "LEFT")
@@ -521,7 +587,7 @@ function UI.dropdown(parent, w, getLabel, getOptions, getCurrent, onPick)
       row:SetPoint("TOPLEFT", 0, y); row:SetPoint("TOPRIGHT", 0, y)
       row.text:SetText(opt.label)
       if opt.value == current then row.text:SetTextColor(COLOR.purple.r, COLOR.purple.g, COLOR.purple.b)
-      else row.text:SetTextColor(1, 1, 1) end
+      else row.text:SetTextColor(COLOR.text.r, COLOR.text.g, COLOR.text.b) end
       row:SetScript("OnClick", function() fly.catcher:Hide(); onPick(opt.value); b:refresh() end)
       row:Show()
       y = y - FLY_ROW_H
@@ -563,17 +629,25 @@ local nameDlg, confirmDlg, pickerDlg
 -- (OK / Cancel / ESC), never a click-somewhere-else that silently drops the edit.
 local scrim
 
+-- ★ The scrim dims the SUITE WINDOW, not the screen (the owner, 2026-09-21:
+-- "the rest of the addon" recedes; the game stays bright). It is anchored to
+-- the window each time a dialog opens, and the dialog is centred on it. With
+-- no window on screen (nothing opens a dialog from anywhere else today) it
+-- falls back to the whole screen.
 local function scrimShow(dlg)
   if not scrim then
     scrim = CreateFrame("Frame", nil, UIParent)
-    scrim:SetAllPoints(UIParent)
     scrim:SetFrameStrata("FULLSCREEN_DIALOG")
     scrim:EnableMouse(true)
     local t = scrim:CreateTexture(nil, "BACKGROUND")
     t:SetAllPoints(scrim)
-    t:SetColorTexture(0, 0, 0, 0.72)
+    t:SetColorTexture(0, 0, 0, 0.6)
     scrim:Hide()
   end
+  local host = _G.GloomsSuiteWindow
+  if not (host and host:IsShown()) then host = UIParent end
+  scrim:ClearAllPoints(); scrim:SetAllPoints(host)
+  dlg:ClearAllPoints(); dlg:SetPoint("CENTER", host, "CENTER", 0, 0)
   -- Sit just under whatever level the dialog's own Raise() settled on, so the
   -- scrim covers the shell (DIALOG strata) without ever covering the dialog.
   local lvl = dlg:GetFrameLevel()
@@ -590,18 +664,29 @@ local function scrimHide()
   scrim:Hide()
 end
 
+-- ★ Both dialogs wear the KIT since MINOR 11 (2026-09-21): the mocks draw no
+-- dialog, so they are DERIVED from the colour picker — the night plate with
+-- the indigo rim, a Play Bold 14 white title at the picker's 30/20 inset, a
+-- Play 11 white body, the white field, and the kit's button row (dark OK and
+-- Cancel; the confirm's accept is AMBER, because it destroys).
+local function kitDialogPlate(f)
+  local plate = f:CreateTexture(nil, "BACKGROUND"); plate:SetAllPoints()
+  plate:SetColorTexture(COLOR.night.r, COLOR.night.g, COLOR.night.b, 1)
+  UI.addEdges(f, COLOR.indigo, 1)
+end
+
 -- Text entry. onAccept(name) fires on OK / Enter; Cancel and ESC drop it.
 function UI.nameDialog(titleText, initial, onAccept)
   if not nameDlg then
-    local W, H = 300, 132
+    local W, H = 340, 128
     local f = CreateFrame("Frame", "GloomSkinNameDialog", UIParent)
     f:SetSize(W, H); f:SetPoint("CENTER"); f:SetFrameStrata("FULLSCREEN_DIALOG"); f:EnableMouse(true)
-    UI.skinPlate(f)
-    f.title = UI.newText(f, FONT.title, 17, COLOR.purple, "CENTER")
-    f.title:SetPoint("TOP", 0, -14)
-    f.box = UI.flatEditBox(f, W - 48, 24); f.box:SetPoint("TOP", 0, -50)
-    local okB = UI.flatButton(f, 100, 26, COLOR.purple, "OK", 13); okB:SetPoint("BOTTOMLEFT", 26, 16)
-    local noB = UI.flatButton(f, 100, 26, COLOR.heroic, "Cancel", 13); noB:SetPoint("BOTTOMRIGHT", -26, 16)
+    kitDialogPlate(f)
+    f.title = UI.newText(f, FONT.uiB, 14, COLOR.paper, "LEFT")
+    f.title:SetPoint("TOPLEFT", 30, -20)
+    f.box = UI.field(f, W - 60); f.box:SetPoint("TOPLEFT", 30, -54)
+    local okB = UI.button(f, "OK", { kind = "action" }); okB:SetPoint("BOTTOMLEFT", 30, 20)
+    local noB = UI.button(f, "Cancel", { kind = "action" }); noB:SetPoint("LEFT", okB, "RIGHT", 6, 0)
     local function accept()
       -- Trimmed here, once, for every caller: a stray leading/trailing space made
       -- a second profile that LOOKED identical to the first in the dropdown.
@@ -633,16 +718,16 @@ end
 -- (the owner 2026-07-24) — this does, via Cancel or ESC.
 function UI.confirm(bodyText, onYes, acceptLabel, titleText)
   if not confirmDlg then
-    local W, H = 330, 144
+    local W, H = 380, 140
     local f = CreateFrame("Frame", "GloomSkinConfirm", UIParent)
     f:SetSize(W, H); f:SetPoint("CENTER"); f:SetFrameStrata("FULLSCREEN_DIALOG"); f:EnableMouse(true)
-    UI.skinPlate(f)
-    f.title = UI.newText(f, FONT.title, 17, COLOR.orange, "CENTER")
-    f.title:SetPoint("TOP", 0, -14)
-    f.body = UI.newText(f, FONT.body, 12, COLOR.text, "CENTER")
-    f.body:SetPoint("TOP", 0, -46); f.body:SetWidth(W - 36)
-    f.yes = UI.flatButton(f, 124, 26, COLOR.orange, "Delete", 13); f.yes:SetPoint("BOTTOMLEFT", 26, 16)
-    local noB = UI.flatButton(f, 124, 26, COLOR.heroic, "Cancel", 13); noB:SetPoint("BOTTOMRIGHT", -26, 16)
+    kitDialogPlate(f)
+    f.title = UI.newText(f, FONT.uiB, 14, COLOR.paper, "LEFT")
+    f.title:SetPoint("TOPLEFT", 30, -20)
+    f.body = UI.newText(f, FONT.ui, 11, COLOR.paper, "LEFT")
+    f.body:SetPoint("TOPLEFT", 30, -48); f.body:SetWidth(W - 60); f.body:SetJustifyH("LEFT")
+    f.yes = UI.button(f, "Delete", { kind = "warn" }); f.yes:SetPoint("BOTTOMLEFT", 30, 20)
+    local noB = UI.button(f, "Cancel", { kind = "action" }); noB:SetPoint("LEFT", f.yes, "RIGHT", 6, 0)
     f.yes:SetScript("OnClick", function()
       local cb = f.onYes; f.onYes = nil; f:Hide(); if cb then cb() end
     end)
@@ -656,9 +741,9 @@ function UI.confirm(bodyText, onYes, acceptLabel, titleText)
   confirmDlg.title:SetText(titleText or "Are you sure?")
   confirmDlg.body:SetText(bodyText or "")
   -- The plate grows with its body (a profile delete may list the characters
-  -- using it): 46 above the text, 14 under it, the 26px buttons, 16 below.
-  confirmDlg:SetHeight(math.max(144, 46 + confirmDlg.body:GetStringHeight() + 14 + 26 + 16))
-  confirmDlg.yes.text:SetText(acceptLabel or "Delete")
+  -- using it): 48 above the text, 20 under it, the 17px buttons, 20 below.
+  confirmDlg:SetHeight(math.max(140, 48 + confirmDlg.body:GetStringHeight() + 20 + 17 + 20))
+  confirmDlg.yes:SetLabel(acceptLabel or "Delete")
   confirmDlg:Show(); confirmDlg:Raise(); scrimShow(confirmDlg)
   return confirmDlg
 end
@@ -959,9 +1044,19 @@ local function paletteShown()
   return out
 end
 
-local PICK_W, SV_W, SV_H = 330, 186, 140
-local PICK_X, HUE_X, PRV_X, PRV_W = 22, 216, 246, 62
-local PICK_H_PLAIN, PICK_H_ALPHA = 328, 380
+-- ★ The KIT's picker (MINOR 11, 2026-09-21) — the one redesigned control in
+-- the PRIMITIVES frame: 440 wide, the night plate with the indigo rim, a
+-- 380px column at a 30/20 inset: "Choose Color" · the field (250) + hue
+-- strip + preview · "Hex Value" and its white box (the Opacity dial takes
+-- the row's right end when the colour has alpha) · "Colors in Use" · OK /
+-- CANCEL. The mock's "Use Class Color" button is the colour SOURCE (class /
+-- power / reaction) the backlog puts in the picker; it lands with the first
+-- consumer that stores a source (stage 2), not here.
+local PICK_W, SV_W, SV_H = 440, 250, 188
+local PICK_X, HUE_X, PRV_X, PRV_W = 30, 289, 330, 80
+local PICK_H_PLAIN, PICK_H_ALPHA = 410, 410
+local PICK_TOP = 56                      -- the field's top; the title sits above it
+local PAL_Y, PAL_SZ, PAL_GAP = 325, 26, 6
 
 function UI.colorPicker(opts)
   opts = opts or {}
@@ -970,10 +1065,9 @@ function UI.colorPicker(opts)
     local f = CreateFrame("Frame", "GloomSkinColorPicker", UIParent)
     f:SetSize(PICK_W, PICK_H_PLAIN); f:SetPoint("CENTER")
     f:SetFrameStrata("FULLSCREEN_DIALOG"); f:EnableMouse(true)
-    UI.skinPlate(f)
     -- Standing in for the scrim: with nothing dimmed behind it, this rim is the
     -- only thing telling the panel apart from the tab it floats over.
-    UI.addEdges(f, { r = COLOR.purple.r, g = COLOR.purple.g, b = COLOR.purple.b, a = 0.55 }, 1)
+    kitDialogPlate(f)
 
     -- Drag it by the plate. Every control on it eats its own clicks, so the
     -- empty chrome — the title strip, the margins — is what moves the panel.
@@ -990,15 +1084,15 @@ function UI.colorPicker(opts)
       self:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y)
     end)
 
-    f.title = UI.newText(f, FONT.title, 17, COLOR.purple, "CENTER")
-    f.title:SetPoint("TOP", 0, -14)
+    f.title = UI.newText(f, FONT.uiB, 14, COLOR.paper, "LEFT")
+    f.title:SetPoint("TOPLEFT", PICK_X, -20)
 
     -- ---- saturation / value field --------------------------------------
     -- Solid hue underneath, white→clear left-to-right for SATURATION, then
     -- clear→black top-to-bottom for VALUE. (WoW's "VERTICAL" gradient runs
     -- min at the BOTTOM, max at the top.)
     local sv = CreateFrame("Frame", nil, f)
-    sv:SetSize(SV_W, SV_H); sv:SetPoint("TOPLEFT", PICK_X, -46); sv:EnableMouse(true)
+    sv:SetSize(SV_W, SV_H); sv:SetPoint("TOPLEFT", PICK_X, -PICK_TOP); sv:EnableMouse(true)
     local hueFill = sv:CreateTexture(nil, "BACKGROUND")
     hueFill:SetAllPoints(); hueFill:SetColorTexture(1, 0, 0, 1)
     local satTex = sv:CreateTexture(nil, "BORDER")
@@ -1021,7 +1115,7 @@ function UI.colorPicker(opts)
 
     -- ---- hue strip ------------------------------------------------------
     local hue = CreateFrame("Frame", nil, f)
-    hue:SetSize(18, SV_H); hue:SetPoint("TOPLEFT", HUE_X, -46); hue:EnableMouse(true)
+    hue:SetSize(18, SV_H); hue:SetPoint("TOPLEFT", HUE_X, -PICK_TOP); hue:EnableMouse(true)
     local STOPS = { {1,0,0}, {1,1,0}, {0,1,0}, {0,1,1}, {0,0,1}, {1,0,1}, {1,0,0} }
     local segH = SV_H / 6
     for i = 1, 6 do
@@ -1038,7 +1132,7 @@ function UI.colorPicker(opts)
 
     -- ---- preview: new on top, original below (click it to go back) ------
     local prv = CreateFrame("Frame", nil, f)
-    prv:SetSize(PRV_W, SV_H); prv:SetPoint("TOPLEFT", PRV_X, -46)
+    prv:SetSize(PRV_W, SV_H); prv:SetPoint("TOPLEFT", PRV_X, -PICK_TOP)
     checkerboard(prv, PRV_W, SV_H)
     UI.addEdges(prv, COLOR.rim, 1)
     local newSw = prv:CreateTexture(nil, "ARTWORK")
@@ -1052,23 +1146,24 @@ function UI.colorPicker(opts)
     UI.attachTip(oldB, "Original", "The color you started with. Click to go back to it.")
 
     -- ---- hex --------------------------------------------------------------
-    local hexLab = UI.newText(f, FONT.head, 12, COLOR.mute, "LEFT")
-    hexLab:SetPoint("TOPLEFT", PICK_X, -198); hexLab:SetText("HEX")
-    f.hex = UI.flatEditBox(f, 96, 22)
-    f.hex:SetPoint("TOPLEFT", PICK_X + 36, -194)
+    local hexY = PICK_TOP + SV_H + 20
+    local hexLab = UI.newText(f, FONT.uiB, 12, COLOR.paper, "LEFT")
+    hexLab:SetPoint("TOPLEFT", PICK_X, -(hexY + 2)); hexLab:SetText("Hex Value")
+    f.hex = UI.field(f, 70)
+    f.hex:SetPoint("LEFT", hexLab, "RIGHT", 6, 0)
     f.hex:SetMaxLetters(9)
 
     -- ---- palette ----------------------------------------------------------
     -- A fixed pool, repainted on every open — its contents change as the user's
     -- own UI does, so it cannot be built once like the rest of the dialog.
-    f.palLab = UI.newText(f, FONT.head, 12, COLOR.mute, "LEFT")
-    f.palLab:SetPoint("TOPLEFT", PICK_X, -230); f.palLab:SetText("IN USE")
+    f.palLab = UI.newText(f, FONT.uiB, 12, COLOR.paper, "LEFT")
+    f.palLab:SetPoint("TOPLEFT", PICK_X, -(PAL_Y - 24)); f.palLab:SetText("Colors in Use")
     f.palBtns = {}
     for i = 1, PALETTE_MAX do
       local b = CreateFrame("Button", nil, f)
-      b:SetSize(20, 20); b:SetPoint("TOPLEFT", PICK_X + (i - 1) * 24, -250)
+      b:SetSize(PAL_SZ, PAL_SZ); b:SetPoint("TOPLEFT", PICK_X + (i - 1) * (PAL_SZ + PAL_GAP), -PAL_Y)
       b.tex = b:CreateTexture(nil, "ARTWORK"); b.tex:SetAllPoints()
-      UI.addEdges(b, COLOR.rim, 1)
+      UI.addEdges(b, COLOR.black, 1)
       b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
       b:SetScript("OnClick", function(self, button)
         if button == "RightButton" then
@@ -1118,20 +1213,20 @@ function UI.colorPicker(opts)
     end
 
     -- ---- opacity ----------------------------------------------------------
-    -- Its own sub-frame because UI.sliderRow always spans its PARENT (insetting
-    -- 18 a side) — laying out a frame is the family way to size a slider.
-    f.alphaBlock = CreateFrame("Frame", nil, f)
-    f.alphaBlock:SetPoint("TOPLEFT", 4, -282); f.alphaBlock:SetSize(PICK_W - 8, 44)
-    f.alphaRow = UI.sliderRow(f.alphaBlock, 0, "Opacity", 0, 100, 1,
-      function() return math.floor((f.a or 1) * 100 + 0.5) end,
-      function(v) f.a = math.floor(v + 0.5) / 100; f:Emit() end,
-      function(v) return string.format("%d%%", math.floor(v + 0.5)) end)
+    -- The kit's dial, at the hex row's right end, only for a colour with alpha.
+    f.alphaRow = UI.dial(f, { label = "Opacity", min = 0, max = 100, step = 1, unit = "%",
+      get = function() return math.floor((f.a or 1) * 100 + 0.5) end,
+      set = function(v) f.a = math.floor(v + 0.5) / 100; f:Emit() end })
+    f.alphaRow:SetPoint("TOPLEFT", PICK_X + 380 - 194, -(hexY - 18))
+    f.alphaRow.label:SetTextColor(1, 1, 1)
+    f.alphaBlock = f.alphaRow
+    UI.tint(f.alphaRow.ticks, COLOR.paper, 0.7)
 
     -- ---- buttons ----------------------------------------------------------
-    f.ok = UI.flatButton(f, 124, 26, COLOR.purple, "OK", 13)
-    f.ok:SetPoint("BOTTOMLEFT", 26, 16)
-    f.cancel = UI.flatButton(f, 124, 26, COLOR.heroic, "Cancel", 13)
-    f.cancel:SetPoint("BOTTOMRIGHT", -26, 16)
+    f.ok = UI.button(f, "OK", { kind = "action" })
+    f.ok:SetPoint("BOTTOMLEFT", PICK_X, 20)
+    f.cancel = UI.button(f, "Cancel", { kind = "action" })
+    f.cancel:SetPoint("LEFT", f.ok, "RIGHT", 6, 0)
 
     -- ---- state ------------------------------------------------------------
     function f:Color()
@@ -1260,7 +1355,7 @@ function UI.colorPicker(opts)
   f.a = f.hasAlpha and (c[4] or 1) or 1
   f.onChange, f.onAccept, f.onCancel = opts.onChange, opts.onAccept, opts.onCancel
   f.accepted = false
-  f.title:SetText(opts.title or "COLOR")
+  f.title:SetText(opts.title or "Choose Color")
   f.oldSw:SetColorTexture(f.orig[1], f.orig[2], f.orig[3], f.hasAlpha and f.a or 1)
   f.alphaBlock:SetShown(f.hasAlpha)
   f:SetHeight(f.hasAlpha and PICK_H_ALPHA or PICK_H_PLAIN)
@@ -1307,9 +1402,81 @@ end
 -- `err` is shown verbatim in the inline note line; ok=false with no err is silent.
 -- Returns { frame, refresh, note, height }.
 -- ------------------------------------------------------------
-function UI.profileBlock(parent, w, api)
+-- The four actions, shared by the rail block below and the kit's footer row
+-- (`UI.profileRow`, MINOR 11): each returns a click handler; `after(ok, err)`
+-- is the block's own "refresh or show the error" step.
+local function profileActions(api, after)
+  local noun = api.noun or "profile"
+  -- The delete gate (the owner, 2026-09-20: "the following characters are
+  -- using this profile, are you sure?"). `api.users(name)` returns the keys of
+  -- every character bound to it — "Name-Realm" or "Name - Realm", the tool's
+  -- own format; this trims each to the character's name and leaves out the
+  -- character you are on, who is always on the active profile.
+  local function others(name)
+    if not api.users then return nil end
+    local me, out = UnitName("player"), {}
+    for _, key in ipairs(api.users(name) or {}) do
+      local char = tostring(key):match("^%s*([^-]-)%s*%-") or tostring(key)
+      if char ~= me then out[#out + 1] = char end
+    end
+    table.sort(out)
+    return out
+  end
+  local A = {}
+  function A.new()
+    UI.nameDialog("New " .. noun, "", function(name)
+      if not name or name == "" then return end
+      after(api.create(name))
+    end)
+  end
+  function A.copy()
+    UI.nameDialog("Copy " .. noun, (api.active() or "") .. " copy", function(name)
+      if not name or name == "" then return end
+      after(api.copy(name))
+    end)
+  end
+  function A.rename()
+    UI.nameDialog("Rename " .. noun, api.active() or "", function(name)
+      if not name or name == "" then return end
+      after(api.rename(name))
+    end)
+  end
+  function A.delete()
+    local active = api.active()
+    if not active then return end
+    local list = others(active)
+    local body
+    if list and #list > 0 then
+      local names = #list == 1 and list[1]
+        or (table.concat(list, ", ", 1, #list - 1) .. " and " .. list[#list])
+      body = ("Delete the %s \"%s\"?\n\nBesides this character, it's in use by |cffffffff%s|r — %s fall back to another %s.\n\nThis can't be undone.")
+        :format(noun, active, names, #list == 1 and "that character will" or "they'll", noun)
+    else
+      body = ("Delete the %s \"%s\"?  This can't be undone."):format(noun, active)
+    end
+    UI.confirm(body, function() after(api.delete()) end)
+  end
+  return A
+end
+
+-- The hover-help for the four buttons + dropdown, shared the same way.
+local function profileTips(api, dd, bNew, bCopy, bRen, bDel)
   local noun = api.noun or "profile"
   local Noun = noun:sub(1, 1):upper() .. noun:sub(2)
+  local tips = api.tips or {}
+  UI.attachTip(dd, Noun, tips.dropdown or ("The active " .. noun .. ". Click to switch."))
+  UI.attachTip(bNew, "New " .. noun, tips.new or ("Creates a new " .. noun .. " and switches to it."))
+  if bCopy then
+    UI.attachTip(bCopy, "Copy " .. noun,
+      tips.copy or ("Duplicates this " .. noun .. " under a new name and switches to the copy."))
+  end
+  UI.attachTip(bRen, "Rename " .. noun, tips.rename or ("Renames this " .. noun .. "."))
+  UI.attachTip(bDel, "Delete " .. noun,
+    tips.delete or ("Deletes this " .. noun .. ". Asks you to confirm first."))
+end
+
+function UI.profileBlock(parent, w, api)
+  local noun = api.noun or "profile"
   local hasCopy = type(api.copy) == "function"
   local block = { }
 
@@ -1371,67 +1538,12 @@ function UI.profileBlock(parent, w, api)
     bDel = btn(2 * (bw + 4), -46, bw, "Delete")
   end
 
-  bNew:SetScript("OnClick", function()
-    UI.nameDialog("New " .. noun, "", function(name)
-      if not name or name == "" then return end
-      after(api.create(name))
-    end)
-  end)
-  if bCopy then
-    bCopy:SetScript("OnClick", function()
-      UI.nameDialog("Copy " .. noun, (api.active() or "") .. " copy", function(name)
-        if not name or name == "" then return end
-        after(api.copy(name))
-      end)
-    end)
-  end
-  bRen:SetScript("OnClick", function()
-    UI.nameDialog("Rename " .. noun, api.active() or "", function(name)
-      if not name or name == "" then return end
-      after(api.rename(name))
-    end)
-  end)
-  -- The delete gate (the owner, 2026-09-20: "the following characters are
-  -- using this profile, are you sure?"). `api.users(name)` returns the keys of
-  -- every character bound to it — "Name-Realm" or "Name - Realm", the tool's
-  -- own format; this trims each to the character's name and leaves out the
-  -- character you are on, who is always on the active profile.
-  local function others(name)
-    if not api.users then return nil end
-    local me, out = UnitName("player"), {}
-    for _, key in ipairs(api.users(name) or {}) do
-      local char = tostring(key):match("^%s*([^-]-)%s*%-") or tostring(key)
-      if char ~= me then out[#out + 1] = char end
-    end
-    table.sort(out)
-    return out
-  end
-  bDel:SetScript("OnClick", function()
-    local active = api.active()
-    if not active then return end
-    local list = others(active)
-    local body
-    if list and #list > 0 then
-      local names = #list == 1 and list[1]
-        or (table.concat(list, ", ", 1, #list - 1) .. " and " .. list[#list])
-      body = ("Delete the %s \"%s\"?\n\nBesides this character, it's in use by |cffffffff%s|r — %s fall back to another %s.\n\nThis can't be undone.")
-        :format(noun, active, names, #list == 1 and "that character will" or "they'll", noun)
-    else
-      body = ("Delete the %s \"%s\"?  This can't be undone."):format(noun, active)
-    end
-    UI.confirm(body, function() after(api.delete()) end)
-  end)
-
-  local tips = api.tips or {}
-  UI.attachTip(dd, Noun, tips.dropdown or ("The active " .. noun .. ". Click to switch."))
-  UI.attachTip(bNew, "New " .. noun, tips.new or ("Creates a new " .. noun .. " and switches to it."))
-  if bCopy then
-    UI.attachTip(bCopy, "Copy " .. noun,
-      tips.copy or ("Duplicates this " .. noun .. " under a new name and switches to the copy."))
-  end
-  UI.attachTip(bRen, "Rename " .. noun, tips.rename or ("Renames this " .. noun .. "."))
-  UI.attachTip(bDel, "Delete " .. noun,
-    tips.delete or ("Deletes this " .. noun .. ". Asks you to confirm first."))
+  local act = profileActions(api, after)
+  bNew:SetScript("OnClick", act.new)
+  if bCopy then bCopy:SetScript("OnClick", act.copy) end
+  bRen:SetScript("OnClick", act.rename)
+  bDel:SetScript("OnClick", act.delete)
+  profileTips(api, dd, bNew, bCopy, bRen, bDel)
 
   function block:refresh() dd:refresh() end
   block.height = f:GetHeight()
@@ -1467,6 +1579,11 @@ local WARM = {   -- the Hub's own pairs (Shell + Media tab + the lib's own widge
   { "label", { 11 } },              -- sliderRow's value text — a LIB widget, so the
                                     -- base list owes it (MINOR 6, when colorPicker's
                                     -- Opacity row made the lib draw one itself).
+  -- The kit (MINOR 11): buttons/inputs 11 · labels 12 · section headers 14 ·
+  -- wordmarks 12 (footer) / 14 (banner, Player/Target) / 22 (the window).
+  { "ui",    { 11 } },
+  { "uiB",   { 12, 14 } },
+  { "mark",  { 12, 14, 22 } },
 }
 local warmer, warmRan
 local pendingPairs = {}   -- registered before the PEW batch
@@ -1572,18 +1689,22 @@ function UI.WarmFonts(extraPairs, onVerified)
   return warmBatch(all, onVerified)
 end
 
--- Family-styled hover tooltip (dark plate, purple title, GeneralSans body).
--- One shared frame; attachTip(frame, title, body) wires OnEnter/OnLeave via
--- HookScript so it coexists with existing hover scripts.
+-- The hover tooltip. One shared frame; attachTip(frame, title, body) wires
+-- OnEnter/OnLeave via HookScript so it coexists with existing hover scripts.
+-- ★ Restyled for the kit (MINOR 11): the mocks draw no tooltip, so this is
+-- DERIVED from the colour picker — the night plate with the indigo rim, Play
+-- Bold 12 title in lilac, Play 11 body in white.
 local tipFrame, tipTitle, tipBody
 local function showTip(owner, title, body)
   if not tipFrame then
     tipFrame = CreateFrame("Frame", nil, UIParent)
     tipFrame:SetFrameStrata("TOOLTIP")
-    UI.skinPlate(tipFrame)
-    tipTitle = UI.newText(tipFrame, FONT.bodyM, 12, COLOR.purple, "LEFT")
+    local plate = tipFrame:CreateTexture(nil, "BACKGROUND"); plate:SetAllPoints()
+    plate:SetColorTexture(COLOR.night.r, COLOR.night.g, COLOR.night.b, 1)
+    UI.addEdges(tipFrame, COLOR.indigo, 1)
+    tipTitle = UI.newText(tipFrame, FONT.uiB, 12, COLOR.lilac, "LEFT")
     tipTitle:SetPoint("TOPLEFT", 10, -8)
-    tipBody = UI.newText(tipFrame, FONT.body, 11, COLOR.text, "LEFT")
+    tipBody = UI.newText(tipFrame, FONT.ui, 11, COLOR.paper, "LEFT")
     tipBody:SetPoint("TOPLEFT", 10, -26); tipBody:SetWidth(220); tipBody:SetJustifyH("LEFT")
   end
   tipTitle:SetText(title or "")
@@ -1637,7 +1758,7 @@ function UI.tabHeader(parent, opts)
   h.logo:SetSize(size, size)          -- square: the art is 1:1, never stretch it
   h.logo:SetPoint("TOPLEFT", x, opts.y or -12)
 
-  h.text = UI.newText(parent, FONT.title, opts.fontSize or 17, { r = 1, g = 1, b = 1 }, "LEFT")
+  h.text = UI.newText(parent, FONT.title, opts.fontSize or 17, COLOR.text, "LEFT")
   h.text:SetPoint("LEFT", h.logo, "RIGHT", opts.gap or 9, 0)
   h.text:SetText(opts.label or "")
 
@@ -1849,6 +1970,540 @@ function UI.cog(parent, opts)
   if opts.tip then UI.attachTip(b, opts.tip[1], opts.tip[2]) end
   paint(false)
   return b
+end
+
+-- ------------------------------------------------------------
+-- ★ THE KIT (MINOR 11, 2026-09-21) — the redesign's widgets, built from the
+-- PRIMITIVES frame of the owner's Figma mocks (BACKLOG 16, stage 1).
+--
+-- The rules the mocks set, and that every widget here keeps:
+--   · light grey window; 4px corners on everything, from ONE nine-slice
+--   · buttons are 17px tall, Play 11 UPPERCASE, 20px side padding, 6px apart;
+--     DARK = an action, VIOLET = a persisting state (a tab, a chosen option),
+--     AMBER = destructive, 50% alpha = unavailable. Hover/pressed are quiet.
+--   · labels are Play Bold 12 in ink; section headers Play Bold 14 in violet
+--   · inputs are white; the scrub DIAL replaces every slider
+-- The pre-kit widgets above stay callable until the last tab has migrated.
+-- ------------------------------------------------------------
+
+local SLICE = 5   -- round4.png is 16×16 with 4px corners; 5 keeps the anti-aliasing intact
+local STRETCHED = (Enum.UITextureSliceMode and Enum.UITextureSliceMode.Stretched) or 0
+
+-- A rounded texture, white, for the caller to tint. `anchored` = fill the parent.
+local function roundTex(parent, layer, anchored)
+  local t = parent:CreateTexture(nil, layer or "BACKGROUND")
+  t:SetTexture(UI.ROUND)
+  t:SetTextureSliceMargins(SLICE, SLICE, SLICE, SLICE)
+  t:SetTextureSliceMode(STRETCHED)
+  if anchored then t:SetAllPoints() end
+  return t
+end
+function UI.roundFill(parent, layer) return roundTex(parent, layer, true) end
+function UI.tint(t, c, a) t:SetVertexColor(c.r, c.g, c.b, a or c.a or 1) end
+
+local function hexOf(c)
+  return c.hex or ("%02x%02x%02x"):format(math.floor(c.r * 255 + 0.5), math.floor(c.g * 255 + 0.5), math.floor(c.b * 255 + 0.5))
+end
+
+-- The four button kinds. `state` is also what any kind becomes while active.
+local KIND = {
+  action = { fill = "ink",    text = "paper" },
+  state  = { fill = "violet", text = "paper" },
+  warn   = { fill = "amber",  text = "black" },
+  quiet  = { fill = "dim",    text = "paper" },
+  paper  = { fill = "paper",  text = "black" },
+}
+
+-- UI.button(parent, label, opts?) → Button with .text, :SetLabel(s), :SetActive(on),
+-- :SetKind(k), :paint(). Width follows the label (+2×padX) unless `w` is given.
+--   opts = { kind = "action"|"state"|"warn"|"quiet"|"paper", w, h = 17, size = 11,
+--            padX = 20, font = FONT.ui, caps = true, active, onClick }
+function UI.button(parent, label, opts)
+  opts = opts or {}
+  local b = CreateFrame("Button", nil, parent)
+  b:SetHeight(opts.h or 17)
+  b.fill = roundTex(b, "BACKGROUND", true)
+  b.hover = roundTex(b, "BORDER", true); b.hover:SetVertexColor(1, 1, 1, 0.10); b.hover:Hide()
+  b.text = UI.newText(b, opts.font or FONT.ui, opts.size or 11, COLOR.paper, "CENTER")
+  b.text:SetPoint("CENTER", 0, 0)
+  b:SetFontString(b.text)
+  b._kind, b._active, b._caps = opts.kind or "action", opts.active and true or false, opts.caps ~= false
+  b._padX, b._fixedW = opts.padX or 20, opts.w
+  function b:paint()
+    local k = KIND[self._active and "state" or self._kind] or KIND.action
+    UI.tint(self.fill, COLOR[k.fill])
+    local tc = COLOR[k.text]; self.text:SetTextColor(tc.r, tc.g, tc.b)
+    self:SetAlpha(self:IsEnabled() and 1 or 0.5)
+  end
+  function b:SetLabel(txt)
+    txt = tostring(txt or "")
+    self.text:SetText(self._caps and txt:upper() or txt)
+    self:SetWidth(self._fixedW or (self.text:GetStringWidth() + 2 * self._padX))
+  end
+  function b:SetActive(on) self._active = on and true or false; self:paint() end
+  function b:SetKind(k) self._kind = k; self:paint() end
+  b:SetScript("OnEnter", function(self) if self:IsEnabled() then self.hover:Show() end end)
+  b:SetScript("OnLeave", function(self) self.hover:Hide() end)
+  b:SetScript("OnMouseDown", function(self) if self:IsEnabled() then self.hover:SetVertexColor(0, 0, 0, 0.12) end end)
+  b:SetScript("OnMouseUp", function(self) self.hover:SetVertexColor(1, 1, 1, 0.10) end)
+  b:SetScript("OnEnable", function(self) self:paint() end)
+  b:SetScript("OnDisable", function(self) self:paint() end)
+  if opts.onClick then b:SetScript("OnClick", opts.onClick) end
+  b:SetLabel(label or "")
+  b:paint()
+  return b
+end
+
+-- UI.label(parent, text) → the field label: Play Bold 12, ink.
+function UI.label(parent, text)
+  local fs = UI.newText(parent, FONT.uiB, 12, COLOR.ink, "LEFT")
+  fs:SetText(text or "")
+  return fs
+end
+
+-- UI.segments(parent, options, get, set, opts?) → the segmented bar: one violet
+-- segment on a dim track. options = { { value =, label = }, … }. Returns the
+-- Frame with :refresh(), :setEnabled(on), .segs. `opts.segW` makes every
+-- segment that wide (the mocks size most by their label).
+function UI.segments(parent, options, get, set, opts)
+  opts = opts or {}
+  local f = CreateFrame("Frame", nil, parent)
+  f:SetHeight(opts.h or 17)
+  f.track = roundTex(f, "BACKGROUND", true); UI.tint(f.track, COLOR.dim)
+  f.segs = {}
+  local prev, total = nil, 0
+  for i, opt in ipairs(options) do
+    local sg = UI.button(f, opt.label, { kind = "quiet", h = opts.h, padX = opts.padX, w = opts.segW })
+    sg.value = opt.value
+    sg.paint = function(self)   -- a segment is transparent until it is the choice
+      if self._active then UI.tint(self.fill, COLOR.violet) else self.fill:SetVertexColor(0, 0, 0, 0) end
+      self.text:SetTextColor(1, 1, 1)
+      self:SetAlpha(self:IsEnabled() and 1 or 0.5)
+    end
+    sg:paint()
+    sg:SetScript("OnClick", function(self) set(self.value); f:refresh() end)
+    if prev then sg:SetPoint("LEFT", prev, "RIGHT", 0, 0) else sg:SetPoint("LEFT", 0, 0) end
+    total = total + sg:GetWidth()
+    prev = sg
+    f.segs[i] = sg
+  end
+  f:SetWidth(total)
+  function f:refresh()
+    local cur = get()
+    for _, sg in ipairs(self.segs) do sg:SetActive(sg.value == cur) end
+  end
+  function f:setEnabled(on)
+    for _, sg in ipairs(self.segs) do sg:SetEnabled(on) end
+    self.track:SetAlpha(on and 1 or 0.5)
+  end
+  f:refresh()
+  return f
+end
+
+-- UI.toggleBar(parent, get, set, opts?) → OFF | ON — the two-segment case.
+function UI.toggleBar(parent, get, set, opts)
+  return UI.segments(parent, { { value = false, label = "Off" }, { value = true, label = "On" } },
+    function() return get() and true or false end, set, opts)
+end
+
+-- UI.check(parent, label, get, set) → the checkbox: a dim 17px box with a
+-- violet dot, Play Bold 12 label. Returns the Button with :refresh().
+function UI.check(parent, label, get, set)
+  local b = CreateFrame("Button", nil, parent)
+  b:SetHeight(17)
+  local box = roundTex(b, "BACKGROUND"); box:SetSize(17, 17); box:SetPoint("LEFT", 0, 0); UI.tint(box, COLOR.dim)
+  local dot = b:CreateTexture(nil, "ARTWORK"); dot:SetTexture(UI.DOT); dot:SetSize(13, 13)
+  dot:SetPoint("CENTER", box, "CENTER", 0, 0); UI.tint(dot, COLOR.violet)
+  b.text = UI.newText(b, FONT.uiB, 12, COLOR.black, "LEFT")
+  b.text:SetPoint("LEFT", box, "RIGHT", 6, 0); b.text:SetText(label or "")
+  b:SetWidth(23 + b.text:GetStringWidth())
+  b.box, b.dot = box, dot
+  function b:refresh() self.dot:SetShown(get() and true or false) end
+  b:SetScript("OnClick", function(self) set(not get()); self:refresh() end)
+  b:SetScript("OnEnable", function(self) self:SetAlpha(1) end)
+  b:SetScript("OnDisable", function(self) self:SetAlpha(0.5) end)
+  b:refresh()
+  return b
+end
+
+-- UI.field(parent, w, opts?) → the white text input (Play 11, black), 17 tall.
+-- It IS a flatEditBox underneath, so it joins the Tab ring and steps numbers
+-- with the arrows; the consumer rules in CONTRACTS §4 apply unchanged.
+--   opts = { h = 17, justify = "LEFT" }
+function UI.field(parent, w, opts)
+  opts = opts or {}
+  local e = UI.flatEditBox(parent, w, opts.h or 17)
+  e.bg:SetTexture(UI.ROUND)
+  e.bg:SetTextureSliceMargins(SLICE, SLICE, SLICE, SLICE)
+  e.bg:SetTextureSliceMode(STRETCHED)
+  UI.tint(e.bg, COLOR.paper)
+  UI.setFont(e, FONT.ui, 11); e:SetTextColor(0, 0, 0)
+  e:SetTextInsets(6, 6, 0, 0)
+  e:SetJustifyH(opts.justify or "LEFT")
+  -- Selected text sits on the light purple (the owner, 2026-09-21: the stock
+  -- dark-grey highlight is hard to read on white).
+  e:SetHighlightColor(COLOR.lilac.r, COLOR.lilac.g, COLOR.lilac.b, 0.6)
+  e.onFocus = function() end   -- the mocks give a focused field no second look; the caret is the signal
+  return e
+end
+
+-- ------------------------------------------------------------
+-- UI.pick — the kit's dropdown. Two faces, one list:
+--   kind = "state"  a violet button carrying the choice, UPPERCASE; with no
+--                   `w` it is as wide as its WIDEST option ("width based on
+--                   widest item inside"), so it never changes size when picked
+--   kind = "field"  a white field with a violet triangle — the profile picker
+-- The open list is an indigo plate anchored under the button, rows Play 11
+-- white uppercase, the current one amber; scrolls past 12. Same closing rules
+-- as UI.dropdown: any outside click, the owner hiding, another list opening.
+--   UI.pick(parent, w, getLabel, getOptions, getCurrent, onPick, opts?)
+-- Returns the button with :refresh().
+-- ------------------------------------------------------------
+local PICK_ROWS, PICK_ROW_H = 12, 22
+local pickFly
+
+local function pickFlyout()
+  if pickFly then return pickFly end
+  local catcher = CreateFrame("Button", nil, UIParent)
+  catcher:SetFrameStrata("FULLSCREEN"); catcher:SetAllPoints(UIParent); catcher:Hide()
+  catcher:SetFrameLevel(20)
+  local fly = CreateFrame("Frame", nil, catcher)
+  fly:SetFrameStrata("FULLSCREEN_DIALOG")
+  local plate = fly:CreateTexture(nil, "BACKGROUND"); plate:SetAllPoints()
+  plate:SetColorTexture(COLOR.indigo.r, COLOR.indigo.g, COLOR.indigo.b, 1)
+  local scroll = CreateFrame("ScrollFrame", nil, fly)
+  scroll:SetPoint("TOPLEFT", 0, -6); scroll:SetPoint("BOTTOMRIGHT", 0, 6)
+  scroll:EnableMouseWheel(true)
+  local child = CreateFrame("Frame", nil, scroll); child:SetSize(10, 10)
+  scroll:SetScrollChild(child)
+  scroll:SetScript("OnMouseWheel", function(self, delta)
+    local range = math.max(0, child:GetHeight() - self:GetHeight())
+    self:SetVerticalScroll(math.max(0, math.min(range, self:GetVerticalScroll() - delta * PICK_ROW_H)))
+  end)
+  catcher:SetScript("OnClick", function() catcher:Hide() end)
+  fly.catcher, fly.scroll, fly.child, fly.rows = catcher, scroll, child, {}
+  pickFly = fly
+  return fly
+end
+
+function UI.pick(parent, w, getLabel, getOptions, getCurrent, onPick, opts)
+  opts = opts or {}
+  local field = opts.kind == "field"
+  local b = UI.button(parent, "", { kind = field and "paper" or "state", w = w, caps = not field })
+  b.text:SetWordWrap(false)
+  if field then
+    b.text:ClearAllPoints(); b.text:SetPoint("LEFT", 6, 0); b.text:SetPoint("RIGHT", -20, 0); b.text:SetJustifyH("LEFT")
+    local tri = b:CreateTexture(nil, "ARTWORK"); tri:SetTexture(UI.TRI); tri:SetSize(9, 9)
+    tri:SetPoint("RIGHT", -6, 0); UI.tint(tri, COLOR.violet)
+    b.tri = tri
+  end
+  -- Width by the widest option, measured once per refresh with a hidden string.
+  local measure
+  function b:refresh()
+    if not w and not field then
+      measure = measure or UI.newText(self, FONT.ui, 11, nil, "LEFT")
+      if measure then measure:Hide() end
+      local widest = 0
+      for _, opt in ipairs(getOptions() or {}) do
+        measure:SetText(tostring(opt.label or ""):upper())
+        widest = math.max(widest, measure:GetStringWidth())
+      end
+      self._fixedW = widest + 2 * self._padX
+    end
+    self:SetLabel(getLabel() or "?")
+  end
+
+  b:SetScript("OnClick", function()
+    local fly = pickFlyout()
+    local options, current = getOptions() or {}, getCurrent()
+    local y, widest = 0, 0
+    for i, opt in ipairs(options) do
+      local row = fly.rows[i]
+      if not row then
+        row = CreateFrame("Button", nil, fly.child); row:SetHeight(PICK_ROW_H)
+        row.hl = row:CreateTexture(nil, "BACKGROUND"); row.hl:SetAllPoints()
+        row.hl:SetColorTexture(1, 1, 1, 0.08); row.hl:Hide()
+        row:SetScript("OnEnter", function(self) self.hl:Show() end)
+        row:SetScript("OnLeave", function(self) self.hl:Hide() end)
+        row.text = UI.newText(row, FONT.ui, 11, COLOR.paper, "CENTER")
+        row.text:SetPoint("LEFT", 10, 0); row.text:SetPoint("RIGHT", -10, 0); row.text:SetWordWrap(false)
+        fly.rows[i] = row
+      end
+      row:ClearAllPoints()
+      row:SetPoint("TOPLEFT", 0, y); row:SetPoint("TOPRIGHT", 0, y)
+      row.text:SetText(tostring(opt.label or ""):upper())
+      widest = math.max(widest, row.text:GetStringWidth())
+      if opt.value == current then row.text:SetTextColor(COLOR.amber.r, COLOR.amber.g, COLOR.amber.b)
+      else row.text:SetTextColor(1, 1, 1) end
+      row:SetScript("OnClick", function() fly.catcher:Hide(); onPick(opt.value); b:refresh() end)
+      row:Show()
+      y = y - PICK_ROW_H
+    end
+    for i = #options + 1, #fly.rows do fly.rows[i]:Hide() end
+    local shown = math.min(#options, PICK_ROWS)
+    local cw = math.max(b:GetWidth(), widest + 20)
+    fly.child:SetSize(cw, math.max(10, #options * PICK_ROW_H))
+    fly:SetSize(cw, shown * PICK_ROW_H + 12)
+    fly.scroll:SetVerticalScroll(0)
+    fly:ClearAllPoints(); fly:SetPoint("TOPLEFT", b, "BOTTOMLEFT", 0, 0)
+    if not b._flyHooked then
+      b._flyHooked = true
+      b:HookScript("OnHide", function() if pickFly then pickFly.catcher:Hide() end end)
+    end
+    fly.catcher:Show()
+  end)
+
+  b:refresh()
+  return b
+end
+
+-- UI.sectionHeader(parent, text, opts?) → a violet triangle + Play Bold 14 violet
+-- UPPERCASE title; the whole line is the click target. :SetOpen(on) turns the
+-- triangle (down = open, right = closed). opts = { open, onToggle(open) }
+function UI.sectionHeader(parent, text, opts)
+  opts = opts or {}
+  local b = CreateFrame("Button", nil, parent)
+  b:SetHeight(16)
+  local tri = b:CreateTexture(nil, "ARTWORK"); tri:SetTexture(UI.TRI); tri:SetSize(10, 10)
+  tri:SetPoint("LEFT", 0, 0); UI.tint(tri, COLOR.violet)
+  b.text = UI.newText(b, FONT.uiB, 14, COLOR.violet, "LEFT")
+  b.text:SetPoint("LEFT", tri, "RIGHT", 10, 0); b.text:SetText(tostring(text or ""):upper())
+  b:SetWidth(20 + b.text:GetStringWidth())
+  b.tri = tri
+  function b:SetOpen(on) self._open = on and true or false; self.tri:SetRotation(self._open and 0 or math.pi / 2) end
+  b:SetScript("OnClick", function(self) if opts.onToggle then opts.onToggle(not self._open) end end)
+  b:SetOpen(opts.open)
+  return b
+end
+
+-- ------------------------------------------------------------
+-- UI.dial — the SCRUB dial, the kit's replacement for every slider. The
+-- owner's definition (2026-09-21, after two wrong builds — a slider with
+-- ticks, then a jog wheel):
+--   · the tick strip is FIXED; the thick centre tick exists only for a range
+--     with zero in the middle (offsets, angles) and never moves;
+--   · the value's place in the range is shown by turning the NEAREST TICK
+--     amber — the whole tick, post or centre mark included, never a separate
+--     needle "riding on top" (the owner, 2026-09-21) — live as you drag;
+--   · the drag is NOT one-to-one with the cursor ("that would just make it a
+--     slider"): the whole range takes a long motion — `dragPx` pixels end to
+--     end, 900 by default, Shift ×10 — from wherever you press, and you may
+--     keep going off the strip; the wheel steps it; click the box to type.
+-- The white box is the readout, with the caller's unit. ★ It sizes itself to
+-- the WIDEST value it can be asked to show: the mock's 42px fits "46px", and
+-- an edit box shows the END of text that overflows — so "-700px" in 42px
+-- read "0px", which cost an evening (2026-09-21).
+--   opts = { label, min, max, step = 1, get, set, unit = "", centre = false,
+--            w = 194, dragPx = 900, fmt(v)? }
+-- Returns the Frame with :refresh(), :setEnabled(on), .label, .box, .strip.
+-- ------------------------------------------------------------
+function UI.dial(parent, opts)
+  local minV, maxV, step = opts.min or 0, opts.max or 100, opts.step or 1
+  local unit = opts.unit or ""
+  local dragPx = opts.dragPx or 900
+  local decimals = 0
+  do local s = step; while s % 1 ~= 0 and decimals < 3 do s = s * 10; decimals = decimals + 1 end end
+  local function fmt(v)
+    if opts.fmt then return opts.fmt(v) end
+    return decimals == 0 and tostring(math.floor(v + 0.5)) or ("%." .. decimals .. "f"):format(v)
+  end
+  local function snap(v)
+    v = math.max(minV, math.min(maxV, v))
+    if step > 0 then v = minV + math.floor((v - minV) / step + 0.5) * step end
+    return math.max(minV, math.min(maxV, v))
+  end
+
+  local f = CreateFrame("Frame", nil, parent)
+  f:SetSize(opts.w or 194, 35)
+  f.label = UI.label(f, opts.label); f.label:SetPoint("TOPLEFT", 0, 0)
+
+  local WIN_W = 141   -- the strip art: posts at 0-1 and 139-140, 45 ticks at 4+3i, the centre one at 69-71
+  local TICKS = 47    -- positions the mark can take: post, 45 ticks, post
+  local strip = CreateFrame("Frame", nil, f)
+  strip:SetPoint("TOPLEFT", 0, -18); strip:SetSize(WIN_W, 17)
+  strip:EnableMouse(true); strip:EnableMouseWheel(true)
+  local ticks = strip:CreateTexture(nil, "ARTWORK")
+  ticks:SetTexture(opts.centre and UI.DIAL_C or UI.DIAL)
+  ticks:SetSize(WIN_W, 16); ticks:SetPoint("TOPLEFT", 0, -2); UI.tint(ticks, COLOR.ink)
+  local mark = strip:CreateTexture(nil, "OVERLAY")   -- the amber tick, shaped like the one it replaces
+  mark:SetColorTexture(COLOR.amber.r, COLOR.amber.g, COLOR.amber.b, 1)
+  mark:SetSize(1, 13)
+  f.strip, f.ticks, f.mark = strip, ticks, mark
+  -- Which tick is amber for a value: index 0 is the left post, 46 the right,
+  -- 1..45 the thin ticks; the centre one (23) is 3px wide on a centred dial.
+  local function markAt(idx)
+    local x, w
+    if idx <= 0 then x, w = 0, 2
+    elseif idx >= TICKS - 1 then x, w = WIN_W - 2, 2
+    elseif opts.centre and idx == 23 then x, w = 69, 3
+    else x, w = 4 + 3 * (idx - 1), 1 end
+    mark:SetSize(w, 13)
+    mark:ClearAllPoints(); mark:SetPoint("TOPLEFT", x, -2)
+  end
+
+  -- The box: at least the mock's 42, wider if the range's extremes need it.
+  local box = UI.field(f, 42, { justify = "CENTER" })
+  box:SetTextInsets(4, 4, 0, 0)
+  do
+    local m = UI.newText(f, FONT.ui, 11, nil, "LEFT"); m:Hide()
+    local widest = 0
+    for _, v in ipairs({ minV, maxV, -maxV }) do
+      m:SetText(fmt(v) .. unit); widest = math.max(widest, m:GetStringWidth())
+    end
+    box:SetWidth(math.max(42, math.ceil(widest) + 10))
+    f:SetWidth(math.max(opts.w or 194, WIN_W + 10 + box:GetWidth()))   -- the frame grows, never the gap shrinks
+  end
+  box:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, -18)
+  f.box = box
+
+  local cur, enabled = snap(opts.get() or minV), true
+  local editing, dragging = false, false   -- our own flags; HasFocus() proved unreliable mid-drag
+  local function paint()
+    local frac = (maxV > minV) and ((cur - minV) / (maxV - minV)) or 0
+    markAt(math.floor(frac * (TICKS - 1) + 0.5))
+    if not editing then box:SetText(fmt(cur) .. unit); box:SetCursorPosition(0) end
+  end
+  local function apply(v)
+    v = snap(v)
+    if v ~= cur then cur = v; opts.set(v) end
+    paint()
+  end
+
+  -- A box that was clicked into keeps keyboard focus until something takes
+  -- it (WoW edit boxes ignore outside clicks). The strip takes it WITHOUT
+  -- committing the box's text, so a stale number never overwrites a drag.
+  local function dropBoxFocus()
+    if editing then editing = false; box._abandon = true; box:ClearFocus() end
+  end
+
+  -- The strip: press anywhere and pull; the mark follows live.
+  strip:SetScript("OnMouseDown", function(self)
+    if not enabled then return end
+    dropBoxFocus()
+    dragging = true
+    self._drag = { x = GetCursorPosition() / self:GetEffectiveScale(), v = cur }
+    paint()
+  end)
+  local function endDrag(self)
+    if not dragging then return end
+    dragging = false; self._drag = nil
+    paint()
+  end
+  strip:SetScript("OnMouseUp", endDrag)
+  strip:SetScript("OnUpdate", function(self)
+    local d = self._drag
+    if not d then return end
+    if not IsMouseButtonDown("LeftButton") then endDrag(self); return end
+    local x = GetCursorPosition() / self:GetEffectiveScale()
+    local units = (x - d.x) * ((maxV - minV) / dragPx) * (IsShiftKeyDown() and 10 or 1)
+    apply(d.v + units)
+  end)
+  local function wheel(_, delta)
+    if not enabled then return end
+    dropBoxFocus()
+    apply(cur + delta * step * (IsShiftKeyDown() and 10 or 1))
+  end
+  strip:SetScript("OnMouseWheel", wheel)
+  box:EnableMouseWheel(true); box:SetScript("OnMouseWheel", wheel)
+  UI.attachTip(strip, opts.label or "", "Press anywhere on the ticks and pull — keep going past them if you like; the full range is a long drag, Shift is ×10. The wheel steps it. Click the number to type one.")
+
+  -- The box: click to type. Enter or leaving commits; Escape puts it back.
+  box:SetScript("OnEditFocusGained", function(self) editing = true; self:SetText(fmt(cur)); self:HighlightText() end)
+  box:SetScript("OnEditFocusLost", function(self)
+    editing = false
+    if self._abandon then self._abandon = nil; paint(); return end
+    local v = tonumber((self:GetText() or ""):match("[-%d%.]+"))
+    if v then apply(v) else paint() end
+  end)
+  box:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+  box:SetScript("OnEscapePressed", function(self) self:SetText(fmt(cur)); self:ClearFocus() end)
+  box.stepper = function(self, delta) apply(cur + delta * step); self:SetText(fmt(cur)); self:HighlightText() end
+
+  function f:refresh() cur = snap(opts.get() or minV); paint() end
+  function f:setEnabled(on)
+    enabled = on and true or false
+    box:SetEnabled(enabled)
+    self:SetAlpha(enabled and 1 or 0.5)
+  end
+  paint()
+  return f
+end
+
+-- UI.wordmark(parent, suffix, size, opts?) → "gloom" + SUFFIX in Michroma, as
+-- ONE FontString with inline colours. The window wears black + violet (SUITE),
+-- a banner all white, the footer black + lilac (the tool).
+--   opts = { prefix = "gloom", prefixColor = COLOR.black, suffixColor = COLOR.violet, justify }
+-- Returns the FontString with :SetMark(suffix, suffixColor?).
+function UI.wordmark(parent, suffix, size, opts)
+  opts = opts or {}
+  local fs = UI.newText(parent, FONT.mark, size or 14, nil, opts.justify or "LEFT")
+  fs._prefix, fs._pc, fs._sc = opts.prefix or "gloom", opts.prefixColor or COLOR.black, opts.suffixColor or COLOR.violet
+  function fs:SetMark(suf, sc)
+    if sc then self._sc = sc end
+    self:SetText(("|cff%s%s|r|cff%s%s|r"):format(hexOf(self._pc), self._prefix, hexOf(self._sc), suf or ""))
+  end
+  fs:SetMark(suffix)
+  return fs
+end
+
+-- UI.profileRow(parent, api, mark) → the kit's FOOTER profile control, the row
+-- form of UI.profileBlock: "gloomUNIT profile:" · a white 250px picker · NEW
+-- COPY RENAME DELETE (DELETE amber — it destroys). Same `api` as the block,
+-- same dialogs, same delete gate; an error shows in amber after the buttons.
+-- `mark` is the tool's wordmark suffix ("UNIT"). Returns { frame, refresh, note }.
+function UI.profileRow(parent, api, mark)
+  local noun = api.noun or "profile"
+  local hasCopy = type(api.copy) == "function"
+  local row = {}
+  local f = CreateFrame("Frame", nil, parent)
+  f:SetHeight(17)
+  row.frame = f
+
+  -- "gloomUNIT" (Michroma 12, tool in lilac) then " profile:" (Play 12) — right-aligned to x=128.
+  local who = UI.newText(f, FONT.ui, 12, COLOR.black, "RIGHT")
+  who:SetPoint("RIGHT", f, "LEFT", 128, 0); who:SetText(" " .. noun .. ":")
+  local wm = UI.wordmark(f, mark or "", 12, { suffixColor = COLOR.lilac, justify = "RIGHT" })
+  wm:SetPoint("RIGHT", who, "LEFT", 0, 0)
+  row.wordmark = wm
+
+  local note = UI.newText(f, FONT.ui, 11, COLOR.amber, "LEFT")
+  function row:note(text) note:SetText(text or "") end
+
+  local dd
+  local function after(ok, err)
+    if ok then row:note(""); dd:refresh(); if api.onChange then api.onChange() end
+    else row:note(err or "") end
+  end
+  dd = UI.pick(f, 250,
+    function() return api.active() end,
+    function()
+      local out = {}
+      for _, name in ipairs(api.names() or {}) do out[#out + 1] = { value = name, label = name } end
+      return out
+    end,
+    function() return api.active() end,
+    function(v) row:note(""); api.switch(v); if api.onChange then api.onChange() end end,
+    { kind = "field" })
+  dd:SetPoint("LEFT", 142, 0)
+  row.dropdown = dd
+
+  local act = profileActions(api, after)
+  local prev = dd
+  local function btn(label, kind, handler, gap)
+    local b = UI.button(f, label, { kind = kind, onClick = handler })
+    b:SetPoint("LEFT", prev, "RIGHT", gap or 6, 0)
+    prev = b
+    return b
+  end
+  local bNew = btn("New", "action", act.new, 11)
+  local bCopy = hasCopy and btn("Copy", "action", act.copy) or nil
+  local bRen = btn("Rename", "action", act.rename)
+  local bDel = btn("Delete", "warn", act.delete)
+  note:SetPoint("LEFT", bDel, "RIGHT", 12, 0); note:SetPoint("RIGHT", f, "RIGHT", 0, 0)
+  profileTips(api, dd, bNew, bCopy, bRen, bDel)
+
+  function row:refresh() dd:refresh() end
+  return row
 end
 
 end   -- if lib

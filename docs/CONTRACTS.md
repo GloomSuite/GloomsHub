@@ -25,6 +25,18 @@ consumed via `LibGloomSkin`. Values are the established family language:
   `Interface\AddOns\GloomsHub\Media\fonts\`.
 - The widget toolkit is `LibGloomSkin-1.0` (Skin.lua is the lib body; `GloomsHub.UI` is the
   Hub-side alias) — formalized Phase C, surface pinned in §4.
+- **★ THE KIT (MINOR 11, 2026-09-21 — the redesign, BACKLOG 16).** A second palette and type set,
+  read off the owner's Figma PRIMITIVES frame, for the light-grey window: `plate #d2d2d2` ·
+  `ink #444444` (action buttons, labels) · `violet #6c2fe6` (persisting state) · `lilac #a881f8`
+  (the tool's name in a wordmark) · `indigo #3b1684` (an open list, the picker's rim) · `amber
+  #ffa04e` (destructive, the dial's mark, the highlighted list row) · `night #110628` (the picker
+  and dialog plate) · `paper #ffffff` (inputs) · `chip #d9d9d9` · `dim` / `faint` (#3e3e3e at 50% /
+  20%) · `black`. Fonts: `FONT.ui` Play Regular (11: buttons, inputs) · `FONT.uiB` Play Bold (12:
+  labels, 14: section headers) · `FONT.mark` Michroma (wordmarks, the big Player/Target buttons).
+  ⚠ **THE TRANSITION:** until every tab has migrated, the OLD tokens are re-pointed to read on the
+  light plate — `text` and `mute` are dark, `rim` is black at 18%, `skinPlate` paints `plate`, and
+  `flatButton` picks white or dark text by how strong its fill is. Every pre-kit widget still
+  works; it just draws light. This goes away with the last migrated tab.
 > **GB (Phase C) and GA (Phase D) both consume these — the duplicated toolkits are GONE**
 > (2026-07-24): each tool's local copy is deleted and its `.COLOR` aliases the lib's table.
 > Deliberate exception, both tools: `GB.FONT`/`GA.FONT` still point at each tool's OWN font
@@ -35,12 +47,14 @@ consumed via `LibGloomSkin`. Values are the established family language:
 ## 2. The tabbed-shell API (GloomsHub owns)
 ```lua
 GloomsHub:RegisterTab{
-  id      = "bars",           -- stable key; the slash focuses by this
-  title   = "BARS",          -- Khand uppercase shown on the tab
-  order   = 20,              -- sort weight; Media = 90, tools 10..80
-  icon    = "…logo.png",     -- optional
-  build   = function(container) … end,  -- called ONCE, lazily, on first show; parent to `container`
-  refresh = function() … end,           -- optional; called each focus (maps to a tool's C:Refresh)
+  id       = "bars",           -- stable key; the slash focuses by this
+  title    = "BARS",          -- the tab button's label (uppercased by the kit)
+  order    = 20,              -- fallback sort weight — the shell orders KNOWN ids itself (below)
+  wordmark = "BARS",          -- MINOR 11: what the banner shows after "gloom"; defaults to `title`
+  profile  = api,             -- MINOR 11: a UI.profileBlock-style api → the shell draws the tool's
+                              --   PROFILE ROW in the window's footer (UI.profileRow); optional
+  build    = function(container) … end,  -- called ONCE, lazily, on first show; parent to `container`
+  refresh  = function() … end,           -- optional; called each focus (maps to a tool's C:Refresh)
 }
 
 GloomsHub:Open(id)      -- show the Suite window + focus tab `id`
@@ -51,12 +65,18 @@ GloomsHub:ToggleWindow(id?)  -- slash semantics (added Phase B): open→close if
 - `build` runs lazily on first show (never at login). A tool whose addon isn't loaded simply
   doesn't register; the shell shows present tools' tabs + the always-present Media tab.
 - A tool's former window-local footer controls move INTO its tab container, not the shared footer.
-- Reserved tab ids: `auras` (order 10, live Phase D), `bars` (order 20, live Phase C),
-  `overlays` (order 30, Phase E), **`portraits` (order 40, 2026-09-19)**, `media` (order 90).
-- **Container content size — PINNED (Phase D, 2026-07-24): at least 860 wide × 626 high.**
-  Tabs may lay out against these as deterministic minimums (GA's centered 620-wide column
-  does; GB's panes stretch). The shell (Hub-owned `SHELL_W/H`, currently 860×740) may GROW
-  the area, but never shrink it below this without updating every tab in the same session.
+- Reserved tab ids: `auras`, `bars`, `unitframes`, `portraits`, `overlays`, `media`. **The strip's
+  order is the MOCKS' and is fixed in the shell** (`TAB_ORDER`, 2026-09-21): Auras · Bars · Unit
+  Frames · Portraits · Overlays · Media; a tab's own `order` only places an unknown id.
+- **★ THE SHELL IS THE MOCKS' (2026-09-21, redesign stage 1): 1060 × 740, fixed**, the light plate,
+  three bands — HEADER 54 (the "gloomSUITE" wordmark; the tab pills right-aligned with the X; the
+  version line is the wordmark's hover-tip), BANNER 36 (a 250px violet block carrying
+  "gloom<wordmark>", the rest dim), FOOTER 65 (a line, then the tool's profile row, drawn only for
+  a tab that passed `profile`).
+- **Container content size — PINNED:** a tab WITH a footer profile row gets **1060 × 585**; a tab
+  WITHOUT one runs to the window's bottom and gets **1060 × 650**, so the pre-redesign pin of
+  **860 × 626** (Phase D) still holds for every un-migrated tab. The shell may GROW either, never
+  shrink one without updating its tabs in the same session.
 - The container fires normal OnShow/OnHide as the tab gains/loses visibility (window
   open/close AND tab switches) — tools may hook these for show/hide side effects (GB ends
   move mode there; GA toggles its editor preview + closes its docked drawers).
@@ -109,7 +129,7 @@ shipper — its `Skin.lua` IS the lib body (embedding a copy in each tool via `.
 externals is Phase G work). `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are Hub-side aliases of the
 same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Phase E**.
 
-**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 10) — the whole API; nothing else is public:**
+**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 11) — the whole API; nothing else is public:**
 - `Skin.COLOR` — `purple · heroic · green · red · orange` (each `{r,g,b,hex}`), `dark`, `rim`
   (both `{r,g,b,a}`), `text`, `mute` (`{r,g,b}`). The §1 literals.
 - `Skin.FONT` — `title · head · body · bodyM · label` → font files under
@@ -327,6 +347,36 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     interrupt popover carries the ring's Color) must repaint the grid's copy itself — nothing
     links them. Consumers: the Unit Frames tab (shield tint · interrupt colouring · effect
     settings · aura filters · the shortcode list).
+- **★ THE KIT (MINOR 11, 2026-09-21)** — the redesign's widgets, one per PRIMITIVES control. Each
+  function's header comment in `Skin.lua` is its spec; this is the surface:
+  · `UI.roundFill(parent, layer?)` → the ONE nine-slice (4px corners, `UI.ROUND`, margins 5) ·
+    `UI.tint(tex, color, a?)`
+  · `UI.button(parent, label, opts?)` → `{ kind = "action"|"state"|"warn"|"quiet"|"paper", w, h=17,
+    size=11, padX=20, font, caps=true, active, onClick }`; `:SetLabel · :SetActive · :SetKind`.
+    Width follows the label unless `w`. Disabled = 50% alpha.
+  · `UI.label(parent, text)` → Play Bold 12 ink · `UI.field(parent, w, opts?)` → the white input (a
+    `flatEditBox` underneath — same Tab ring, same commit rules; lilac selection)
+  · `UI.segments(parent, options, get, set, opts?)` → the segmented bar, `:refresh · :setEnabled`;
+    `UI.toggleBar(parent, get, set)` = OFF | ON · `UI.check(parent, label, get, set)` → checkbox
+  · `UI.pick(parent, w, getLabel, getOptions, getCurrent, onPick, opts?)` → the dropdown: `kind =
+    "state"` (violet, as wide as its widest option when `w` is nil) or `"field"` (white + triangle);
+    an indigo list, current row amber. ⚠ The owner dislikes its look (BACKLOG 16) — expect change.
+  · `UI.sectionHeader(parent, text, { open, onToggle })` → triangle + Play Bold 14 violet; `:SetOpen`
+  · **`UI.dial(parent, opts)` → THE SCRUB DIAL, the replacement for every slider.** `{ label, min,
+    max, step=1, get, set, unit="", centre=false, w=194, dragPx=900, fmt? }` → `:refresh ·
+    :setEnabled`. Its definition (five rounds with the owner) is the header comment — do not
+    redesign it. `UI.sliderRow` stays for un-migrated tabs.
+  · `UI.wordmark(parent, suffix, size, opts?)` → "gloom" + SUFFIX in Michroma, `:SetMark`
+  · `UI.profileRow(parent, api, mark)` → the footer form of `profileBlock` (same `api`, same
+    dialogs, same delete gate); the shell calls it — a tab passes `profile` to `RegisterTab`.
+  · `UI.makeScrollbar(parent, scroll, place, { kit = true })` → the kit's capsule scrollbar.
+  · The **dialogs, tooltip and colour picker** wear the kit (night plate + indigo rim, kit buttons;
+    the picker is 440 wide with the Opacity DIAL on the hex row). **Modals dim the Suite WINDOW,
+    not the screen** (the owner, 2026-09-21); the picker never dims (his 2026-07-26 ruling stands).
+  · Art under `Media/ui/`: `round4` (nine-slice) · `pill` (scrollbar) · `dot` · `tri` (points DOWN;
+    +90° = right) · `dial` / `dial-c` (the tick strips, 141 × 16).
+  · **Not built yet:** the colour CHIP (swatch + "(Remove)" / "None") and the picker's colour
+    SOURCES — they land with the first consumer that stores a source (stage 2).
 - **NOT exported (deliberate):** `makeSection` — each tab's accordion closes over its own
   scroll/relayout/one-open state, so the Media tab and the Bars tab each keep a local copy of
   the small pattern. Revisit at Phase D if GA shows a clean shared shape; adding it then is a
@@ -344,6 +394,7 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
   sort -u`) and register the ones the base list misses. GB registers: `title 17/18 · head
   12/13 · body 9.5/10/12.5 · label 10/10.5/11` (Config.lua, right after the toolkit aliases).
   GA registers: `title 13/16/17/18/20 · head 12/13 · label 11/12` (same spot in its Config.lua).
+  The kit's pairs joined the base list at MINOR 11: `ui 11 · uiB 12/14 · mark 12/14/22`.
   Overlays registers: `title 16 · head 13 · label 11` (GloomsOverlays_Editor.lua). Pairs dedupe
   across addons, so overlap — and a tool re-registering something the base already covers — is free.
 - **Versioning:** LibStub newest-wins. Additive changes bump MINOR here + in `Skin.lua`
@@ -441,7 +492,7 @@ end
 | `GloomsOverlays/GloomsOverlays_Editor.lua` | MINOR **4** — calls `UI.tabHeader` |
 | `GloomsOverlays/GloomsOverlays_Preview.lua` | MINOR **3** — the drawer needs nothing newer |
 | `GloomsPortraits/GloomsPortraits_Tab.lua` | MINOR **4** — calls `UI.tabHeader` |
-| `GloomsUnitFrames/GloomsUnitFrames_Tab.lua` | MINOR **9** — calls `UI.grid` / `UI.popover` / `UI.cog` (bumped 2026-09-20, in the commit that first called them) |
+| `GloomsUnitFrames/GloomsUnitFrames_Tab.lua` | MINOR **11** — the kit (`UI.button` / `dial` / `pick` / `sectionHeader`) and `RegisterTab`'s `profile` footer (bumped 2026-09-21, in the commit that first called them) |
 
 ★ Note the table is **not uniform, and that is correct** — each file declares what IT
 actually uses. MINOR 4 landed as the first live exercise of this gate: `UI.tabHeader` was
@@ -449,7 +500,7 @@ added and the two files that call it were bumped **in the same commit**. GA foll
 same discipline on 2026-07-25 when its layout rework adopted `UI.tabHeader` — gate bumped
 in the commit that first called it, which is the only maintenance this gate ever needs.
 
-Hub currently ships **MINOR 9** (`Skin.lua`, 2026-09-20).
+Hub currently ships **MINOR 11** (`Skin.lua`, 2026-09-21).
 
 ⚠ **This line was stale for three weeks** — it still said MINOR 6 after 7 shipped on 2026-08-15, and
 was only caught on 09-08. It is the line a session reads to decide whether a `SKIN_NEEDS` bump is

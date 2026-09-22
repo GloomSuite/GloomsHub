@@ -9,12 +9,11 @@
 > **Keep this file short enough to re-read.** If it passes ~180 lines, move the settled history to
 > [ARCHIVE.md](ARCHIVE.md). A document nobody re-reads is a document nobody corrects.
 
-**Last updated:** 2026-09-21 (**GU has BAR MODE; the Hub has a bar-shape family; the Suite UI
-redesign is briefed.** Every Unit Frames display draws as an arc OR a shaped straight bar
-(FINDINGS §21), with per-display layering and an outline; the Hub's `Shapes.lua` carries a second,
-separate silhouette family for bars with its generator in `tools/`; Portraits has an Off
-visibility. The owner mocked the entire Suite window in Figma (24 screens, 1060 × 740, a
-PRIMITIVES kit) — BACKLOG item 16 is the brief and the next several sessions.)
+**Last updated:** 2026-09-21, late (**the Suite UI redesign's STAGE 1 shipped on master.** The
+window is the mocks' light-grey 1060 × 740 shell, `LibGloomSkin` is at MINOR 11 with the whole
+PRIMITIVES kit, and the Unit Frames tab's Global section is on it; every other tab draws through
+a transition theme until its stage. BACKLOG 16 holds the stages. Earlier the same day: GU's BAR
+MODE (FINDINGS §21), the Hub's bar-shape family, Portraits' Off visibility.)
 
 ---
 
@@ -56,6 +55,11 @@ of it.
 ## Locked decisions — do not reopen
 
 - **Shared base = GloomsHub**, permanent asset path `Interface\AddOns\GloomsHub\…`.
+- **★ THE SUITE UI IS BEING REBUILT FROM THE OWNER'S FIGMA MOCKS** (decided 2026-09-21; stage 1
+  shipped the same day). Light-grey 1060 × 740 window, Play + Michroma, the scrub dial for every
+  slider, no cogs or popovers, colour sources in the picker, one layer control. BACKLOG 16 is the
+  brief and the stage ledger; CONTRACTS §1/§2/§4 hold the tokens, the shell and the kit. **Do not
+  tidy or restyle any pre-kit tab on its own** — each is rebuilt from its mocks in its stage.
 - **★ THE SILHOUETTE CATALOG AND THE ANIMATION ENGINE ARE THE HUB'S** (2026-08-25). Shapes, their
   art, and the eight effect modules serve GB *and* GA, so they have one home like every other shared
   fact. **Since 2026-09-21 the Hub carries TWO families**: the button shapes (GB, GA) and the
@@ -99,8 +103,9 @@ of it.
   window; its config renders ONLY inside the Hub's shell. Chosen over graceful fallback precisely to
   avoid two window paths that could drift. A tool installed without the Hub fails **loudly**.
 - **★ VERSIONS MAY DRIFT — release only the addon that changed** (2026-07-25). *"It doesn't bother
-  me if the versions of the individual units drift."* The shell footer lists every installed addon's
-  version, which is what retired the reason for synchronizing them. (The one-time `v1.2.0`
+  me if the versions of the individual units drift."* The shell lists every installed addon's
+  version (since the redesign, as the hover-tip of the window's wordmark), which is what retired
+  the reason for synchronizing them. (The one-time `v1.2.0`
   squaring-up of 2026-07-26 was a tidy-up after the PII purge, not a standing rule — ARCHIVE.)
 - **★ EVERY `LibGloomSkin` CONSUMER CARRIES A VERSION GATE** — pinned in [CONTRACTS.md](CONTRACTS.md)
   §6. This is what makes drift safe. `## Dependencies: GloomsHub` checks only that the Hub is
@@ -137,31 +142,31 @@ of it.
 
 **`~/GloomsHub`** — symlinked into AddOns. `Core.lua` (namespace, `GloomsHubDB`, ST copy-migration,
 the permanent compat shim, `/gh` probe) · `Skin.lua` (**the body of `LibGloomSkin-1.0`**, LibStub-
-registered, **MINOR 10** — tokens, toolkit, `WarmFonts`/`RegisterWarmPairs`, **the suite's own colour
-picker + its "in use" palette**, **the two-column `UI.grid` and the `UI.cog` → `UI.popover`
-sub-settings panel**, **every edit box's Tab / Shift-Tab ring and Up / Down stepping, the
-profile-delete gate** (2026-09-20); `GloomsHub.COLOR/.FONT/
-.UI/.MEDIA` are aliases) · **`Shapes.lua`** (the suite's silhouette catalog — 21 shapes,
+registered, **MINOR 11** — tokens, toolkit, `WarmFonts`/`RegisterWarmPairs`, the suite's own colour
+picker + its "in use" palette, the two-column `UI.grid`, the `UI.cog` → `UI.popover` sub-settings
+panel, every edit box's Tab ring and Up / Down stepping, the profile-delete gate, **and THE KIT
+(2026-09-21): the redesign's tokens and widgets — `UI.button / segments / toggleBar / check /
+field / pick / sectionHeader / dial / wordmark / profileRow`, the kit scrollbar, the dialogs,
+tooltip and picker on the night plate** — with the pre-kit widgets re-pointed to draw on the light
+plate until every tab has migrated; `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are aliases) · **`Shapes.lua`** (the suite's silhouette catalog — 21 shapes,
 `GloomsHub:ShapeAsset/ShapeInfo/GrowAnchor` — **the ONE grow-anchor; GB's `hgAnchor` delegates
 to it since 2026-09-20**) · **`Effects.lua`** (the eight shaped animation
 modules + `GloomsHub.Effects`) · `Shell.lua` (the Suite window: `RegisterTab`/`Open`/`FocusTab`/
 `ToggleWindow` + `/gloom`) · `Media.lua` (LSM registration — `RegisterAll` at the Hub's
 ADDON_LOADED, `VerifyFonts` at PLAYER_ENTERING_WORLD — `ResolveAssetPath`, `ListMedia`, the
-Media tab) · `MinimapButton.lua` (**the ONE suite launcher** — never one per tool).
+Media tab) · `MinimapButton.lua` (**the ONE suite launcher** — never one per tool). `Shell.lua`
+is the mocks' shell since 2026-09-21 (CONTRACTS §2): header · banner · footer profile row.
+`tools/figma.py` reads the mocks straight from the Figma desktop server (the app's connector
+lists no tools).
 
-**The shape catalog and the animation engine are the Hub's since 2026-08-25**, moved out of GB so
-Gloom's Auras could draw the same silhouettes without a second copy of 136 files. GB still owns
-which shape a button wears, its picker, the plate extension and all glow TRIGGERING; the Hub owns
-the vocabulary, the art and the renderers. GB's `HAND_SHAPES`/`HAND_ORDER`/`HAND_GROUPS`/`HandAsset`
-are unchanged aliases onto the Hub's, so its ~25 call sites never moved, and `GB.Anims` kept its
-whole public surface (`Get`/`Each`/`Params`/`Enabled`/`Reconcile`/`Invalidate`/`PreviewReconcile`)
-so its `Config.lua` and `Glows.lua` did not change at all. Owner-QA'd: all 21 thumbnails, procs and
-animations identical before and after. ⚠ **GB's `Glows.lua` shaped halo did NOT move** — it is
-entangled with Blizzard's spell-alert hooks and has a solid centre that only works because an opaque
-button icon hides it. GA gets its glow from the HOLLOW rim-based modules instead.
+**The shape catalog and the animation engine are the Hub's since 2026-08-25** (a locked decision
+above); GB keeps the aliases so its call sites never moved, and **GB's `Glows.lua` shaped halo
+deliberately did NOT move** (entangled with Blizzard's spell-alert hooks). The move's record and
+QA are in [ARCHIVE.md](ARCHIVE.md).
 
-**Tracked assets are `Media/` ONLY** — Khand ×2, GeneralSans ×3, their licence files, the GS and Gh
-marks, plus **`Media/art/shapes/` (136 silhouette files) and `Media/art/effects/` (5 shared effect
+**Tracked assets are `Media/` ONLY** — Khand ×2, GeneralSans ×3, **Play ×2 and Michroma (the
+redesign's faces, OFL, licences beside them — added 2026-09-21)**, the GS and Gh marks, the kit's
+UI art (`Media/ui/`: `round4` `pill` `dot` `tri` `dial` `dial-c`), plus **`Media/art/shapes/` (136 silhouette files) and `Media/art/effects/` (5 shared effect
 textures)**. `Libs/` is gitignored and pulled by the packager. ⚠ **`Fonts/`, `Textures/` and `Graphics/`
 are the USER's drop-in directories and are gitignored** (2026-07-26). They still exist on the
 owner's disk — 7 / 13 / 45 files, which his catalog resolves normally — but they are not in the repo,
@@ -202,12 +207,13 @@ cast/kick logic — a target's secret cast drawn from the duration object's perc
 the **TEXT pieces** (`GloomsUnitFrames_Text.lua`: shortcode templates → one `SetFormattedText`),
 the **AURA groups** (`GloomsUnitFrames_Auras.lua`: Buffs / Debuffs `AuraContainer` groups with
 class filters and Hub shapes — FINDINGS §20; the sample-icon PREVIEW while the tab's Auras section
-is open) and the **Unit Frames** tab (`GloomsUnitFrames_Tab.lua`, `SKIN_NEEDS = 10`, order 50: the
-PROFILE block above UNITS in the rail, then a GB-style accordion whose bodies are `UI.grid`s with
-cogs for the deep clusters: Position · Layer · Visibility · Texts · Auras · one section per ring,
-each with a **Drawn as · Arc | Bar** switch, an Outline, and an Own-layer toggle). The engine's
-BAR renderer (`NewBar`, FINDINGS §21) sits beside the arc renderer; `/gu bar <ring> …` drives it
-from chat. ⚠ This tab's look is being replaced by the redesign (BACKLOG 16).
+is open) and the **Unit Frames** tab (`GloomsUnitFrames_Tab.lua`, `SKIN_NEEDS = 11`: **mid-redesign** —
+since stage 1 (2026-09-21) its profile row is in the window's footer, Player / Target are the two
+Michroma buttons at the top with Copy-from / Reset at the row's right, the section headers are
+the kit's, and the **Global** section (Visibility · X / Y dials · Layer · Level) is built from the
+kit; Texts · Auras · one section per ring are still the pre-kit `UI.grid` bodies with cogs,
+drawn through the transition theme, until stage 2 rebuilds them). The engine's BAR renderer
+(`NewBar`, FINDINGS §21) sits beside the arc renderer; `/gu bar <ring> …` drives it from chat.
 `/gu` → `ToggleWindow("unitframes")`. Art in `Media/art/` is GENERATED (Python/PIL, the
 scripts were throwaway): `disc.png` + its ramp companion and `disc-ramp-10…90.png` (the ramp at
 narrower fade widths, for the shield wash), the two half-plane masks per sweep direction, the two

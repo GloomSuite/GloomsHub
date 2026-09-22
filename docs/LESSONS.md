@@ -358,6 +358,18 @@ GU's `cNum` shows the live-stepping hook.
 
 ## Lua & tooling
 
+- **★ `Skin.lua` ends the lib body with `end   -- if lib` — anything pasted AFTER that line is
+  outside the lib.** On 2026-09-21 the whole kit (300 lines) landed after it: `UI` and `COLOR` were
+  nil there, the first `UI.x = …` raised at load, `LibStub` never got the lib, and every consumer
+  died with six unrelated-looking BugSack errors (`attempt to index field 'UI'`, `MEDIA` nil …).
+  `luac -p` passes it. When adding to the lib, insert BEFORE the "Hub-side aliases" section and
+  check with `grep -n '^end   -- if lib'` that the new code sits above that line. A stubbed WoW
+  API smoke test (`scratchpad/stub.lua` that session — a `CreateFrame` returning tables whose
+  unknown METHODS are no-ops and whose unknown DATA fields are nil) catches this class in a second.
+- **The Claude desktop app's Figma connector can say "connected, 0 tools" while the server is
+  fine.** Do not wait for it or tell the owner his Figma is closed: `curl` the server
+  (`127.0.0.1:3845/mcp`) — if `initialize` answers, drive it with `~/GloomsHub/tools/figma.py`.
+
 - **`luac -p` does NOT catch an orphaned global.** Delete a block, leave a module-local that another
   function still calls, and it becomes a nil global — valid Lua, passes the syntax check, throws at
   runtime. After **any block deletion or rename**:
@@ -408,6 +420,19 @@ GU's `cNum` shows the live-stepping hook.
 ---
 
 ## WoW client behaviour
+
+- **★ An EditBox shows the TAIL of text that does not fit.** A 42px readout holding "-700px"
+  displays "0px" — the cursor sits at the end after `SetText`, and the box scrolls to it. On
+  2026-09-21 this read as "the value has no relation to reality" and cost three rounds before the
+  logic (which was right) was suspected of the wrong thing. Size a readout to its WIDEST possible
+  string (measure `fmt(min)`, `fmt(max)` with a hidden FontString) and `SetCursorPosition(0)` after
+  each `SetText`. Also: an EditBox KEEPS keyboard focus when you click elsewhere — a control that
+  shares a readout with a box must take the focus away itself (without committing) or its own
+  updates get suppressed by the "don't overwrite while typing" guard.
+- **`Texture:SetTextureSliceMargins` + `SetTextureSliceMode` work on 12.1** with a non-power-of-two
+  16×16 PNG — that is how every 4px-cornered kit widget is drawn from ONE file (`Media/ui/round4.png`,
+  margins 5). `SetVertexColor` tints a sliced texture normally. An 8×16 capsule sliced top/bottom
+  only makes the scrollbar.
 
 - **★★ NEVER TRUTH-TEST A SECRET; CARRY A PLAIN `ok` IN FRONT OF IT.** On 2026-09-19 the first
   draft of the class-color code did `cr and {cr, cg, cb} or default` on a channel that can be
@@ -616,6 +641,21 @@ GU's `cNum` shows the live-stepping hook.
 ---
 
 ## Design & working with the owner
+
+- **★★ For a NEW interaction, describe what he should see AT THE EXTREMES before he touches it —
+  and build one cheap round, then ask.** The scrub dial took FIVE rounds on 2026-09-21: a slider
+  with ticks, a jog wheel, a hidden needle, a needle again, then the nearest-tick-turns-amber the
+  owner actually meant. Every wrong model looked plausible at a value in the middle; each was
+  exposed only at 0 / min / max. Two things would have cut it to two rounds: (1) asking, at the
+  brief, what the mark does at zero and at the ends (his answer defined the whole widget in four
+  sentences once asked); (2) the QA line saying "at 0 the mark is ON the thick centre tick; at the
+  far left it IS the left post" instead of "try dragging it". "Did it work?" tells you nothing —
+  he answered "the dial did drag" and it was wrong in three ways.
+- **His frustration is information about the QA loop, not the code.** *"What the fuck do you want
+  me to test"* came after four rounds of "reload and look" with nothing finished to look at. When
+  a stage is a foundation (tokens, a shell, a kit), SAY that only one panel is on it and name the
+  three things worth his eyes; do not send him hunting through un-migrated sections for widgets
+  that are not there yet.
 
 - **★ Report the CONCLUSION, not the evidence he cannot check.** He said it plainly on 2026-08-24:
   *"You do realize that I can't/don't read the SavedVariables files myself, right? I'm a human."* A

@@ -4,41 +4,52 @@
 -- CONTRACTS §2 exactly: GloomsHub:RegisterTab / :Open /
 -- :FocusTab (+ :ToggleWindow for the slash semantics).
 -- Tabs' build(container) runs ONCE, lazily, on first show —
--- never at login. Chrome is the family language, lifted from
--- GB Config.lua's BuildPanel.
+-- never at login.
+--
+-- ★ REDESIGNED 2026-09-21 (BACKLOG 16, stage 1) from the owner's Figma mocks:
+-- a 1060 × 740 light-grey window in three bands —
+--   HEADER  (54)  "gloomSUITE" wordmark left · the tab buttons + X right
+--   BANNER  (36)  a 250px violet block carrying the TOOL's wordmark, the rest dim
+--   FOOTER  (65)  a line, then the tool's PROFILE row (label · picker · buttons)
+-- The content area is what is left: 1060 × 585 for a tab that supplies a
+-- `profile` api (the footer is drawn for it), 1060 × 650 for one that does not
+-- (no footer; the pre-redesign tabs keep their pinned 860 × 626 this way).
 -- ============================================================
 
 local Hub = GloomsHub
 local UI, COLOR, FONT = Hub.UI, Hub.COLOR, Hub.FONT
 
--- Sized to host the tools' layouts: GB's three-pane body (820 wide, Phase C)
--- and GA's 620×~614 master/detail column (Phase D — the height driver).
--- The resulting content area (860 × 626) is PINNED in CONTRACTS §2: the shell
--- may grow it, but never shrink below that without updating every tab.
-local SHELL_W, SHELL_H = 860, 740
-local TITLE_DIV_Y = -48          -- title bar divider (family constant)
-local TAB_STRIP_H = 34
-local FOOTER_H = 30
-local WHITE = "Interface\\Buttons\\WHITE8X8"
+local SHELL_W, SHELL_H = 1060, 740
+local HEAD_H   = 54
+local BANNER_H = 36
+local BANNER_W = 250          -- the violet block
+local FOOT_H   = 65           -- the line sits at 740 - 65 = 675
+local CONTENT_Y = -(HEAD_H + BANNER_H)   -- -90
+
+-- The strip's order is the MOCKS' (Auras · Bars · Unit Frames · Portraits ·
+-- Overlays · Media), fixed here so no tool's registration can reorder it;
+-- an unknown id falls back to its own `order`.
+local TAB_ORDER = { auras = 10, bars = 20, unitframes = 30, portraits = 40, overlays = 50, media = 90 }
 
 local tabs = {}       -- id → def
 local ordered = {}    -- defs sorted by order
-local panel, tabStrip
+local panel, header, banner, footer
 local current         -- id of the focused tab
 
--- The suite's four addons, in tab order. ★ Gloom's Build Barn is deliberately
+-- The suite's addons, in tab order. ★ Gloom's Build Barn is deliberately
 -- NOT here — it is not a suite member (a locked decision; it mounts no tab).
--- Adding a fifth tool means adding it here.
 local SUITE = {
-  { addon = "GloomsHub",      short = "Hub" },
-  { addon = "GloomsBars",     short = "Bars" },
-  { addon = "GloomsAuras",    short = "Auras" },
-  { addon = "GloomsOverlays", short = "Overlays" },
+  { addon = "GloomsHub",        short = "Hub" },
+  { addon = "GloomsAuras",      short = "Auras" },
+  { addon = "GloomsBars",       short = "Bars" },
+  { addon = "GloomsUnitFrames", short = "Unit Frames" },
+  { addon = "GloomsPortraits",  short = "Portraits" },
+  { addon = "GloomsOverlays",   short = "Overlays" },
 }
 
--- Version of any suite addon. nil = NOT INSTALLED (so the footer can omit it);
+-- Version of any suite addon. nil = NOT INSTALLED (so the line can omit it);
 -- "dev" = the TOC still holds the packager's literal @project-version@, i.e. a
--- dev checkout / symlink rather than a WoWup-installed build.
+-- dev checkout / symlink rather than a packaged build.
 function Hub:Version(addon)
   local v = C_AddOns and C_AddOns.GetAddOnMetadata
         and C_AddOns.GetAddOnMetadata(addon or "GloomsHub", "Version")
@@ -47,13 +58,11 @@ function Hub:Version(addon)
   return v
 end
 
--- ★ EVERY installed suite addon's version, not just the Hub's (the owner,
--- 2026-07-25: "the individual addon version isn't shown anywhere in GH").
--- The four addons version INDEPENDENTLY — the synchronized scheme was relaxed
--- the same day — so one number could never describe the install. This is also
--- the first question in any support exchange, and the alternative was hovering
--- four separate entries in Blizzard's addon list.
--- This is the long-open "shared-footer contents" question, answered.
+-- ★ EVERY installed suite addon's version (the owner, 2026-07-25: "the
+-- individual addon version isn't shown anywhere in GH"). The addons version
+-- INDEPENDENTLY, so one number could never describe the install, and this is
+-- the first question in any support exchange. The mocks have no footer version
+-- line, so since the redesign it is the hover-help of the window's wordmark.
 function Hub:VersionLine()
   local parts = {}
   for _, e in ipairs(SUITE) do
@@ -61,30 +70,27 @@ function Hub:VersionLine()
     if v then parts[#parts + 1] = e.short .. " " .. v end
   end
   if #parts == 0 then return "Gloom Suite" end
-  return "Gloom Suite  —  " .. table.concat(parts, "   ·   ")
+  return table.concat(parts, "\n")
 end
 
 -- ------------------------------------------------------------
--- Tab strip
+-- Tab strip — right-aligned, the X last, in tab order left to right
 -- ------------------------------------------------------------
 
 local function RebuildTabStrip()
-  if not tabStrip then return end
-  local prev
-  for _, def in ipairs(ordered) do
+  if not header then return end
+  local right = header.close
+  for i = #ordered, 1, -1 do
+    local def = ordered[i]
     local b = def._tabBtn
     if not b then
-      b = UI.flatButton(tabStrip, 70, 24, COLOR.purple, def.title or def.id:upper(), 13)
-      b:SetBase(0.35)
-      b:SetWidth(math.max(70, b.text:GetStringWidth() + 28))
-      b:SetScript("OnClick", function() Hub:FocusTab(def.id) end)
+      b = UI.button(header, def.title or def.id:upper(), { kind = "action", onClick = function() Hub:FocusTab(def.id) end })
       def._tabBtn = b
     end
     b:ClearAllPoints()
-    if prev then b:SetPoint("LEFT", prev, "RIGHT", 6, 0)
-    else b:SetPoint("LEFT", tabStrip, "LEFT", 16, 0) end
+    b:SetPoint("RIGHT", right, "LEFT", -6, 0)
     b:SetActive(def.id == current)
-    prev = b
+    right = b
   end
 end
 
@@ -100,58 +106,51 @@ local function BuildPanel()
   panel:EnableMouse(true)
   panel:SetMovable(true); panel:SetClampedToScreen(true)
   -- Come to the front when opened or clicked, WITHOUT SetToplevel — toplevel
-  -- would pin us permanently above GB/GA (they aren't toplevel, so they could
-  -- never raise back). Their own click-to-raise arrives when they mount as
-  -- tabs (Phases C/D) and the standalone windows disappear.
+  -- would pin us permanently above anything that is not.
   panel:HookScript("OnShow", function(self) self:Raise() end)
   panel:HookScript("OnMouseDown", function(self) self:Raise() end)
-  UI.skinPlate(panel)
-  -- Signature warm bottom glow: orange gradient fading up over the lower ~55%.
-  local glow = panel:CreateTexture(nil, "BORDER")
-  glow:SetTexture(WHITE)
-  glow:SetPoint("BOTTOMLEFT", 1, 1); glow:SetPoint("BOTTOMRIGHT", -1, 1); glow:SetHeight(SHELL_H * 0.55)
-  glow:SetGradient("VERTICAL",
-    CreateColor(COLOR.orange.r, COLOR.orange.g, COLOR.orange.b, 0.11),
-    CreateColor(COLOR.orange.r, COLOR.orange.g, COLOR.orange.b, 0))
-  UI.addEdges(panel, COLOR.rim, 1)
+  local plate = panel:CreateTexture(nil, "BACKGROUND")
+  plate:SetAllPoints(); plate:SetColorTexture(COLOR.plate.r, COLOR.plate.g, COLOR.plate.b, 1)
 
-  -- Title bar: the GS monogram (Media/ui/logo.png) left of the wordmark.
-  -- ★ The mark is the SUITE's (GS), not the Hub-as-an-addon's (Gh, Media/ui/hub.png,
-  -- which is the TOC IconTexture). This window is the suite, so it wears GS.
-  -- Art is the 2026-07-25 set: 512×512 SQUARE with transparent ground and internal
-  -- padding — the old logos were portrait with the name baked in underneath.
-  local logo = panel:CreateTexture(nil, "ARTWORK")
-  logo:SetTexture(Hub.MEDIA .. "ui\\logo.png")
-  logo:SetSize(28, 28)   -- square; matches the old 28 height so the title bar is unchanged
-  logo:SetPoint("TOPLEFT", 14, -10)
-  local mark = UI.newText(panel, FONT.title, 21, { r = 1, g = 1, b = 1 }, "LEFT")
-  mark:SetPoint("LEFT", logo, "RIGHT", 9, 0); mark:SetText("GLOOM SUITE")
-  local close = UI.flatButton(panel, 22, 20, COLOR.heroic, "X", 12)
-  close:SetPoint("TOPRIGHT", -8, -13); close:SetScript("OnClick", function() panel:Hide() end)
-  local tdiv = UI.hLine(panel)
-  tdiv:SetPoint("TOPLEFT", 0, TITLE_DIV_Y); tdiv:SetPoint("TOPRIGHT", 0, TITLE_DIV_Y)
+  -- HEADER: the wordmark, the tab strip, the X.
+  header = CreateFrame("Frame", nil, panel)
+  header:SetPoint("TOPLEFT", 0, 0); header:SetPoint("TOPRIGHT", 0, 0); header:SetHeight(HEAD_H)
+  local mark = UI.wordmark(header, "SUITE", 22)
+  mark:SetPoint("TOPLEFT", 20, -7)
+  local markHit = CreateFrame("Frame", nil, header)   -- a FontString cannot take a hover
+  markHit:SetPoint("TOPLEFT", mark, "TOPLEFT", 0, 0); markHit:SetPoint("BOTTOMRIGHT", mark, "BOTTOMRIGHT", 0, 0)
+  UI.attachTip(markHit, "Gloom Suite", function() return Hub:VersionLine() end)
+  header.close = UI.button(header, "X", { kind = "quiet", padX = 8, onClick = function() panel:Hide() end })
+  header.close:SetPoint("TOPRIGHT", -20, -15)
 
-  -- Drag strip (title bar)
+  -- Drag strip: the header band, minus the buttons (they sit above it).
   local drag = CreateFrame("Frame", nil, panel)
-  drag:SetPoint("TOPLEFT", 2, -2); drag:SetPoint("TOPRIGHT", -34, -2); drag:SetHeight(44)
+  drag:SetPoint("TOPLEFT", 0, 0); drag:SetPoint("TOPRIGHT", 0, 0); drag:SetHeight(HEAD_H)
   drag:EnableMouse(true); drag:RegisterForDrag("LeftButton")
   drag:SetScript("OnDragStart", function() if panel:IsMovable() then panel:StartMoving() end end)
   drag:SetScript("OnDragStop", function() panel:StopMovingOrSizing() end)
+  drag:SetFrameLevel(header:GetFrameLevel())
+  header:SetFrameLevel(drag:GetFrameLevel() + 1)
 
-  -- Tab strip row under the title bar, its own divider beneath.
-  tabStrip = CreateFrame("Frame", nil, panel)
-  tabStrip:SetPoint("TOPLEFT", 0, TITLE_DIV_Y)
-  tabStrip:SetPoint("TOPRIGHT", 0, TITLE_DIV_Y)
-  tabStrip:SetHeight(TAB_STRIP_H)
-  local sdiv = UI.hLine(panel)
-  sdiv:SetPoint("TOPLEFT", 0, TITLE_DIV_Y - TAB_STRIP_H)
-  sdiv:SetPoint("TOPRIGHT", 0, TITLE_DIV_Y - TAB_STRIP_H)
+  -- BANNER: the tool's wordmark on violet, the rest of the row dim.
+  banner = CreateFrame("Frame", nil, panel)
+  banner:SetPoint("TOPLEFT", 0, -HEAD_H); banner:SetPoint("TOPRIGHT", 0, -HEAD_H); banner:SetHeight(BANNER_H)
+  local block = banner:CreateTexture(nil, "BACKGROUND")
+  block:SetPoint("TOPLEFT"); block:SetPoint("BOTTOMLEFT"); block:SetWidth(BANNER_W)
+  block:SetColorTexture(COLOR.violet.r, COLOR.violet.g, COLOR.violet.b, 1)
+  local rest = banner:CreateTexture(nil, "BACKGROUND")
+  rest:SetPoint("TOPLEFT", BANNER_W, 0); rest:SetPoint("BOTTOMRIGHT")
+  rest:SetColorTexture(COLOR.dim.r, COLOR.dim.g, COLOR.dim.b, COLOR.dim.a)
+  banner.mark = UI.wordmark(banner, "", 14, { prefixColor = COLOR.paper, suffixColor = COLOR.paper, justify = "RIGHT" })
+  banner.mark:SetPoint("RIGHT", banner, "LEFT", BANNER_W - 20, 0)
 
-  -- Footer: divider + the version line for EVERY installed suite addon.
-  local fdiv = UI.hLine(panel)
-  fdiv:SetPoint("BOTTOMLEFT", 0, FOOTER_H); fdiv:SetPoint("BOTTOMRIGHT", 0, FOOTER_H)
-  local ver = UI.newText(panel, FONT.body, 10.5, COLOR.mute, "LEFT")
-  ver:SetPoint("BOTTOMLEFT", 16, 10); ver:SetText(Hub:VersionLine())
+  -- FOOTER: the line and the slot the focused tab's profile row sits in.
+  footer = CreateFrame("Frame", nil, panel)
+  footer:SetPoint("BOTTOMLEFT", 0, 0); footer:SetPoint("BOTTOMRIGHT", 0, 0); footer:SetHeight(FOOT_H)
+  local line = footer:CreateTexture(nil, "ARTWORK")
+  line:SetPoint("TOPLEFT", 0, 0); line:SetPoint("TOPRIGHT", 0, 0); line:SetHeight(1)
+  line:SetColorTexture(COLOR.ink.r, COLOR.ink.g, COLOR.ink.b, 1)
+  footer:Hide()
 
   tinsert(UISpecialFrames, "GloomsSuiteWindow")   -- Escape closes it
   RebuildTabStrip()
@@ -173,26 +172,39 @@ function Hub:RegisterTab(def)
   end
   tabs[def.id] = def
   ordered[#ordered + 1] = def
-  table.sort(ordered, function(a, b) return (a.order or 50) < (b.order or 50) end)
+  table.sort(ordered, function(a, b) return (TAB_ORDER[a.id] or a.order or 50) < (TAB_ORDER[b.id] or b.order or 50) end)
   if panel then RebuildTabStrip() end
 end
 
 local function EnsureContainer(def)
   if def._container then return def._container end
   local c = CreateFrame("Frame", nil, panel)
-  c:SetPoint("TOPLEFT", 0, TITLE_DIV_Y - TAB_STRIP_H - 1)
-  c:SetPoint("BOTTOMRIGHT", 0, FOOTER_H + 1)
+  c:SetPoint("TOPLEFT", 0, CONTENT_Y)
+  -- A tab with a profile api gets the footer and stops above it; one without
+  -- runs to the bottom of the window (the pre-redesign tabs' 626 fits there).
+  c:SetPoint("BOTTOMRIGHT", 0, def.profile and FOOT_H or 0)
   c:Hide()
   def._container = c
   def.build(c)   -- ONCE, lazily, on first show
   return c
 end
 
+-- The footer row is built once per tab that supplies `profile`, on first focus.
+local function EnsureProfileRow(def)
+  if def._profileRow or not def.profile then return def._profileRow end
+  local row = UI.profileRow(footer, def.profile, def.wordmark or def.title or "")
+  row.frame:SetPoint("TOPLEFT", 53, -20); row.frame:SetPoint("TOPRIGHT", -20, -20)
+  def._profileRow = row
+  return row
+end
+
 function Hub:FocusTab(id)
   local def = tabs[id]
   if not def or not panel then return end
-  if current and tabs[current] and tabs[current]._container then
-    tabs[current]._container:Hide()
+  if current and tabs[current] then
+    local old = tabs[current]
+    if old._container then old._container:Hide() end
+    if old._profileRow then old._profileRow.frame:Hide() end
   end
   local c = EnsureContainer(def)
   c:Show()
@@ -201,6 +213,10 @@ function Hub:FocusTab(id)
   for _, d in ipairs(ordered) do
     if d._tabBtn then d._tabBtn:SetActive(d.id == id) end
   end
+  banner.mark:SetMark(def.wordmark or def.title or def.id:upper())
+  local row = EnsureProfileRow(def)
+  footer:SetShown(row ~= nil)
+  if row then row.frame:Show(); row:refresh() end
   if def.refresh then def.refresh() end
 end
 
