@@ -116,7 +116,10 @@ local function BuildPanel()
   header = CreateFrame("Frame", nil, panel)
   header:SetPoint("TOPLEFT", 0, 0); header:SetPoint("TOPRIGHT", 0, 0); header:SetHeight(HEAD_H)
   local mark = UI.wordmark(header, "SUITE", 22)
-  mark:SetPoint("TOPLEFT", 20, -7)
+  -- The mock's text box is 31 tall at y=7 (Figma leading); a FontString has
+  -- none, so anchor the glyphs' CENTRE where the box's is — level with the
+  -- tab pills (the owner, 2026-09-21: "too high up" when anchored at the top).
+  mark:SetPoint("LEFT", header, "TOPLEFT", 20, -23)
   local markHit = CreateFrame("Frame", nil, header)   -- a FontString cannot take a hover
   markHit:SetPoint("TOPLEFT", mark, "TOPLEFT", 0, 0); markHit:SetPoint("BOTTOMRIGHT", mark, "BOTTOMRIGHT", 0, 0)
   UI.attachTip(markHit, "Gloom Suite", function() return Hub:VersionLine() end)

@@ -129,7 +129,7 @@ shipper — its `Skin.lua` IS the lib body (embedding a copy in each tool via `.
 externals is Phase G work). `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are Hub-side aliases of the
 same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Phase E**.
 
-**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 11) — the whole API; nothing else is public:**
+**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 12) — the whole API; nothing else is public:**
 - `Skin.COLOR` — `purple · heroic · green · red · orange` (each `{r,g,b,hex}`), `dark`, `rim`
   (both `{r,g,b,a}`), `text`, `mute` (`{r,g,b}`). The §1 literals.
 - `Skin.FONT` — `title · head · body · bodyM · label` → font files under
@@ -360,12 +360,30 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     `UI.toggleBar(parent, get, set)` = OFF | ON · `UI.check(parent, label, get, set)` → checkbox
   · `UI.pick(parent, w, getLabel, getOptions, getCurrent, onPick, opts?)` → the dropdown: `kind =
     "state"` (violet, as wide as its widest option when `w` is nil) or `"field"` (white + triangle);
-    an indigo list, current row amber. ⚠ The owner dislikes its look (BACKLOG 16) — expect change.
+    the list (the owner's revised look, MINOR 12): plate grey with a dim rim on three sides, 14px
+    rows of Play 11 black, the current row a 20% violet band, as wide as its widest item, centred
+    under the button, scrolls past 20.
   · `UI.sectionHeader(parent, text, { open, onToggle })` → triangle + Play Bold 14 violet; `:SetOpen`
   · **`UI.dial(parent, opts)` → THE SCRUB DIAL, the replacement for every slider.** `{ label, min,
-    max, step=1, get, set, unit="", centre=false, w=194, dragPx=900, fmt? }` → `:refresh ·
-    :setEnabled`. Its definition (five rounds with the owner) is the header comment — do not
-    redesign it. `UI.sliderRow` stays for un-migrated tabs.
+    max, step=1, get, set, unit="", centre=false, w=194, dragPx=900, fmt?, short=false, bare=false }`
+    → `:refresh · :setEnabled`. Its definition (five rounds with the owner) is the header comment —
+    do not redesign it. MINOR 12 added `short` (the mocks' 133px dial: a 78px strip of 24 ticks)
+    and `bare` (no label, 17 tall — a table row's dial under a column header). `UI.sliderRow` stays
+    for un-migrated tabs.
+  · **`UI.chip(parent, opts)` → THE COLOUR CHIP (MINOR 12):** a SQUARE 20 × 17 swatch + a word —
+    "(Remove)" (violet) on an optional colour that is set, "None" on one that is not, the source's
+    word on a source, nothing on a required fixed colour; `opts.text` puts a description after the
+    swatch (the Cast mock's interrupt rows). `opts = { get, set, hasAlpha, optional, label, title,
+    sources = { { value, label, word, color() } }, fixed(), text }`. get() returns `{r,g,b[,a]}`, a
+    source's value string, or nil; set() is handed the same three shapes. `:refresh · :setEnabled`.
+  · **The picker's colour SOURCES (MINOR 12):** `opts.sources / opts.source / opts.onSource(v)`.
+    A source button SELECTS (lights, seeds the field with the source's colour, previews through
+    `onChange(value)`); any colour edit unselects it; **OK** fires `onSource(value)` instead of
+    `onAccept`; Cancel restores as ever.
+  · `UI.cell(parent, labelText, make)` → the mocks' 35px labelled cell (MINOR 12): `make(cell)`
+    returns the control, placed 18 under a Play Bold 12 label; `:refresh · :show · :setEnabled`
+    (disabled by another setting = 50%, never hidden).
+  · `UI.popover` wears the kit since MINOR 12 (night plate, indigo rim, Play Bold 14 white title).
   · `UI.wordmark(parent, suffix, size, opts?)` → "gloom" + SUFFIX in Michroma, `:SetMark`
   · `UI.profileRow(parent, api, mark)` → the footer form of `profileBlock` (same `api`, same
     dialogs, same delete gate); the shell calls it — a tab passes `profile` to `RegisterTab`.
@@ -375,8 +393,7 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     not the screen** (the owner, 2026-09-21); the picker never dims (his 2026-07-26 ruling stands).
   · Art under `Media/ui/`: `round4` (nine-slice) · `pill` (scrollbar) · `dot` · `tri` (points DOWN;
     +90° = right) · `dial` / `dial-c` (the tick strips, 141 × 16).
-  · **Not built yet:** the colour CHIP (swatch + "(Remove)" / "None") and the picker's colour
-    SOURCES — they land with the first consumer that stores a source (stage 2).
+  · Art also under `Media/ui/`: `dial-s` (the short strip, 78 × 16).
 - **NOT exported (deliberate):** `makeSection` — each tab's accordion closes over its own
   scroll/relayout/one-open state, so the Media tab and the Bars tab each keep a local copy of
   the small pattern. Revisit at Phase D if GA shows a clean shared shape; adding it then is a
@@ -487,12 +504,12 @@ end
 ### Current requirement
 | Consumer | needs |
 |---|---|
-| `GloomsBars/Config.lua` | MINOR **5** — branches on `UI.setFont`'s return (font picker) |
+| `GloomsBars/Config.lua` | MINOR **12** — the kit incl. `UI.chip` / `cell` / the bare dial and `RegisterTab`'s `profile` footer (bumped 2026-09-21, redesign stage 3, in the commit that first called them) |
 | `GloomsAuras/Config.lua` | MINOR **6** — calls `UI.colorPicker` directly (its `MakeColor` swatch) |
 | `GloomsOverlays/GloomsOverlays_Editor.lua` | MINOR **4** — calls `UI.tabHeader` |
 | `GloomsOverlays/GloomsOverlays_Preview.lua` | MINOR **3** — the drawer needs nothing newer |
 | `GloomsPortraits/GloomsPortraits_Tab.lua` | MINOR **4** — calls `UI.tabHeader` |
-| `GloomsUnitFrames/GloomsUnitFrames_Tab.lua` | MINOR **11** — the kit (`UI.button` / `dial` / `pick` / `sectionHeader`) and `RegisterTab`'s `profile` footer (bumped 2026-09-21, in the commit that first called them) |
+| `GloomsUnitFrames/GloomsUnitFrames_Tab.lua` | MINOR **12** — the kit, `UI.chip`, the picker's colour sources, the short dial (bumped 2026-09-21, redesign stage 2) |
 
 ★ Note the table is **not uniform, and that is correct** — each file declares what IT
 actually uses. MINOR 4 landed as the first live exercise of this gate: `UI.tabHeader` was
@@ -500,7 +517,7 @@ added and the two files that call it were bumped **in the same commit**. GA foll
 same discipline on 2026-07-25 when its layout rework adopted `UI.tabHeader` — gate bumped
 in the commit that first called it, which is the only maintenance this gate ever needs.
 
-Hub currently ships **MINOR 11** (`Skin.lua`, 2026-09-21).
+Hub currently ships **MINOR 12** (`Skin.lua`, 2026-09-21).
 
 ⚠ **This line was stale for three weeks** — it still said MINOR 6 after 7 shipped on 2026-08-15, and
 was only caught on 09-08. It is the line a session reads to decide whether a `SKIN_NEEDS` bump is

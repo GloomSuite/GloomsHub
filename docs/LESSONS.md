@@ -366,6 +366,21 @@ GU's `cNum` shows the live-stepping hook.
   check with `grep -n '^end   -- if lib'` that the new code sits above that line. A stubbed WoW
   API smoke test (`scratchpad/stub.lua` that session — a `CreateFrame` returning tables whose
   unknown METHODS are no-ops and whose unknown DATA fields are nil) catches this class in a second.
+- **★ `Texture:SetAlpha` REPLACES the vertex alpha — it is the same channel `SetVertexColor`'s
+  fourth argument writes.** A texture tinted `dim` (grey at 50%) and then `SetAlpha(1)`'d goes
+  SOLID grey. On 2026-09-21 every segmented bar that had been through `setEnabled(true)` drew a
+  dark track while the one that had not stayed light, and the first guess (the segment fill) was
+  wrong. Dim a tinted texture by re-tinting it with the product alpha (`UI.tint(t, c, c.a * k)`),
+  or `SetAlpha` the FRAME. `Frame:SetAlpha` is a real multiplier; `Texture:SetAlpha` is not.
+- **`x and f()` keeps ONE return value.** Lua truncates a call in an `and`/`or` expression to its
+  first result, so `local r, g, b = src.color and src.color()` gives `r` and two nils — the chip
+  passed `SetVertexColor(0, nil, nil)` and the Power panel would not open. Write the `if` out.
+- **A FontString anchored `TOP` + `LEFT` + `RIGHT` is over-constrained** and WoW resolves it
+  unpredictably (the Bars preview caption drifted 10px left). Anchor two corners on the same edge
+  (`TOPLEFT` + `TOPRIGHT`) and give y through those.
+- **`get_metadata` from the Figma server can prefix "Currently selected nodes: …" as a FIRST
+  content entry** when something is selected in the app. Join every `content[].text` before
+  parsing; a parser that reads `content[0]` alone finds no frame and dies.
 - **The Claude desktop app's Figma connector can say "connected, 0 tools" while the server is
   fine.** Do not wait for it or tell the owner his Figma is closed: `curl` the server
   (`127.0.0.1:3845/mcp`) — if `initialize` answers, drive it with `~/GloomsHub/tools/figma.py`.
@@ -641,6 +656,19 @@ GU's `cNum` shows the live-stepping hook.
 ---
 
 ## Design & working with the owner
+
+- **★★ Build from the mock's NUMBERS, not from a grid you infer from it.** Stage 2 (2026-09-21)
+  snapped Display Type to a "column" at x=276 because two other rows had controls there; the mock
+  had it at 196 and it overlapped Shape. The owner: *"there aren't necessarily always columns in
+  the panels. I put things where they are for a reason."* Read every control's x/y off
+  `get_metadata`, compute body-relative coordinates (`headerY + 36`), and place them literally —
+  including per-mock segment padding (a four-way bar is ~8px, not the kit's 20) and per-mock
+  label suffixes ("Icon Size (Bar 1)"). Then compare the reload against the mock side by side
+  BEFORE handing it over: colour of chip buttons (dark, never light grey), a white separator, a
+  bar's width — he sent five comparison screenshots for things a side-by-side would have caught.
+- **When one of a set of identical widgets misbehaves, diff their HISTORY, not their code.** The
+  dark-track bars were exactly the ones `setEnabled` had touched; the code path was shared. "Which
+  of these went through a call the others did not?" found it in one look after two wrong guesses.
 
 - **★★ For a NEW interaction, describe what he should see AT THE EXTREMES before he touches it —
   and build one cheap round, then ask.** The scrub dial took FIVE rounds on 2026-09-21: a slider

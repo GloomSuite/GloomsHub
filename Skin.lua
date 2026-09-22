@@ -9,7 +9,7 @@
 -- change it THERE and every consumer in the same session.
 -- ============================================================
 
-local MAJOR, MINOR = "LibGloomSkin-1.0", 11  -- MINOR 11 (2026-09-21): THE KIT — the redesign's tokens (COLOR.plate/ink/violet/…, FONT.ui/uiB/mark) and widgets (UI.button · segments · toggleBar · check · field · label · pick · sectionHeader · dial · wordmark · profileRow); the old widgets stay for tabs not yet migrated
+local MAJOR, MINOR = "LibGloomSkin-1.0", 12  -- MINOR 12 (2026-09-21, redesign stages 2–3): UI.chip (the colour chip), the picker's colour SOURCES (selected, committed by OK), the SHORT and BARE dials, UI.cell, the revised dropdown list, the kit popover. MINOR 11: THE KIT — the redesign's tokens (COLOR.plate/ink/violet/…, FONT.ui/uiB/mark) and widgets (UI.button · segments · toggleBar · check · field · label · pick · sectionHeader · dial · wordmark · profileRow); the old widgets stay for tabs not yet migrated
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if lib then
@@ -109,6 +109,7 @@ UI.DOT    = lib.MEDIA .. "ui\\dot.png"     -- a disc (the checkbox's mark)
 UI.TRI    = lib.MEDIA .. "ui\\tri.png"     -- a triangle pointing DOWN; +90° = right
 UI.DIAL   = lib.MEDIA .. "ui\\dial.png"    -- the scrub dial's tick strip, 141×16 (13 used): 2 posts + 45 ticks, 2px gaps
 UI.DIAL_C = lib.MEDIA .. "ui\\dial-c.png"  -- … with the fixed centre mark (zero), tick 22 at x=69-71
+UI.DIAL_S = lib.MEDIA .. "ui\\dial-s.png"  -- the SHORT strip (MINOR 12), 78×16: 2 posts + 24 ticks, same 3px pitch
 UI.PILL   = lib.MEDIA .. "ui\\pill.png"    -- 8×16 capsule (slice top/bottom 5) — the kit scrollbar
 
 -- ★ SetFont RAISES on a missing font asset — it does NOT return false. Proven
@@ -775,6 +776,7 @@ end
 --                     swatchFunc, so consumers keep their live previews
 --   opts.onAccept(c)  OK only
 --   opts.onCancel()   after the original has been restored via onChange
+--   opts.sources / opts.source / opts.onSource(v)   MINOR 12 — see the kit's picker note
 --   opts.owner        the frame the picker belongs to (the swatch). When that
 --                     goes away — tab switch, Suite window closed — the picker
 --                     closes and CANCELS, rather than floating there editing a
@@ -1049,9 +1051,17 @@ end
 -- 380px column at a 30/20 inset: "Choose Color" · the field (250) + hue
 -- strip + preview · "Hex Value" and its white box (the Opacity dial takes
 -- the row's right end when the colour has alpha) · "Colors in Use" · OK /
--- CANCEL. The mock's "Use Class Color" button is the colour SOURCE (class /
--- power / reaction) the backlog puts in the picker; it lands with the first
--- consumer that stores a source (stage 2), not here.
+-- CANCEL. The mock's "Use Class Color" button is a colour SOURCE (MINOR 12):
+-- `opts.sources = { { value = "class", label = "Use Class Color" }, … }` draws
+-- (a source's `color()` → r, g, b seeds the field when it is picked) —
+-- one dark button per source at the hex row's right end (on the OK row when
+-- the Opacity dial holds that spot); `opts.source` names the one in force
+-- (drawn violet). Clicking one SELECTS it — the button lights and the
+-- consumer previews it through onChange(value), exactly as a drag previews a
+-- colour — and any colour edit after that unselects it. OK then fires
+-- `opts.onSource(value)` instead of onAccept; Cancel restores as ever. (The
+-- owner, 2026-09-21: a source "shouldn't select and close the picker … the
+-- user should still need to click OK".) UI.chip is the consumer.
 local PICK_W, SV_W, SV_H = 440, 250, 188
 local PICK_X, HUE_X, PRV_X, PRV_W = 30, 289, 330, 80
 local PICK_H_PLAIN, PICK_H_ALPHA = 410, 410
@@ -1228,6 +1238,43 @@ function UI.colorPicker(opts)
     f.cancel = UI.button(f, "Cancel", { kind = "action" })
     f.cancel:SetPoint("LEFT", f.ok, "RIGHT", 6, 0)
 
+    -- ---- colour sources (MINOR 12) ------------------------------------------
+    -- A pool of buttons, right-aligned on the hex row (the mock: "Use Class
+    -- Color", 131 wide, at x=249 of the 380 column); the OK row when the
+    -- Opacity dial has the hex row's end. Picking one is an ACCEPT.
+    f.srcBtns = {}
+    function f:LaySources(list, current)
+      local prev
+      self.srcList, self.source = list, current
+      for i = #self.srcBtns, 1, -1 do self.srcBtns[i]:Hide() end
+      for i = #(list or {}), 1, -1 do
+        local src = list[i]
+        local b = self.srcBtns[i]
+        if not b then
+          b = UI.button(self, "", { kind = "action" })
+          b:SetScript("OnClick", function(bt)
+            f:LaySources(f.srcList, bt.value)
+            -- The field, hex and preview take the source's colour (silently —
+            -- an edit would unselect it), then the consumer previews it live.
+            local r, g, bb
+            if bt.src.color then r, g, bb = bt.src.color() end
+            if r then f.silent = true; f:SetRGB(r, g, bb); f.silent = false end
+            if f.onChange then f.onChange(bt.value) end
+          end)
+          self.srcBtns[i] = b
+        end
+        b.value, b.src = src.value, src
+        b:SetLabel(src.label or tostring(src.value))
+        b:SetActive(src.value == current)
+        b:ClearAllPoints()
+        if prev then b:SetPoint("RIGHT", prev, "LEFT", -6, 0)
+        elseif self.hasAlpha then b:SetPoint("RIGHT", self, "BOTTOMRIGHT", -PICK_X, 20 + 8)
+        else b:SetPoint("RIGHT", self, "TOPRIGHT", -PICK_X, -(hexY + 8)) end
+        b:Show()
+        prev = b
+      end
+    end
+
     -- ---- state ------------------------------------------------------------
     function f:Color()
       if self.hasAlpha then return { self.r, self.g, self.b, self.a } end
@@ -1247,6 +1294,7 @@ function UI.colorPicker(opts)
       if not self.hex:HasFocus() then
         self.hex:SetText(("#%02X%02X%02X"):format(byte255(r), byte255(g), byte255(b)))
       end
+      if not self.silent and self.source then self:LaySources(self.srcList, nil) end   -- an edit means a fixed colour again
       if self.onChange and not self.silent then self.onChange(self:Color()) end
     end
 
@@ -1308,6 +1356,12 @@ function UI.colorPicker(opts)
     -- ---- close paths ------------------------------------------------------
     f.ok:SetScript("OnClick", function()
       f.accepted = true
+      if f.source then
+        local cb, v = f.onSource, f.source
+        f:Hide()
+        if cb then cb(v) end
+        return
+      end
       local cb, c = f.onAccept, f:Color()
       UI.NoteColor(c, true)   -- OK, and only OK, counts as a deliberate pick
       f:Hide()
@@ -1320,7 +1374,7 @@ function UI.colorPicker(opts)
     -- puts the original color back, because this picker applies LIVE.
     f:HookScript("OnHide", function()
       local cancelled, restore, onCancel = not f.accepted, f.onChange, f.onCancel
-      f.onChange, f.onAccept, f.onCancel, f.accepted = nil, nil, nil, false
+      f.onChange, f.onAccept, f.onCancel, f.onSource, f.accepted = nil, nil, nil, nil, false
       if cancelled then
         if restore and f.orig then restore(f.orig) end
         if onCancel then onCancel() end
@@ -1353,8 +1407,9 @@ function UI.colorPicker(opts)
   f.hasAlpha = opts.hasAlpha and true or false
   f.orig = { c[1] or 1, c[2] or 1, c[3] or 1, f.hasAlpha and (c[4] or 1) or nil }
   f.a = f.hasAlpha and (c[4] or 1) or 1
-  f.onChange, f.onAccept, f.onCancel = opts.onChange, opts.onAccept, opts.onCancel
+  f.onChange, f.onAccept, f.onCancel, f.onSource = opts.onChange, opts.onAccept, opts.onCancel, opts.onSource
   f.accepted = false
+  f:LaySources(opts.sources, opts.source)
   f.title:SetText(opts.title or "Choose Color")
   f.oldSw:SetColorTexture(f.orig[1], f.orig[2], f.orig[3], f.hasAlpha and f.a or 1)
   f.alphaBlock:SetShown(f.hasAlpha)
@@ -1884,7 +1939,7 @@ end
 -- inside a popover dismisses cleanly, and the color picker (FULLSCREEN_DIALOG)
 -- floats over everything as it already does.
 -- ------------------------------------------------------------
-local POP_TITLE_H, POP_PAD = 30, 10
+local POP_TITLE_H, POP_PAD = 48, 20   -- the kit title sits at y=20; content starts under it
 local popCatcher, popOpen
 
 local function popCatcherFrame()
@@ -1906,11 +1961,11 @@ function UI.popover(opts)
     local f = CreateFrame("Frame", nil, c)
     f:SetFrameStrata("FULLSCREEN"); f:SetFrameLevel(5)
     f:EnableMouse(true); f:SetClampedToScreen(true)
-    UI.skinPlate(f)
-    UI.addEdges(f, { r = COLOR.purple.r, g = COLOR.purple.g, b = COLOR.purple.b, a = 0.55 }, 1)
-    f.title = UI.newText(f, FONT.head, 12, COLOR.purple, "LEFT")
-    f.title:SetPoint("TOPLEFT", 14, -10); f.title:SetText((opts.title or ""):upper())
-    local div = UI.hLine(f); div:SetPoint("TOPLEFT", 10, -POP_TITLE_H + 2); div:SetPoint("TOPRIGHT", -10, -POP_TITLE_H + 2)
+    -- The kit's dialog family (MINOR 12, 2026-09-21): the picker's night plate
+    -- and indigo rim, the title Play Bold 14 white at the picker's inset.
+    kitDialogPlate(f)
+    f.title = UI.newText(f, FONT.uiB, 14, COLOR.paper, "LEFT")
+    f.title:SetPoint("TOPLEFT", 30, -20); f.title:SetText((opts.title or ""):upper())
     f.content = CreateFrame("Frame", nil, f)
     f.content:SetPoint("TOPLEFT", 0, -POP_TITLE_H); f.content:SetPoint("TOPRIGHT", 0, -POP_TITLE_H)
     local h = opts.build and opts.build(f.content) or 100
@@ -2075,13 +2130,19 @@ function UI.segments(parent, options, get, set, opts)
   for i, opt in ipairs(options) do
     local sg = UI.button(f, opt.label, { kind = "quiet", h = opts.h, padX = opts.padX, w = opts.segW })
     sg.value = opt.value
-    sg.paint = function(self)   -- a segment is transparent until it is the choice
+    sg.paint = function(self)   -- a segment is transparent until it is the choice: the TRACK shows through
       if self._active then UI.tint(self.fill, COLOR.violet) else self.fill:SetVertexColor(0, 0, 0, 0) end
       self.text:SetTextColor(1, 1, 1)
       self:SetAlpha(self:IsEnabled() and 1 or 0.5)
     end
     sg:paint()
-    sg:SetScript("OnClick", function(self) set(self.value); f:refresh() end)
+    -- A TWO-way bar flips when its current side is clicked (the owner,
+    -- 2026-09-21: "a natural expectation … frustrating every time").
+    sg:SetScript("OnClick", function(self)
+      local v = self.value
+      if #options == 2 and self._active then v = options[i == 1 and 2 or 1].value end
+      set(v); f:refresh()
+    end)
     if prev then sg:SetPoint("LEFT", prev, "RIGHT", 0, 0) else sg:SetPoint("LEFT", 0, 0) end
     total = total + sg:GetWidth()
     prev = sg
@@ -2094,7 +2155,9 @@ function UI.segments(parent, options, get, set, opts)
   end
   function f:setEnabled(on)
     for _, sg in ipairs(self.segs) do sg:SetEnabled(on) end
-    self.track:SetAlpha(on and 1 or 0.5)
+    -- ★ Not Texture:SetAlpha — on a texture that REPLACES the vertex alpha the
+    -- dim tint carries (0.5), and the track went solid #3e3e3e (2026-09-21).
+    UI.tint(self.track, COLOR.dim, COLOR.dim.a * (on and 1 or 0.5))
   end
   f:refresh()
   return f
@@ -2153,13 +2216,18 @@ end
 --                   `w` it is as wide as its WIDEST option ("width based on
 --                   widest item inside"), so it never changes size when picked
 --   kind = "field"  a white field with a violet triangle — the profile picker
--- The open list is an indigo plate anchored under the button, rows Play 11
--- white uppercase, the current one amber; scrolls past 12. Same closing rules
--- as UI.dropdown: any outside click, the owner hiding, another list opening.
+-- The open list (the owner's REVISED look, Figma "Dropdown" 682:14067,
+-- 2026-09-21 — the indigo plate with amber rows was disliked): the window's
+-- own plate grey with a dim 1px rim on the left, right and bottom (none on
+-- top — it hangs off the button), 14px rows of Play 11 black UPPERCASE, the
+-- current row a 20% violet band, 4px above the first row and 6 below the
+-- last; as wide as its widest item + 11 each side, centred under the button;
+-- scrolls past 20. Same closing rules as UI.dropdown: any outside click, the
+-- owner hiding, another list opening.
 --   UI.pick(parent, w, getLabel, getOptions, getCurrent, onPick, opts?)
 -- Returns the button with :refresh().
 -- ------------------------------------------------------------
-local PICK_ROWS, PICK_ROW_H = 12, 22
+local PICK_ROWS, PICK_ROW_H, PICK_PAD_T, PICK_PAD_B, PICK_INSET = 20, 14, 4, 6, 11
 local pickFly
 
 local function pickFlyout()
@@ -2170,9 +2238,10 @@ local function pickFlyout()
   local fly = CreateFrame("Frame", nil, catcher)
   fly:SetFrameStrata("FULLSCREEN_DIALOG")
   local plate = fly:CreateTexture(nil, "BACKGROUND"); plate:SetAllPoints()
-  plate:SetColorTexture(COLOR.indigo.r, COLOR.indigo.g, COLOR.indigo.b, 1)
+  plate:SetColorTexture(COLOR.plate.r, COLOR.plate.g, COLOR.plate.b, 1)
+  local rim = UI.addEdges(fly, COLOR.dim, 1); rim.top:Hide()
   local scroll = CreateFrame("ScrollFrame", nil, fly)
-  scroll:SetPoint("TOPLEFT", 0, -6); scroll:SetPoint("BOTTOMRIGHT", 0, 6)
+  scroll:SetPoint("TOPLEFT", 0, -PICK_PAD_T); scroll:SetPoint("BOTTOMRIGHT", 0, PICK_PAD_B)
   scroll:EnableMouseWheel(true)
   local child = CreateFrame("Frame", nil, scroll); child:SetSize(10, 10)
   scroll:SetScrollChild(child)
@@ -2221,31 +2290,33 @@ function UI.pick(parent, w, getLabel, getOptions, getCurrent, onPick, opts)
       local row = fly.rows[i]
       if not row then
         row = CreateFrame("Button", nil, fly.child); row:SetHeight(PICK_ROW_H)
-        row.hl = row:CreateTexture(nil, "BACKGROUND"); row.hl:SetAllPoints()
-        row.hl:SetColorTexture(1, 1, 1, 0.08); row.hl:Hide()
+        -- the current row's band: violet at 20%, 13 of the row's 14px
+        row.cur = row:CreateTexture(nil, "BACKGROUND"); row.cur:SetPoint("TOPLEFT", 0, 0); row.cur:SetPoint("BOTTOMRIGHT", 0, 1)
+        row.cur:SetColorTexture(COLOR.violet.r, COLOR.violet.g, COLOR.violet.b, 0.2); row.cur:Hide()
+        row.hl = row:CreateTexture(nil, "BORDER"); row.hl:SetPoint("TOPLEFT", 0, 0); row.hl:SetPoint("BOTTOMRIGHT", 0, 1)
+        row.hl:SetColorTexture(0, 0, 0, 0.08); row.hl:Hide()
         row:SetScript("OnEnter", function(self) self.hl:Show() end)
         row:SetScript("OnLeave", function(self) self.hl:Hide() end)
-        row.text = UI.newText(row, FONT.ui, 11, COLOR.paper, "CENTER")
-        row.text:SetPoint("LEFT", 10, 0); row.text:SetPoint("RIGHT", -10, 0); row.text:SetWordWrap(false)
+        row.text = UI.newText(row, FONT.ui, 11, COLOR.black, "LEFT")
+        row.text:SetPoint("LEFT", PICK_INSET, 0); row.text:SetPoint("RIGHT", -PICK_INSET, 0); row.text:SetWordWrap(false)
         fly.rows[i] = row
       end
       row:ClearAllPoints()
       row:SetPoint("TOPLEFT", 0, y); row:SetPoint("TOPRIGHT", 0, y)
       row.text:SetText(tostring(opt.label or ""):upper())
       widest = math.max(widest, row.text:GetStringWidth())
-      if opt.value == current then row.text:SetTextColor(COLOR.amber.r, COLOR.amber.g, COLOR.amber.b)
-      else row.text:SetTextColor(1, 1, 1) end
+      row.cur:SetShown(opt.value == current)
       row:SetScript("OnClick", function() fly.catcher:Hide(); onPick(opt.value); b:refresh() end)
       row:Show()
       y = y - PICK_ROW_H
     end
     for i = #options + 1, #fly.rows do fly.rows[i]:Hide() end
     local shown = math.min(#options, PICK_ROWS)
-    local cw = math.max(b:GetWidth(), widest + 20)
+    local cw = math.ceil(widest) + 2 * PICK_INSET
     fly.child:SetSize(cw, math.max(10, #options * PICK_ROW_H))
-    fly:SetSize(cw, shown * PICK_ROW_H + 12)
+    fly:SetSize(cw, shown * PICK_ROW_H + PICK_PAD_T + PICK_PAD_B)
     fly.scroll:SetVerticalScroll(0)
-    fly:ClearAllPoints(); fly:SetPoint("TOPLEFT", b, "BOTTOMLEFT", 0, 0)
+    fly:ClearAllPoints(); fly:SetPoint("TOP", b, "BOTTOM", 0, 0)
     if not b._flyHooked then
       b._flyHooked = true
       b:HookScript("OnHide", function() if pickFly then pickFly.catcher:Hide() end end)
@@ -2294,7 +2365,12 @@ end
 -- an edit box shows the END of text that overflows — so "-700px" in 42px
 -- read "0px", which cost an evening (2026-09-21).
 --   opts = { label, min, max, step = 1, get, set, unit = "", centre = false,
---            w = 194, dragPx = 900, fmt(v)? }
+--            w = 194, dragPx = 900, fmt(v)?, short = false, bare = false }
+-- `bare` (MINOR 12) drops the label — a TABLE row's dial, under a column
+-- header (the Glows mock): the strip sits at the frame's top, 17 tall.
+-- `short` (MINOR 12) is the mocks' compact form — a 78px strip of 24 ticks
+-- and the same box, 133 wide (the Health panel's Gradient Angle and Track
+-- Opacity). Same behaviour in every respect; never centred.
 -- Returns the Frame with :refresh(), :setEnabled(on), .label, .box, .strip.
 -- ------------------------------------------------------------
 function UI.dial(parent, opts)
@@ -2313,17 +2389,19 @@ function UI.dial(parent, opts)
     return math.max(minV, math.min(maxV, v))
   end
 
+  local short, bare = opts.short and true or false, opts.bare and true or false
+  local TOP = bare and 0 or 18
   local f = CreateFrame("Frame", nil, parent)
-  f:SetSize(opts.w or 194, 35)
-  f.label = UI.label(f, opts.label); f.label:SetPoint("TOPLEFT", 0, 0)
+  f:SetSize(opts.w or (short and 133 or 194), bare and 17 or 35)
+  f.label = UI.label(f, bare and "" or opts.label); f.label:SetPoint("TOPLEFT", 0, 0)
 
-  local WIN_W = 141   -- the strip art: posts at 0-1 and 139-140, 45 ticks at 4+3i, the centre one at 69-71
-  local TICKS = 47    -- positions the mark can take: post, 45 ticks, post
+  local WIN_W = short and 78 or 141   -- the strip art: posts at 0-1 and W-2..W-1, ticks at 4+3i (45, or 24 short), the centre one at 69-71
+  local TICKS = short and 26 or 47    -- positions the mark can take: post, the ticks, post
   local strip = CreateFrame("Frame", nil, f)
-  strip:SetPoint("TOPLEFT", 0, -18); strip:SetSize(WIN_W, 17)
+  strip:SetPoint("TOPLEFT", 0, -TOP); strip:SetSize(WIN_W, 17)
   strip:EnableMouse(true); strip:EnableMouseWheel(true)
   local ticks = strip:CreateTexture(nil, "ARTWORK")
-  ticks:SetTexture(opts.centre and UI.DIAL_C or UI.DIAL)
+  ticks:SetTexture(short and UI.DIAL_S or (opts.centre and UI.DIAL_C or UI.DIAL))
   ticks:SetSize(WIN_W, 16); ticks:SetPoint("TOPLEFT", 0, -2); UI.tint(ticks, COLOR.ink)
   local mark = strip:CreateTexture(nil, "OVERLAY")   -- the amber tick, shaped like the one it replaces
   mark:SetColorTexture(COLOR.amber.r, COLOR.amber.g, COLOR.amber.b, 1)
@@ -2335,7 +2413,7 @@ function UI.dial(parent, opts)
     local x, w
     if idx <= 0 then x, w = 0, 2
     elseif idx >= TICKS - 1 then x, w = WIN_W - 2, 2
-    elseif opts.centre and idx == 23 then x, w = 69, 3
+    elseif opts.centre and not short and idx == 23 then x, w = 69, 3
     else x, w = 4 + 3 * (idx - 1), 1 end
     mark:SetSize(w, 13)
     mark:ClearAllPoints(); mark:SetPoint("TOPLEFT", x, -2)
@@ -2351,9 +2429,9 @@ function UI.dial(parent, opts)
       m:SetText(fmt(v) .. unit); widest = math.max(widest, m:GetStringWidth())
     end
     box:SetWidth(math.max(42, math.ceil(widest) + 10))
-    f:SetWidth(math.max(opts.w or 194, WIN_W + 10 + box:GetWidth()))   -- the frame grows, never the gap shrinks
+    f:SetWidth(math.max(opts.w or (short and 133 or 194), WIN_W + 10 + box:GetWidth()))   -- the frame grows, never the gap shrinks
   end
-  box:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, -18)
+  box:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, -TOP)
   f.box = box
 
   local cur, enabled = snap(opts.get() or minV), true
@@ -2427,6 +2505,145 @@ function UI.dial(parent, opts)
   end
   paint()
   return f
+end
+
+-- ------------------------------------------------------------
+-- UI.chip — the kit's colour control (MINOR 12): a 20×17 rounded swatch and,
+-- at x=26, one word of Play 11 — "(Remove)" on an optional colour that is
+-- set, "None" on one that is not, the SOURCE's word when the chip holds a
+-- source ("Class"), nothing on a required fixed colour. The mock's
+-- PRIMITIVES chip. Click the swatch (or "None") for the picker; click
+-- "(Remove)" to clear. ★ A chip holds a fixed colour OR a source (the
+-- backlog's decision, 2026-09-21 — the "use class colour" toggles are gone):
+-- get() returns {r,g,b[,a]}, a source's `value` string, or nil; set(v) is
+-- handed the same three shapes back. The picker applies LIVE through set and
+-- a cancel puts back exactly what the chip held, source included.
+--   opts = { get, set, hasAlpha, optional = false, label ("Unit Frames › Health color" —
+--            the palette's provenance), title, sources = { { value, label, word, color() } },
+--            fixed(), text }
+-- `text` (the Cast mock's interrupt rows) is a DESCRIPTION drawn after the
+-- swatch in ink, with the "(Remove)" link after it: the chip reads
+-- "▪ Can't be interrupted" / "▪ Interrupt available before the cast ends (Remove)".
+-- `fixed()` returns the FIXED colour the consumer keeps under a source, so a
+-- cancelled picker session that began on a source puts it back too (the
+-- picker's restore goes through set(colour) before onCancel runs).
+-- A source's `color()` returns r, g, b for the swatch (nil → violet); `word`
+-- is the chip's text for it (default: the label's last word). Returns the
+-- Frame with :refresh(), :setEnabled(on), .swatch, .text. ★ The swatch is
+-- SQUARE — the one kit surface without the 4px corners (the owner,
+-- 2026-09-21) — and "(Remove)" is violet: links and actions are purple.
+-- ------------------------------------------------------------
+function UI.chip(parent, opts)
+  opts = opts or {}
+  local f = CreateFrame("Frame", nil, parent)
+  f:SetSize(74, 17)
+  local sw = CreateFrame("Button", nil, f)
+  sw:SetSize(20, 17); sw:SetPoint("LEFT", 0, 0)
+  sw.fill = sw:CreateTexture(nil, "ARTWORK"); sw.fill:SetAllPoints(); sw.fill:SetColorTexture(1, 1, 1, 1)
+  sw.empty = UI.addEdges(sw, COLOR.dim, 1)   -- the "None" look: an outlined, unfilled box
+  local enabled = true
+  local desc
+  if opts.text then
+    desc = UI.newText(f, FONT.ui, 11, COLOR.ink, "LEFT")
+    desc:SetPoint("LEFT", sw, "RIGHT", 6, 0); desc:SetText(opts.text)
+  end
+  local txt = CreateFrame("Button", nil, f)
+  if desc then txt:SetPoint("LEFT", desc, "RIGHT", 4, 0) else txt:SetPoint("LEFT", sw, "RIGHT", 6, 0) end
+  txt:SetSize(48, 17)
+  txt.text = UI.newText(txt, FONT.ui, 11, COLOR.ink, "LEFT")
+  txt.text:SetPoint("LEFT", 0, 0); txt:SetFontString(txt.text)
+  f.swatch, f.text, f.desc = sw, txt, desc
+
+  local function sourceOf(v)
+    if type(v) ~= "string" then return nil end
+    for _, src in ipairs(opts.sources or {}) do if src.value == v then return src end end
+  end
+  local function paint()
+    local v = opts.get()
+    local src = sourceOf(v)
+    if src then
+      local r, g, b
+      if src.color then r, g, b = src.color() end   -- (not `x and f()` — that keeps ONE return)
+      if r then sw.fill:SetVertexColor(r, g, b, 1) else UI.tint(sw.fill, COLOR.violet) end
+      sw.fill:Show(); sw.empty:SetColor(COLOR.dim, 0)
+      txt.text:SetText(src.word or tostring(src.label or src.value):match("(%S+)$") or "")
+      txt.mode = "source"
+    elseif type(v) == "table" then
+      UI.NoteColor(v)
+      sw.fill:SetVertexColor(v[1] or 1, v[2] or 1, v[3] or 1, 1)
+      sw.fill:Show(); sw.empty:SetColor(COLOR.dim, 0)
+      txt.text:SetText(opts.optional and "(Remove)" or "")
+      txt.mode = opts.optional and "remove" or nil
+    else
+      sw.fill:Hide(); sw.empty:SetColor(COLOR.dim, 1)
+      txt.text:SetText(desc and "" or "None")   -- with a description the empty box is the whole cue
+      txt.mode = "none"
+    end
+    txt:SetWidth(math.max(1, txt.text:GetStringWidth()))
+    f:SetWidth(26 + (desc and (desc:GetStringWidth() + 4) or 0) + txt:GetWidth())
+    local lc = txt.mode == "remove" and COLOR.violet or COLOR.ink
+    txt.text:SetTextColor(lc.r, lc.g, lc.b)
+  end
+
+  local function open()
+    local held = opts.get()
+    local heldFixed = opts.fixed and opts.fixed()
+    local src = sourceOf(held)
+    local start = type(held) == "table" and held or nil
+    if src and src.color then local r, g, b = src.color(); if r then start = { r, g, b } end end   -- (a plain call: all three returns)
+    local list, cur = {}, src and src.value or nil
+    for _, s2 in ipairs(opts.sources or {}) do list[#list + 1] = { value = s2.value, label = s2.label, color = s2.color } end
+    UI.colorPicker({
+      color = start or { 1, 1, 1 },
+      hasAlpha = opts.hasAlpha,
+      owner = sw,
+      title = opts.title,
+      onChange = function(c) opts.set(c); paint() end,
+      onCancel = function()   -- the source, or nil, comes back exactly — and the fixed colour under it
+        if heldFixed then opts.set(heldFixed) end
+        opts.set(held); paint()
+      end,
+      sources = list[1] and list or nil,
+      source = cur,
+      onSource = function(v) opts.set(v); paint() end,
+    })
+  end
+  sw:SetScript("OnClick", function() if enabled then open() end end)
+  txt:SetScript("OnClick", function(self)
+    if not enabled then return end
+    if self.mode == "remove" then opts.set(nil); paint()
+    elseif self.mode ~= nil then open() end
+  end)
+  txt:SetScript("OnEnter", function(self) if self.mode and enabled then self.text:SetTextColor(COLOR.lilac.r, COLOR.lilac.g, COLOR.lilac.b) end end)
+  txt:SetScript("OnLeave", function(self) paint() end)
+  UI.RegisterColorSource(sw, opts.get, opts.label)
+  function f:refresh() paint() end
+  function f:setEnabled(on) enabled = on and true or false; self:SetAlpha(enabled and 1 or 0.5) end
+  paint()
+  return f
+end
+
+-- UI.cell(parent, labelText, make) → the mocks' 35px LABELLED CELL (MINOR 12):
+-- a Play Bold 12 label with the control 18 under it. `make(cell)` returns the
+-- control (a segments bar, a chip, a pick, a field…). The cell has :refresh()
+-- (→ the control's), :show(on) and :setEnabled(on) — disabled BY ANOTHER
+-- SETTING = 50%, never hidden (the owner, 2026-09-21); hide only what another
+-- mode's face lacks. A kit button dims itself, so only its label dims here.
+function UI.cell(parent, labelText, make)
+  local cell = CreateFrame("Frame", nil, parent)
+  cell:SetSize(10, 35)
+  cell.label = UI.label(cell, labelText); cell.label:SetPoint("TOPLEFT", 0, 0)
+  cell.control = make(cell)
+  cell.control:SetPoint("TOPLEFT", 0, -18)
+  function cell:refresh() if self.control.refresh then self.control:refresh() end end
+  function cell:show(on) self:SetShown(on ~= false) end
+  function cell:setEnabled(on)
+    on = on and true or false
+    if self.control.setEnabled then self.control:setEnabled(on); self.label:SetAlpha(on and 1 or 0.5)
+    elseif self.control.paint then self.control:SetEnabled(on); self.label:SetAlpha(on and 1 or 0.5)
+    else self:SetAlpha(on and 1 or 0.5); if self.control.SetEnabled then self.control:SetEnabled(on) end end
+  end
+  return cell
 end
 
 -- UI.wordmark(parent, suffix, size, opts?) → "gloom" + SUFFIX in Michroma, as
