@@ -493,6 +493,23 @@ Art lives in `Media\art\shapes\<key>-<part>.png`, tracked and shipped.
 - ⚠ `GrowAnchor` has a **twin**: `hgAnchor` in `GloomsBars/Skin.lua`, still used by GB's own layout.
   Verified identical 2026-08-25. **Change the formula and you change both.** Backlog item 10.
 
+### 7b. The BAR-shape family (GloomsHub owns) — **NEW 2026-09-21**
+```lua
+GloomsHub.BAR_SHAPES        -- key → { label, canvas = {w,h}, footprint = {x0,y0,x1,y1}, set?, setFootprint? }
+GloomsHub.BAR_SHAPE_ORDER   -- ordered keys, picker order
+GloomsHub:BarShapeAsset(key, part)   -- part: "base" | "base-s" | "rim" | "rim-thin" | "rim-thick"; nil for an unknown key
+GloomsHub:BarShapeInfo(key)          -- → the row, falling back to orb
+```
+Art lives in `Mediartarshapes\<key>-<part>.png`; `tools/gen-barshapes.py` writes it (generated
+shapes, or the owner's imported files) and prints the rows with the footprint MEASURED from the
+alpha. **A separate family from §7 by the owner's ruling** — GU never lists the button shapes, GB
+and GA never list these. Same mechanism: files are the contract, keys are append-only.
+- **The footprint is the bar's box**; the mask is the whole canvas, placed so the footprint lands
+  on the box (a set member may sit off-centre). A **set** = members sharing a canvas; `size` on a
+  member scales `setFootprint`, so one size nests the set.
+- The base art's edge is BINARY; `-base-s` (quarter size, anti-aliased) is for draws under ~192 px.
+- Masks refuse flipped texcoords (FINDINGS §21) — a flip is a mirrored file.
+
 ## 8. `GloomsHub.Effects` — the shaped animation engine (GloomsHub owns) — **NEW 2026-08-25**
 ```lua
 GloomsHub.Effects.VERSION            -- 1; bump when the module set or contract changes

@@ -1633,3 +1633,66 @@ diagnostic reports counts only — it may not test a child's `IsShown`.
 - ~~*"Void Breach is a priority / boss / raid aura that bypasses candidate filters."*~~ **KILLED** —
   every flag false, no dispel type; and Blood Draw is an ordinary timed self-debuff.
 - ~~*"Only permanent debuffs get through."*~~ **KILLED** — Blood Draw is timed.
+
+---
+
+## §21 — A SHAPED STRAIGHT BAR on 12.1: the StatusBar door, and what a mask will and will not take ✅ `TESTED` 2026-09-21
+
+**The question.** Gloom's Unit Frames wanted health / power / cast / resource as straight bars cut
+to silhouettes (an orb, a pill, a crescent set), alongside the arcs of §18. Everything below was
+measured on the live client the same day, by the owner, on screen; the throwaway probe was
+`/gu barprobe` (deleted once the engine had the mechanism) and its readout printed the secrets as
+text. Bar mode shipped in GU the same day.
+
+### ▶ `TESTED` — the mechanism
+- **`StatusBar:SetMinMaxValues(0, secretMax)` + `SetValue(secretHealth)` size the fill engine-side,
+  and a `MaskTexture` on the fill texture holds while the engine resizes it**: 683,911 / 854,889 =
+  80.0% health → a fill 96.0 of 120 px tall under a circle mask (readout `fill h 96.000`). No curve,
+  no chunk, no seam — the other door out of a secret, alongside §18's rotation/alpha sinks.
+- **A frame anchored to the fill texture's REGION follows it under secrecy** (`SetPoint("TOPLEFT",
+  bar:GetStatusBarTexture(), "TOPLEFT")`). This is an anchor to a region, not a secret VALUE, which
+  is why it is not the §18 `SetPoint` sink. Measured twice: an absorb bar anchored to the health
+  fill's end (Blizzard's pattern) and a clip frame pinned to an absorb fill's rectangle.
+- **`Frame:SetClipsChildren(true)` on that pinned frame clips a tiled texture inside it** to the
+  secret-sized rectangle — the absorb overlay's stripes draw only over the shield's part.
+- **`StatusBar:SetTimerDuration(durationObject, interp, Enum.StatusBarTimerDirection.…)`**
+  animates a bar from a duration object (EUI's cast bar; signature read from
+  `EllesmereUINameplates.lua`). `TESTED` only on the PLAYER's preview cast (plain times); a target's
+  cast under secrecy in bar mode is **`UNTESTED`** — BACKLOG 12.
+- **The catalog's mask art has a BINARY edge** (alpha 0→255 in one texel, checked in the file);
+  minified ten times (a 24 px shard from a 512 px canvas) it draws jagged. A quarter-size copy with
+  a two-texel anti-aliased edge (`-base-s`) picked under ~192 px on screen draws clean. Owner-verified.
+
+### ▶ `TESTED` — what a mask will NOT take
+- **`MaskTexture:SetTexCoord` with mirrored coordinates hides EVERYTHING** — both the 4-argument
+  and the 8-corner forms, tried on separate reloads. A flip is a matter of art (a mirrored file),
+  never of the mask. Rotation (`SetRotation`) is fine.
+- **A mask's `CLAMPTOBLACKADDITIVE` wrap fades its outermost half-texel**: an 8×8 white square used
+  as a rectangle's mask, stretched to 200 px, gave ~12 px of soft edge per side. A rectangle wears
+  NO mask (the StatusBar already is one); GU removes the masks in Rectangle mode.
+
+### ▶ `OBSERVED` — `SetRotatesTexture(true)` on a masked StatusBar fill
+With it on, a rotated pill's fill covered only part of the silhouette (a straight cut parallel to
+the pill's axis) while the track's mask was right; with it off, the fill covered the whole pill.
+The cause was not isolated (the mask sampled through the rotated texture coordinates is the
+plausible reading). **Rule: no `SetRotatesTexture` on a masked fill** — a vertical ramp is a second
+image instead.
+
+### ▶ `TESTED` — tiling
+- **A tiled texture (`SetHorizTile` / `SetVertTile`, `REPEAT` wrap) repeats at its FILE's size in
+  UI units and ignores `SetTexCoord`** — a repeat count of `width / 16` changed nothing on screen. The
+  file's size IS the pattern scale: the absorb hatch went 32 → 8 px, two periods per tile, to reach
+  EUI's stripe density.
+- A StatusBar itself cannot tile — it STRETCHES its texture over the box, so one square hatch went
+  flat on a 200×24 rectangle and huge on a tall pill. Hence the invisible-fill + clip-frame + tiled
+  texture construction above.
+
+### `KILLED` — do not revive these
+- ~~*"Flip a bar's silhouette with texture coordinates on the mask."*~~ **KILLED**, twice.
+- ~~*"Aspect-matched hatch files keep a stretched StatusBar's stripes at 45°."*~~ Tried (w1…w16,
+  t2…t16); the angle held but the SCALE still followed the box. **KILLED** by the tiled construction.
+- ~~*"A repeat count in `SetTexCoord` scales a tiled texture."*~~ **KILLED** — the file size does.
+- ~~*"Gradient on a bar via `Texture:SetGradient` on the fill."*~~ Not wrong, but it compresses with
+  the fill (the gradient is per-vertex on the shrinking region). ALONG the fill axis GU uses a ramp
+  IMAGE as the StatusBar texture (a StatusBar crops rather than stretches its texture, so the ramp
+  stays put in space); ACROSS the axis `SetGradient` on the base is fine — that axis never shrinks.

@@ -1599,3 +1599,44 @@ Buffs group had six Breathe instances running).
 ### QA tools added to the addon
 `/gu casttrace` (prints the target's cast route as it changes — the delve measurement that could
 not be timed by hand) and a `cast=` line in `/gu debug target`.
+
+---
+
+## 2026-09-21 — the shaped-bar session, and the redesign brief
+
+### What shipped
+- **Gloom's Unit Frames: BAR MODE** on all four displays. A display is drawn as an ARC (§18) or a
+  BAR: a `StatusBar` whose fill the engine sizes from the secret, cut to a silhouette from the Hub's
+  bar-shape family (FINDINGS §21). Shape · size (one value; a shape fixes its own proportions; a
+  set member scales the set) · rotation (the fill stays screen-axis) · fill direction · the same
+  colour / gradient / shift / track settings as the arc · an EUI-style absorb overlay (stripes
+  from the FULL end back over the fill, present at full health — a tiled hatch inside a clip frame
+  pinned to an invisible absorb bar) · an outline (the shape's rim art at three widths; four
+  edges on a rectangle; a grown arc under an arc's track). Per-display strata + level, absolute,
+  "Own layer" off = the unit's layer in the automatic order. The bar keeps its own offset.
+- **The Hub: a SEPARATE bar-shape family** (`GloomsHub.BAR_SHAPES`, `Media/art/barshapes/`,
+  `tools/gen-barshapes.py`): `Orb`, `Pill`, the generated `Bracket` set (rejected by the owner as
+  too thin / too uniform — he will draw his own), his `Tall crescent` set (three 1024² files, one
+  canvas). Rows record canvas + measured footprint; a set's members share one scale. Every button
+  shape also gained a `-base-s` quarter-size anti-aliased copy (the binary edge aliased at 10×).
+- **Gloom's Portraits:** an **Off** visibility choice per unit (there was no way to turn one off).
+
+### Closed
+- **Item 13, the Unit Frames tab tidy pass** — superseded by the redesign (item 16).
+- **Item 15** stayed closed; nothing reopened it.
+
+### Decisions (the owner's, verbatim where it matters)
+- Button shapes are not offered to a unit frame — *"fundamentally different things."*
+- An arc and a bar never share an offset.
+- Nested brackets: **option B** (concentric, tips on the same radial angle) over A (same cut
+  height, inner tips fatter) and over translated copies (gaps pinch) — the geometry note: equal
+  gap everywhere forces one centre.
+- The absorb overlay must look like EUI's (present at full health, hatched, fine).
+- Rectangles must be sharp — no stretched mask art.
+- Layer numbers must mean the same thing as Overlays' (hence "level of the lowest piece", 0–1000).
+- The whole Suite UI is being redesigned from his Figma mocks; the brief is BACKLOG item 16.
+
+### Detours worth remembering
+- Three rounds on the absorb stripes (stretched → aspect-matched files → tiled at file size); two
+  on flips (masks refuse texcoords); one on "the wedge" — the assistant named an artefact the owner
+  had never seen or called that, and sent him a command that was already in effect; LESSONS has it.

@@ -9,14 +9,12 @@
 > **Keep this file short enough to re-read.** If it passes ~180 lines, move the settled history to
 > [ARCHIVE.md](ARCHIVE.md). A document nobody re-reads is a document nobody corrects.
 
-**Last updated:** 2026-09-20, evening (**six tools, six public repos**: `GloomSuite/GloomsUnitFrames`
-was created and pushed today. Gloom's Unit Frames is PROFILE-BASED (`GloomsUnitFramesDB` v2),
-draws DK runes, previews aura groups, and **no longer has a "This spell" kind** — the owner removed
-it when the engine proved unable to filter the player's DEBUFFS by spell ID (FINDINGS §20.6).
-Gloom's Portraits `v1.0.0` (stage 1), stage 2 untagged. Hub/Bars/Auras at `v1.4.0`, Overlays at
-`v1.3.0`; **LibGloomSkin at MINOR 10** (edit-box Tab / Shift-Tab + Up / Down stepping; profileBlock
-`api.users` → the delete gate) on `master`, untagged. **Distribution: symlinks for the owner,
-CurseForge if ever public, the WoWup path retired.**)
+**Last updated:** 2026-09-21 (**GU has BAR MODE; the Hub has a bar-shape family; the Suite UI
+redesign is briefed.** Every Unit Frames display draws as an arc OR a shaped straight bar
+(FINDINGS §21), with per-display layering and an outline; the Hub's `Shapes.lua` carries a second,
+separate silhouette family for bars with its generator in `tools/`; Portraits has an Off
+visibility. The owner mocked the entire Suite window in Figma (24 screens, 1060 × 740, a
+PRIMITIVES kit) — BACKLOG item 16 is the brief and the next several sessions.)
 
 ---
 
@@ -60,7 +58,10 @@ of it.
 - **Shared base = GloomsHub**, permanent asset path `Interface\AddOns\GloomsHub\…`.
 - **★ THE SILHOUETTE CATALOG AND THE ANIMATION ENGINE ARE THE HUB'S** (2026-08-25). Shapes, their
   art, and the eight effect modules serve GB *and* GA, so they have one home like every other shared
-  fact. **The routing tables in the Hub's and GB's `CLAUDE.md` said "shapes/catalog + art" and
+  fact. **Since 2026-09-21 the Hub carries TWO families**: the button shapes (GB, GA) and the
+  BAR shapes (GU) — same mechanism, separate lists and art, never mixed in a picker (the owner's
+  ruling). Bar shapes come from `tools/gen-barshapes.py` (generated or imported, with measured
+  footprints, `-base-s` and three rim widths); sets nest by sharing a canvas. **The routing tables in the Hub's and GB's `CLAUDE.md` said "shapes/catalog + art" and
   "glows" belonged to GB; both were rewritten in the same session.** Do not "restore" them — that
   line predates GA drawing shapes at all. What stayed GB's: which shape a button wears, the Bars-tab
   picker, the plate extension, and all glow triggering.
@@ -75,7 +76,9 @@ of it.
   and target frames outright (EUI keeps ToT/focus/pet/boss via its per-unit *hidden* source). Its
   own repo, not Portraits: the owner — "they're not necessarily going to be linked in any fashion".
   Not clickable unit buttons yet. Auras, texts, class color and the shield wash are BUILT
-  (2026-09-19); profiles, DK runes and the aura-group preview followed (2026-09-20). **The "This
+  (2026-09-19); profiles, DK runes and the aura-group preview followed (2026-09-20); **BAR MODE
+  — every display as an arc OR a StatusBar cut to a silhouette, with a real absorb overlay, an
+  outline, and per-display strata/level — landed 2026-09-21 (FINDINGS §21).** **The "This
   spell" kind is GONE (2026-09-20)** — the engine ignores spell-ID filters on the player's debuffs
   (FINDINGS §20.6), and a highlight that cannot single out a debuff was "effectively useless" (the
   owner). Do not rebuild it on `includeSpellIDs`. What remains is BACKLOG item 12 (watching) and
@@ -184,7 +187,8 @@ frames, `GloomsPortraitsDB`, the secret-identity handling of FINDINGS §17, a sm
 `GloomsPortraits` namespace) and the **Portraits** tab (`GloomsPortraits_Tab.lua`, `SKIN_NEEDS = 4`,
 order 40). `/gp` → `ToggleWindow("portraits")`. No profile block (two fixed units, one account-wide
 config), no minimap button, no floating panel. Each mode keeps its own size/position/layer
-(`cfg.layouts[mode]`); the in-combat 2D stand-in wears the 2D set. The Gp mark is
+(`cfg.layouts[mode]`); the in-combat 2D stand-in wears the 2D set; a unit's visibility can be
+**Off** (`showCondition = "never"`, 2026-09-21). The Gp mark is
 `Media/ui/logo.png`, composed from the family G and GB's b flipped.
 
 **`~/GloomsUnitFrames`** — `GloomSuite/GloomsUnitFrames`, `master`, symlinked into AddOns. Hard-deps
@@ -200,11 +204,16 @@ the **AURA groups** (`GloomsUnitFrames_Auras.lua`: Buffs / Debuffs `AuraContaine
 class filters and Hub shapes — FINDINGS §20; the sample-icon PREVIEW while the tab's Auras section
 is open) and the **Unit Frames** tab (`GloomsUnitFrames_Tab.lua`, `SKIN_NEEDS = 10`, order 50: the
 PROFILE block above UNITS in the rail, then a GB-style accordion whose bodies are `UI.grid`s with
-cogs for the deep clusters: Position · Layer · Visibility · Texts · Auras · one section per ring).
+cogs for the deep clusters: Position · Layer · Visibility · Texts · Auras · one section per ring,
+each with a **Drawn as · Arc | Bar** switch, an Outline, and an Own-layer toggle). The engine's
+BAR renderer (`NewBar`, FINDINGS §21) sits beside the arc renderer; `/gu bar <ring> …` drives it
+from chat. ⚠ This tab's look is being replaced by the redesign (BACKLOG 16).
 `/gu` → `ToggleWindow("unitframes")`. Art in `Media/art/` is GENERATED (Python/PIL, the
 scripts were throwaway): `disc.png` + its ramp companion and `disc-ramp-10…90.png` (the ramp at
 narrower fade widths, for the shield wash), the two half-plane masks per sweep direction, the two
-"lead" masks, `hole.png`, `cap.png`. The Gu mark is still the Hub's logo — a real mark is owed.
+"lead" masks, `hole.png`, `cap.png`, and for bars `ramp.png` / `ramp-v.png` (plain gradient
+ramps) and `hatch.png` (the 8 px absorb stripe tile). The Gu mark is still the Hub's logo — a real
+mark is owed.
 
 ⚠ **`VibeOverlayDB` / `VibeOverlayDBChar` keep their names on purpose.** WoW keys SavedVariables off
 the addon FOLDER name; 23 save files were copied in place and **12 characters ride non-Default

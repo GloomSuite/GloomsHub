@@ -635,6 +635,17 @@ GU's `cNum` shows the live-stepping hook.
   coder; provenance is a distinction that serves the assistant, not him. **Establishing that a change
   is unrelated is useful once, to narrow the search — as a framing for the answer it reads as excuse
   making.** Say what is broken, say what fixes it, fix it.
+- **★ Describe what HE can see, in his words — never name an artefact he hasn't named, and never
+  re-send a command that is already in effect.** On 2026-09-21 a session called a rendering fault
+  "the dark wedge on the pill", referred to it three times, and twice told the owner to run
+  `/gu bar health rot 30` — which was already his setting. His reply: *"I've never seen a dark
+  wedge on the pill. Are you hallucinating? … it doesn't do anything because it's ALREADY at that
+  angle."* The fault was real (his earlier screenshots showed it) and already fixed; the framing
+  was the failure. **Ask "does the pill look whole now?" — a question about the picture — and
+  check the echoed settings line before sending a command.** The same session also wrote "Not for
+  a Rectangle" on a control because the rectangle had no art, treating a gap as a limit until he
+  asked why; a thing skipped for lack of art is a gap, and the tooltip should not dress it up.
+
 - **Group controls by what they DO to the thing, not by which engine function they call.** GB's icon
   tint first shipped beside the availability tints it shares an engine funnel with; the owner
   rejected it on sight — *"this belongs in Decoration Layers."* **Grouping by shared plumbing is the

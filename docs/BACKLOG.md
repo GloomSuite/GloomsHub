@@ -6,62 +6,119 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-09-20, evening (**a clearing session — twelve items closed.** GU went
-PROFILE-BASED (item 14, owner-QA'd), `GloomSuite/GloomsUnitFrames` now EXISTS on GitHub, the
-profile delete gate names the characters on a profile (Hub MINOR 10, with Tab / Shift-Tab and
-Up / Down on every edit box), GA's `ApplyConfig` heat was measured and fixed, the silent-yes engine
-fix was DISPROVED by trace and replaced with a list-row mark, texture-less auras show their spell's
-icon, `hgAnchor` has one copy, DK runes work. **GU's "This spell" kind was REMOVED by the owner**:
-the engine ignores spell-ID filters on the PLAYER's DEBUFFS (FINDINGS §20.6), so it could never
-single out a debuff. What is left is bigger — start fresh.)
+**Last updated:** 2026-09-21 (**the shaped-bar session, and the redesign is specified.** GU's
+four displays gained BAR MODE — a StatusBar cut to a silhouette, FINDINGS §21 — with per-display
+layering, an outline in either mode, a real EUI-style absorb overlay, and the Hub got a SEPARATE
+bar-shape family (`Orb`, `Pill`, the generated `Bracket` set, the owner's `Tall crescent` set).
+Portraits got an **Off** visibility. Then the owner mocked **the whole Suite UI in Figma** —
+24 screens + a PRIMITIVES kit — and the redesign is item 16, fully briefed. **Item 13 (the tab
+tidy pass) closed as superseded by it.**)
 ---
 
 ## Open items
 
-### 12 · Gloom's Unit Frames — what is left
-**Repo:** `~/GloomsUnitFrames` (on GitHub since 2026-09-20) · **Size:** watching, then small pieces · **Evidence:** everything shipped is owner-QA'd
+### 16 · ★ THE SUITE UI REDESIGN — from the owner's Figma mocks
+**Repo:** `~/GloomsHub` first (tokens, fonts, shell, `LibGloomSkin`), then every tab · **Size:** several sessions, ONE per stage · **Evidence:** the mocks exist and were read through the Figma desktop connector 2026-09-21
 
-**Done 2026-09-20:** profiles (item 14) · the GitHub repo · DK runes (via `GetRuneCooldown`, class
-red) · the aura-group PREVIEW (sample icons from the spellbook while the Auras section is open) ·
-the shape-mask bind no longer errors when a button is wired mid-fight · the spell-list boxes
-round-trip by ID and are greyed where the engine ignores them.
+The owner: *"I've grown to hate how it looks."* He mocked it all in Figma, file page **"GloomSuite UI"
+(node `646:144`)**: 24 screens at **1060 × 740** — Auras ×7, Bars ×10, Unit Frames ×7 — plus a
+**PRIMITIVES** frame (`674:13578`) holding every repeated control and a redesigned colour picker.
+The connector reads frames BY ID (`get_metadata` for structure, `get_screenshot`,
+`get_design_context` after loading its guidance resource); he does not need to select anything.
+Layers inside screens are mostly auto-named — the TEXT layers carry the labels, and the PRIMITIVES
+frame is the key for matching controls by shape.
 
-**Left, in order:**
-1. **The shield wash switching OFF** — still only ever seen on the probe square (§19). The owner
-   will watch for it in the next raid.
-2. **Aura filter CLASSES** beyond timed-only and cast-by-you (boss, dispellable, the dispel types,
-   CC…) — same engine path, `UNTESTED` individually; he will use them in the real world and report.
-   ⚠ Spell-ID lists on a PLAYER Debuffs group are DEAD (§20.6) — that is not one of these.
-3. **The aura PREVIEW's alignment** — it reproduces the engine's flow rules (icon rect, spacing,
-   wrap, growth, anchor corner) with our own textures; nobody has yet compared it against a live
-   group pixel-for-pixel. If it is off, it is a one-number correction in `LayoutAuraPreview`.
-4. **The mid-cast tint and kick tick under secrecy** — off for an instanced target by design
-   (the cast's clock is secret). Park unless he asks.
-5. **The Gu mark** in the tab header is still the Hub's logo. Art, not code.
+**Decisions already taken (do not re-ask):**
+- **Window 1060 × 740, fixed** — the shell grows first (CONTRACTS §2 allows growing, never shrinking).
+- **Light grey window** (`#c0c0c0`-ish) with the deep purple as the persisting-state colour, orange
+  for destructive actions and the scrub indicator; the nine colour chips in PRIMITIVES are the
+  palette, roles as a starting point, **not a law** — follow the mocks, flag exceptions.
+- **Fonts: Audiowide** (wordmark, section headers, the big Player/Target buttons) and **Play**
+  regular + bold (body 11 regular, labels 12 bold) — both OFL, ship them with licence files, and
+  **a new font needs a full client restart** to load. Smaller type throughout, deliberately.
+- **Button states:** dark = action, purple = persisting state (tabs, dropdowns, choices), light =
+  disabled. Hover/pressed are the assistant's to derive and should be quiet.
+- **The scrub dial replaces every slider**: tick strip + value box, drag anywhere (the whole screen
+  is the drag range), wheel steps, click-to-type; unit from context (px / ° / % / none); the
+  centre-mark variant wherever zero is meaningful (offsets, angles).
+- **No cogs, no popovers** — settings live on the panel (anything that appears only after a
+  dropdown choice is in the mocks).
+- **Colour SOURCES live in the picker** (class / power type / resource / reaction) — a swatch holds
+  a fixed colour OR a source; the "use class colour" toggles disappear. "(Remove)" only on optional
+  colours.
+- **ONE layer control unit** everywhere in GU (rings, auras, texts): a **Global Settings** panel
+  holds the default strata + level for both units; each element inherits (in the automatic order)
+  or **overrides** with its own two numbers. The per-unit Layer section goes.
+- **Rounded corners at one radius throughout** → one nine-slice family. Dashed borders and a
+  right-click context menu are possible and may be used (`contextMenu` is not mocked — derive).
+- **A Suite SETTINGS tab** with a UI-scale control (EUI's named sizes, Tiny…Massive) — contents beyond
+  that to be found.
+- Dialogs and tooltips: **new**, derived from the kit — never the old designs.
 
-**Read first:** `~/GloomsUnitFrames/CLAUDE.md` · [FINDINGS.md](FINDINGS.md) §18–§20
+**Stages, one session each:** (1) Foundation — tokens, fonts, the shell at 1060 × 740, the
+primitives, and the **UnitFrames Global** panel on screen to prove the kit; (2) Unit Frames' seven
+panels; (3) Bars' ten; (4) Auras' seven; (5) Overlays, Portraits, Media from the kit alone ("same
+controls, new skin" — do not ask him to mock them). Within a session: one panel at a time — read
+it, list what is there, ask only where ambiguous, build, he `/reload`s and looks.
+
+**Read first:** the PRIMITIVES frame (`674:13578`) and the UnitFrames Global screen (`660:5703`)
+through the connector · [CONTRACTS.md](CONTRACTS.md) §1, §2, §4, §6 (what the toolkit and shell
+promise today, and the version gate every consumer carries) · `~/GloomsHub/Skin.lua` (the 13
+primitives and their call shapes) · `~/GloomsHub/Shell.lua`
 
 ---
 
-### 13 · The Unit Frames tab — the tidy pass after the compaction
-**Repo:** `~/GloomsUnitFrames` (the tab) · **Size:** an hour, once he has a mock · **Evidence:** landed and owner-QA'd 2026-09-20 — "a little messy, we can clean up later"
+### 12 · Gloom's Unit Frames — what is left
+**Repo:** `~/GloomsUnitFrames` · **Size:** watching, then small pieces · **Evidence:** bar mode owner-QA'd 2026-09-21 (FINDINGS §21)
 
-The compaction shipped: every section body is a `UI.grid` (two cells per line), the deep clusters
-sit behind `UI.cog` popovers, one-line conditionals appear inline under their switch, the shortcode
-list is a popover that inserts on click. What is left is the LOOK — spacing, which pairs sit
-together, label widths — and **the owner said he might make a mock**; ask for it before touching
-anything. Do not redesign the mechanism. Two things he called confusing today, worth folding in:
-the filter popover differs by kind (now titled "FILTERS — BUFFS / DEBUFFS"), and the rail's PROFILE
-block sits above UNITS with nothing separating the two.
+**Done 2026-09-21:** BAR MODE on health / power / cast / resource (shape · size · rotation · fill
+direction · track · gradient · shift · absorb overlay · outline) · per-display strata + level
+(level = the display's lowest piece; a bar spans +6, an arc +15) · outline in either mode, three
+widths · the bar's own offset, separate from the arc's · `/gu bar <ring> …` QA command (keep it).
 
-**Read first:** `~/GloomsUnitFrames/GloomsUnitFrames_Tab.lua` (the header comment explains the
-three tiers) · [CONTRACTS.md](CONTRACTS.md) §4 (`UI.grid` / `UI.popover` / `UI.cog`)
+**Left, in order:**
+1. **A TARGET's cast in bar mode under secrecy** — `SetTimerDuration` from the duration object,
+   `UNTESTED` there (§21). Needs a delve or a casting mob; he just looks.
+2. **The shield wash switching OFF** (arc mode) — still only ever seen on the probe square (§19).
+3. **Aura filter CLASSES** beyond timed-only and cast-by-you — `UNTESTED` individually.
+4. **The aura PREVIEW's alignment** against a live group — unverified; a one-number fix if off.
+5. **Flips for non-symmetric bar shapes** — a mirrored file per shape + a "Mirror" choice; only
+   matters for the crescent set. Masks refuse flipped texcoords (§21).
+6. **The Gu mark** — still the Hub's logo. Art.
+⚠ The tab's LOOK is item 16's; do not tidy it separately.
+
+**Read first:** `~/GloomsUnitFrames/CLAUDE.md` · [FINDINGS.md](FINDINGS.md) §18–§21
+
+---
+
+### 17 · Bar-shape art — the owner's sets
+**Repo:** `~/GloomsHub` (`Media/art/barshapes/`, `Shapes.lua` BAR_SHAPE_DEF, `tools/gen-barshapes.py`) · **Size:** minutes per set · **Evidence:** the Tall crescent set imported and drawn 2026-09-21
+
+The family has `Orb`, `Pill`, the generated **Bracket** set (owner: *"too thin, and I'm not even
+sure they should be uniform … this isn't it"* — he will draw his own) and his **Tall crescent** set.
+A set = one composition exported one member per file on the shared canvas, white on transparent;
+the generator derives `-base-s` and three rim widths and prints the catalog rows with measured
+footprints. **Size** on a set member scales the SET's footprint so members nest. Expect more sets
+from him; each is: drop the files in, run the script, paste the rows.
+
+**Read first:** the header of `~/GloomsHub/tools/gen-barshapes.py` · the BAR SHAPES block at the end of `~/GloomsHub/Shapes.lua`
 
 ---
 
 ## Not open — recorded so nobody re-raises them
 
 > Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
+
+- **The Unit Frames tab tidy pass (item 13)** — **CLOSED 2026-09-21 as superseded**: the whole
+  Suite UI is being redesigned from mocks (item 16). Do not tidy the old tab.
+- **Offering the BUTTON shape catalog to a unit frame** — **RULED OUT by the owner 2026-09-21**:
+  *"they are fundamentally different things."* GU reads only the Hub's BAR-shape family
+  (`GloomsHub.BAR_SHAPES`); the mechanism is shared, the lists never mix in a picker.
+- **A shared Offset X/Y between a display's arc and bar** — **RULED OUT 2026-09-21**: *"no scenario
+  in which the X/Y placement would be the same."* Each mode keeps its own.
+- **WCAG contrast thresholds for the redesign** — the owner **does not care** (2026-09-21): *"if I
+  can read at age 50, it's not a problem."* Measure if asked; do not lecture.
+- **The mid-combat ruling for GU** stands (2026-09-20): apply at regen is enough.
 
 - **GU's "This spell" aura kind (one aura by spell ID, wearing a Hub effect)** — **REMOVED by the
   owner 2026-09-20.** On the player, the engine ignores `includeSpellIDs` AND `excludeSpellIDs` on
