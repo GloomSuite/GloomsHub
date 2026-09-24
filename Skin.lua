@@ -9,7 +9,7 @@
 -- change it THERE and every consumer in the same session.
 -- ============================================================
 
-local MAJOR, MINOR = "LibGloomSkin-1.0", 12  -- MINOR 12 (2026-09-21, redesign stages 2–3): UI.chip (the colour chip), the picker's colour SOURCES (selected, committed by OK), the SHORT and BARE dials, UI.cell, the revised dropdown list, the kit popover. MINOR 11: THE KIT — the redesign's tokens (COLOR.plate/ink/violet/…, FONT.ui/uiB/mark) and widgets (UI.button · segments · toggleBar · check · field · label · pick · sectionHeader · dial · wordmark · profileRow); the old widgets stay for tabs not yet migrated
+local MAJOR, MINOR = "LibGloomSkin-1.0", 13  -- MINOR 13 (2026-09-23, the SECOND redesign, "GloomSuite UI 2"): THE DARK KIT — COLOR.void/sky/jade/coral/flame, FONT.sa/saB (Saira), UI.accentOf, UI.pill, UI.pillPick, UI.profileStack, and UI.openList (the kit list, openable from any button), the dark UI.dial, UI.plate/rule/text/box/colorDot/toggle2/pillField/xbtn/scrollPane. MINOR 12 (2026-09-21, redesign stages 2–3): UI.chip (the colour chip), the picker's colour SOURCES (selected, committed by OK), the SHORT and BARE dials, UI.cell, the revised dropdown list, the kit popover. MINOR 11: THE KIT — the redesign's tokens (COLOR.plate/ink/violet/…, FONT.ui/uiB/mark) and widgets (UI.button · segments · toggleBar · check · field · label · pick · sectionHeader · dial · wordmark · profileRow); the old widgets stay for tabs not yet migrated
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if lib then
@@ -2255,6 +2255,58 @@ local function pickFlyout()
   return fly
 end
 
+-- UI.openList(anchor, options, current, onPick) — MINOR 13: the kit list on its
+-- own, openable from any button (UI.pick is one caller; the Suite window's tool
+-- switcher and UI.pillPick are the others). options = { {value, label, disabled?}, … };
+-- the row whose value == current wears the band; picking closes it first. A
+-- `disabled` row greys and ignores its click — for a choice that exists but
+-- cannot work for this selection (a sound timing the spell never emits).
+function UI.openList(anchor, options, current, onPick)
+  local fly = pickFlyout()
+  local y, widest = 0, 0
+  for i, opt in ipairs(options) do
+    local row = fly.rows[i]
+    if not row then
+      row = CreateFrame("Button", nil, fly.child); row:SetHeight(PICK_ROW_H)
+      -- the current row's band: violet at 20%, 13 of the row's 14px
+      row.cur = row:CreateTexture(nil, "BACKGROUND"); row.cur:SetPoint("TOPLEFT", 0, 0); row.cur:SetPoint("BOTTOMRIGHT", 0, 1)
+      row.cur:SetColorTexture(COLOR.violet.r, COLOR.violet.g, COLOR.violet.b, 0.2); row.cur:Hide()
+      row.hl = row:CreateTexture(nil, "BORDER"); row.hl:SetPoint("TOPLEFT", 0, 0); row.hl:SetPoint("BOTTOMRIGHT", 0, 1)
+      row.hl:SetColorTexture(0, 0, 0, 0.08); row.hl:Hide()
+      row:SetScript("OnEnter", function(self) self.hl:Show() end)
+      row:SetScript("OnLeave", function(self) self.hl:Hide() end)
+      row.text = UI.newText(row, FONT.ui, 11, COLOR.black, "LEFT")
+      row.text:SetPoint("LEFT", PICK_INSET, 0); row.text:SetPoint("RIGHT", -PICK_INSET, 0); row.text:SetWordWrap(false)
+      fly.rows[i] = row
+    end
+    row:ClearAllPoints()
+    row:SetPoint("TOPLEFT", 0, y); row:SetPoint("TOPRIGHT", 0, y)
+    row.text:SetText(tostring(opt.label or ""):upper())
+    row.text:SetAlpha(opt.disabled and 0.4 or 1)
+    widest = math.max(widest, row.text:GetStringWidth())
+    row.cur:SetShown(opt.value == current)
+    row:SetScript("OnClick", function()
+      if opt.disabled then return end
+      fly.catcher:Hide(); onPick(opt.value)
+    end)
+    row:Show()
+    y = y - PICK_ROW_H
+  end
+  for i = #options + 1, #fly.rows do fly.rows[i]:Hide() end
+  local shown = math.min(#options, PICK_ROWS)
+  local cw = math.ceil(widest) + 2 * PICK_INSET
+  fly.child:SetSize(cw, math.max(10, #options * PICK_ROW_H))
+  fly:SetSize(cw, shown * PICK_ROW_H + PICK_PAD_T + PICK_PAD_B)
+  fly.scroll:SetVerticalScroll(0)
+  fly:ClearAllPoints(); fly:SetPoint("TOP", anchor, "BOTTOM", 0, 0)
+  -- The owner hiding (a tab switch, the window closing) takes the list with it.
+  if not anchor._flyHooked then
+    anchor._flyHooked = true
+    anchor:HookScript("OnHide", function() if pickFly then pickFly.catcher:Hide() end end)
+  end
+  fly.catcher:Show()
+end
+
 function UI.pick(parent, w, getLabel, getOptions, getCurrent, onPick, opts)
   opts = opts or {}
   local field = opts.kind == "field"
@@ -2283,45 +2335,7 @@ function UI.pick(parent, w, getLabel, getOptions, getCurrent, onPick, opts)
   end
 
   b:SetScript("OnClick", function()
-    local fly = pickFlyout()
-    local options, current = getOptions() or {}, getCurrent()
-    local y, widest = 0, 0
-    for i, opt in ipairs(options) do
-      local row = fly.rows[i]
-      if not row then
-        row = CreateFrame("Button", nil, fly.child); row:SetHeight(PICK_ROW_H)
-        -- the current row's band: violet at 20%, 13 of the row's 14px
-        row.cur = row:CreateTexture(nil, "BACKGROUND"); row.cur:SetPoint("TOPLEFT", 0, 0); row.cur:SetPoint("BOTTOMRIGHT", 0, 1)
-        row.cur:SetColorTexture(COLOR.violet.r, COLOR.violet.g, COLOR.violet.b, 0.2); row.cur:Hide()
-        row.hl = row:CreateTexture(nil, "BORDER"); row.hl:SetPoint("TOPLEFT", 0, 0); row.hl:SetPoint("BOTTOMRIGHT", 0, 1)
-        row.hl:SetColorTexture(0, 0, 0, 0.08); row.hl:Hide()
-        row:SetScript("OnEnter", function(self) self.hl:Show() end)
-        row:SetScript("OnLeave", function(self) self.hl:Hide() end)
-        row.text = UI.newText(row, FONT.ui, 11, COLOR.black, "LEFT")
-        row.text:SetPoint("LEFT", PICK_INSET, 0); row.text:SetPoint("RIGHT", -PICK_INSET, 0); row.text:SetWordWrap(false)
-        fly.rows[i] = row
-      end
-      row:ClearAllPoints()
-      row:SetPoint("TOPLEFT", 0, y); row:SetPoint("TOPRIGHT", 0, y)
-      row.text:SetText(tostring(opt.label or ""):upper())
-      widest = math.max(widest, row.text:GetStringWidth())
-      row.cur:SetShown(opt.value == current)
-      row:SetScript("OnClick", function() fly.catcher:Hide(); onPick(opt.value); b:refresh() end)
-      row:Show()
-      y = y - PICK_ROW_H
-    end
-    for i = #options + 1, #fly.rows do fly.rows[i]:Hide() end
-    local shown = math.min(#options, PICK_ROWS)
-    local cw = math.ceil(widest) + 2 * PICK_INSET
-    fly.child:SetSize(cw, math.max(10, #options * PICK_ROW_H))
-    fly:SetSize(cw, shown * PICK_ROW_H + PICK_PAD_T + PICK_PAD_B)
-    fly.scroll:SetVerticalScroll(0)
-    fly:ClearAllPoints(); fly:SetPoint("TOP", b, "BOTTOM", 0, 0)
-    if not b._flyHooked then
-      b._flyHooked = true
-      b:HookScript("OnHide", function() if pickFly then pickFly.catcher:Hide() end end)
-    end
-    fly.catcher:Show()
+    UI.openList(b, getOptions() or {}, getCurrent(), function(v) onPick(v); b:refresh() end)
   end)
 
   b:refresh()
@@ -2371,8 +2385,15 @@ end
 -- `short` (MINOR 12) is the mocks' compact form — a 78px strip of 24 ticks
 -- and the same box, 133 wide (the Health panel's Gradient Angle and Track
 -- Opacity). Same behaviour in every respect; never centred.
+-- `dark` (MINOR 13) is the SECOND redesign's dial (GloomSuite UI 2, e.g. Opacity
+-- in node 724:1226): Saira 12 label; 21 ticks in the accent, 1px at a 5px pitch,
+-- 12 tall; the value is a small light-grey ▲ UNDER the ticks (the mock's Polygon
+-- 5), not an amber tick; a 54 × 21 box of the accent at 30% with Saira 11 white,
+-- 10 right of the ticks. 164 wide, 40 tall. Same behaviour in every respect.
 -- Returns the Frame with :refresh(), :setEnabled(on), .label, .box, .strip.
 -- ------------------------------------------------------------
+UI.DIAL_D = lib.MEDIA .. "ui\\dial-ticks.png"   -- MINOR 13: 21 ticks, x = 0,5..100, 12 tall, on 128x16
+
 function UI.dial(parent, opts)
   local minV, maxV, step = opts.min or 0, opts.max or 100, opts.step or 1
   local unit = opts.unit or ""
@@ -2390,26 +2411,46 @@ function UI.dial(parent, opts)
   end
 
   local short, bare = opts.short and true or false, opts.bare and true or false
-  local TOP = bare and 0 or 18
+  local dark = opts.dark and true or false
+  local ac = dark and (opts.accent or UI.accentOf(parent)) or nil
+  local TOP = bare and 0 or (dark and 19 or 18)
   local f = CreateFrame("Frame", nil, parent)
-  f:SetSize(opts.w or (short and 133 or 194), bare and 17 or 35)
-  f.label = UI.label(f, bare and "" or opts.label); f.label:SetPoint("TOPLEFT", 0, 0)
+  f:SetSize(opts.w or (dark and 164 or (short and 133 or 194)), bare and (dark and 21 or 17) or (dark and 40 or 35))
+  if dark then
+    f.label = UI.newText(f, FONT.sa, 12, COLOR.paper, "LEFT"); f.label:SetText(bare and "" or (opts.label or ""))
+  else
+    f.label = UI.label(f, bare and "" or opts.label)
+  end
+  f.label:SetPoint("TOPLEFT", 0, 0)
 
-  local WIN_W = short and 78 or 141   -- the strip art: posts at 0-1 and W-2..W-1, ticks at 4+3i (45, or 24 short), the centre one at 69-71
-  local TICKS = short and 26 or 47    -- positions the mark can take: post, the ticks, post
+  local WIN_W = dark and 101 or (short and 78 or 141)   -- the strip art: posts at 0-1 and W-2..W-1, ticks at 4+3i (45, or 24 short), the centre one at 69-71
+  local TICKS = dark and 21 or (short and 26 or 47)     -- positions the mark can take: post, the ticks, post
   local strip = CreateFrame("Frame", nil, f)
-  strip:SetPoint("TOPLEFT", 0, -TOP); strip:SetSize(WIN_W, 17)
+  strip:SetPoint("TOPLEFT", 0, -TOP); strip:SetSize(WIN_W, dark and 21 or 17)
   strip:EnableMouse(true); strip:EnableMouseWheel(true)
   local ticks = strip:CreateTexture(nil, "ARTWORK")
-  ticks:SetTexture(short and UI.DIAL_S or (opts.centre and UI.DIAL_C or UI.DIAL))
-  ticks:SetSize(WIN_W, 16); ticks:SetPoint("TOPLEFT", 0, -2); UI.tint(ticks, COLOR.ink)
-  local mark = strip:CreateTexture(nil, "OVERLAY")   -- the amber tick, shaped like the one it replaces
-  mark:SetColorTexture(COLOR.amber.r, COLOR.amber.g, COLOR.amber.b, 1)
-  mark:SetSize(1, 13)
+  local mark = strip:CreateTexture(nil, "OVERLAY")
+  if dark then
+    ticks:SetTexture(UI.DIAL_D); ticks:SetTexCoord(0, 101 / 128, 0, 12 / 16)
+    ticks:SetSize(101, 12); ticks:SetPoint("TOPLEFT", 0, -0.5); UI.tint(ticks, ac)
+    mark:SetTexture(UI.TRI); mark:SetRotation(math.pi)   -- tri.png points down; turned, it points up at the tick
+    mark:SetSize(6, 6); mark:SetVertexColor(0xd9 / 255, 0xd9 / 255, 0xd9 / 255, 1)
+  else
+    ticks:SetTexture(short and UI.DIAL_S or (opts.centre and UI.DIAL_C or UI.DIAL))
+    ticks:SetSize(WIN_W, 16); ticks:SetPoint("TOPLEFT", 0, -2); UI.tint(ticks, COLOR.ink)
+    -- the amber tick, shaped like the one it replaces
+    mark:SetColorTexture(COLOR.amber.r, COLOR.amber.g, COLOR.amber.b, 1)
+    mark:SetSize(1, 13)
+  end
   f.strip, f.ticks, f.mark = strip, ticks, mark
   -- Which tick is amber for a value: index 0 is the left post, 46 the right,
   -- 1..45 the thin ticks; the centre one (23) is 3px wide on a centred dial.
+  -- A dark dial's pointer sits under tick `idx`, 2px below the strip's ticks.
   local function markAt(idx)
+    if dark then
+      mark:ClearAllPoints(); mark:SetPoint("TOP", strip, "TOPLEFT", idx * 5 + 0.5, -14)
+      return
+    end
     local x, w
     if idx <= 0 then x, w = 0, 2
     elseif idx >= TICKS - 1 then x, w = WIN_W - 2, 2
@@ -2420,18 +2461,28 @@ function UI.dial(parent, opts)
   end
 
   -- The box: at least the mock's 42, wider if the range's extremes need it.
-  local box = UI.field(f, 42, { justify = "CENTER" })
+  -- A dark dial's box is the accent at 30% under Saira 11 white, 54 wide at least.
+  local box
+  if dark then
+    box = CreateFrame("EditBox", nil, f); box:SetAutoFocus(false); box:SetHeight(21)
+    UI.setFont(box, FONT.sa, 11); box:SetTextColor(1, 1, 1); box:SetJustifyH("CENTER")
+    local bbg = box:CreateTexture(nil, "BACKGROUND"); bbg:SetAllPoints(); bbg:SetColorTexture(ac.r, ac.g, ac.b, 0.3)
+  else
+    box = UI.field(f, 42, { justify = "CENTER" })
+  end
   box:SetTextInsets(4, 4, 0, 0)
   do
-    local m = UI.newText(f, FONT.ui, 11, nil, "LEFT"); m:Hide()
+    local m = UI.newText(f, dark and FONT.sa or FONT.ui, 11, nil, "LEFT"); m:Hide()
     local widest = 0
     for _, v in ipairs({ minV, maxV, -maxV }) do
       m:SetText(fmt(v) .. unit); widest = math.max(widest, m:GetStringWidth())
     end
-    box:SetWidth(math.max(42, math.ceil(widest) + 10))
-    f:SetWidth(math.max(opts.w or (short and 133 or 194), WIN_W + 10 + box:GetWidth()))   -- the frame grows, never the gap shrinks
+    local minBox = dark and 54 or 42
+    box:SetWidth(math.max(minBox, math.ceil(widest) + 10))
+    f:SetWidth(math.max(opts.w or (dark and 164 or (short and 133 or 194)), WIN_W + (dark and 9 or 10) + box:GetWidth()))   -- the frame grows, never the gap shrinks
   end
-  box:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, -TOP)
+  if dark then box:SetPoint("TOPLEFT", f, "TOPLEFT", 110, -TOP)
+  else box:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, -TOP) end
   f.box = box
 
   local cur, enabled = snap(opts.get() or minV), true
@@ -2721,6 +2772,536 @@ function UI.profileRow(parent, api, mark)
 
   function row:refresh() dd:refresh() end
   return row
+end
+
+-- ------------------------------------------------------------
+-- ★ THE DARK KIT (MINOR 13, 2026-09-23) — the SECOND redesign (Figma page
+-- "GloomSuite UI 2"). The window went near-black, the type went to Saira, and
+-- every tool wears its own ACCENT: Auras green, Bars and Unit Frames their own,
+-- everything else the suite blue. A colour does not mean the same thing in two
+-- tools — the owner, 2026-09-23: "just accept the inconsistency."
+-- The first redesign's kit above stays for the tabs that have not moved yet.
+--
+-- ACCENT BY ANCESTRY: a dark-kit widget takes `opts.accent`, or else the accent
+-- of the nearest ancestor carrying `_gloomAccent` (the Suite window sets it on a
+-- tool's container), or else the suite blue. So a tool never passes its colour
+-- to every widget, and a widget moved between tools cannot keep a stale one.
+-- ------------------------------------------------------------
+COLOR.void  = color("0c0d11")   -- the window
+COLOR.sky   = color("13a0f7")   -- the suite blue: the default accent, the foot of the sidebar's gradient
+COLOR.jade  = color("4fc667")   -- Auras' accent
+COLOR.coral = color("e14b4b")   -- destructive: Delete, Delete Aura
+COLOR.flame = color("ea9438")   -- Auras' highlight: the selected aura, a visible eye
+
+-- ⚠ NEW FONTS LOAD AT CLIENT LAUNCH — the first time these ship, a /reload is not
+-- enough (CLAUDE.md working agreement 4). Both are the static builds, OFL.
+FONT.sa  = FONT_DIR .. "Saira-Regular.ttf"
+FONT.saB = FONT_DIR .. "Saira-Bold.ttf"
+
+function UI.accentOf(frame)
+  local f = frame
+  while f do
+    if f._gloomAccent then return f._gloomAccent end
+    f = f.GetParent and f:GetParent()
+  end
+  return COLOR.sky
+end
+
+-- UI.pill — the dark kit's button. A pill of 1000px radius with a border on the
+-- LEFT and RIGHT only, which is why the stroke is a crescent at each end that
+-- tapers to nothing at the top and bottom (the mocks' `border-l border-r`), and
+-- a fill of the same colour at 10% under all of it.
+-- Built from three pieces so nothing is ever stretched: a left cap, a plain
+-- rectangle, the right cap (the left one's texcoords flipped). The caps are
+-- generated per height by tools/gen-kit-art.py — 22 (the small row) and 25 (the
+-- standard); any other height falls back to 25.
+--   UI.pill(parent, label, opts?) → Button with .text, :SetLabel(s),
+--     :SetSelected(on), :SetAccent(c), :paint()
+--   opts = { h = 25|22, size (11 for 25, 9 for 22), padX = 11, w (fixed width),
+--            accent, danger (coral), selected (fill 30% instead of 10%),
+--            paper (the white field: no rim, dark text), font, onClick,
+--            rim = "both"|"left"|"right"|"none" (which ends carry the stroke),
+--            solid = {r,g,b} (an OPAQUE fill instead of the accent at 10% — for a
+--              pill that sits on something it must hide, like the "Choose" at
+--              the end of a white field) }
+UI.PILL_DIR = lib.MEDIA .. "ui\\pill\\"
+local PILL_CAP = { [22] = 11, [25] = 13 }   -- cap width per height: ceil(h / 2)
+
+function UI.pill(parent, label, opts)
+  opts = opts or {}
+  local h = PILL_CAP[opts.h or 25] and (opts.h or 25) or 25
+  local cw = PILL_CAP[h]
+  local b = CreateFrame("Button", nil, parent)
+  b:SetHeight(h)
+  local u, v = cw / 16, h / 32
+  local function capTex(kind, layer, right)
+    local t = b:CreateTexture(nil, layer)
+    t:SetTexture(UI.PILL_DIR .. "cap" .. h .. "-" .. kind .. ".png")
+    t:SetSize(cw, h)
+    if right then t:SetTexCoord(u, 0, 0, v); t:SetPoint("RIGHT", 0, 0)
+    else t:SetTexCoord(0, u, 0, v); t:SetPoint("LEFT", 0, 0) end
+    return t
+  end
+  b.fillL, b.fillR = capTex("fill", "BACKGROUND"), capTex("fill", "BACKGROUND", true)
+  b.fillM = b:CreateTexture(nil, "BACKGROUND")
+  b.fillM:SetPoint("TOPLEFT", cw, 0); b.fillM:SetPoint("BOTTOMRIGHT", -cw, 0)
+  b.fillM:SetColorTexture(1, 1, 1, 1)
+  b.rimL, b.rimR = capTex("rim", "BORDER"), capTex("rim", "BORDER", true)
+  b.text = UI.newText(b, opts.font or FONT.sa, opts.size or (h == 22 and 9 or 11), nil, "CENTER")
+  b.text:SetPoint("CENTER", 0, 0); b.text:SetWordWrap(false)
+  b:SetFontString(b.text)
+  b._padX, b._fixedW = opts.padX or 11, opts.w
+  b._accent, b._danger, b._paper = opts.accent, opts.danger, opts.paper
+  b._sel, b._hot = opts.selected and true or false, false
+  b._rim, b._solid = opts.rim or "both", opts.solid
+
+  function b:paint()
+    local c = self._danger and COLOR.coral or self._accent or UI.accentOf(self:GetParent())
+    local fa, ra, tc
+    local fc = c
+    if self._paper then
+      fc, fa, ra, tc = COLOR.paper, self._hot and 0.88 or 1, 0, COLOR.void
+    elseif self._solid then
+      fc, fa, ra, tc = self._solid, 1, 1, COLOR.paper
+      if self._hot then fc = { r = math.min(1, fc.r + 0.06), g = math.min(1, fc.g + 0.06), b = math.min(1, fc.b + 0.06) } end
+    else
+      fa = (self._sel and 0.3 or 0.1) + (self._hot and 0.1 or 0)
+      ra, tc = 1, COLOR.paper
+    end
+    for _, t in ipairs({ self.fillL, self.fillR, self.fillM }) do t:SetVertexColor(fc.r, fc.g, fc.b, fa) end
+    local r = self._rim
+    self.rimL:SetVertexColor(c.r, c.g, c.b, (r == "both" or r == "left") and ra or 0)
+    self.rimR:SetVertexColor(c.r, c.g, c.b, (r == "both" or r == "right") and ra or 0)
+    self.text:SetTextColor(tc.r, tc.g, tc.b)
+    self:SetAlpha(self:IsEnabled() and 1 or 0.5)   -- unavailable = 50%, never hidden
+  end
+  function b:SetLabel(txt)
+    self.text:SetText(tostring(txt or ""))
+    self:SetWidth(self._fixedW or (math.ceil(self.text:GetStringWidth()) + 2 * self._padX))
+  end
+  function b:SetSelected(on) self._sel = on and true or false; self:paint() end
+  function b:SetAccent(c) self._accent = c; self:paint() end
+  b:SetScript("OnEnter", function(self) if self:IsEnabled() then self._hot = true; self:paint() end end)
+  b:SetScript("OnLeave", function(self) self._hot = false; self:paint() end)
+  b:SetScript("OnEnable", function(self) self:paint() end)
+  b:SetScript("OnDisable", function(self) self._hot = false; self:paint() end)
+  if opts.onClick then b:SetScript("OnClick", opts.onClick) end
+  b:SetLabel(label or "")
+  b:paint()
+  return b
+end
+
+-- UI.pillPick — the dark kit's dropdown: a pill carrying the choice that opens
+-- the kit list (UI.openList). `paper` = the white field with a dark triangle and
+-- the label on the left (the profile picker); otherwise an accent pill with the
+-- label centred, as the mocks draw every other picker.
+--   UI.pillPick(parent, w, getLabel, getOptions, getCurrent, onPick, opts?)
+--   opts = the UI.pill opts. Returns the pill with :refresh().
+function UI.pillPick(parent, w, getLabel, getOptions, getCurrent, onPick, opts)
+  opts = opts or {}
+  opts.w = w
+  local b = UI.pill(parent, "", opts)
+  if opts.paper then
+    b.text:ClearAllPoints(); b.text:SetPoint("LEFT", 6, 0); b.text:SetPoint("RIGHT", -20, 0); b.text:SetJustifyH("LEFT")
+    local tri = b:CreateTexture(nil, "ARTWORK"); tri:SetTexture(UI.TRI); tri:SetSize(8, 8)
+    tri:SetPoint("RIGHT", -8, 0); UI.tint(tri, COLOR.void)
+    b.tri = tri
+  end
+  function b:refresh() self:SetLabel(getLabel() or "?") end
+  b:SetScript("OnClick", function(self)
+    UI.openList(self, getOptions() or {}, getCurrent(), function(val) onPick(val); self:refresh() end)
+  end)
+  b:refresh()
+  return b
+end
+
+-- UI.profileStack(parent, api, mark, accent?) → the dark kit's profile control,
+-- stacked for the Suite window's sidebar (GloomSuite UI 2, node 718:40), 210 wide:
+--   "gloomAURAS profile:" (Saira 12, the tool's name in its accent)
+--   the white 210px picker, 25 tall, 22 below the label
+--   New · Copy · Rename · Delete — small pills (22 tall, Saira 9), Delete coral
+-- Same `api` as UI.profileBlock / UI.profileRow, same dialogs, same delete gate.
+-- An error shows in coral ABOVE the label (there is no room beside the buttons).
+-- Returns { frame, refresh, note }.
+function UI.profileStack(parent, api, mark, accent)
+  local noun = api.noun or "profile"
+  local hasCopy = type(api.copy) == "function"
+  local ac = accent or UI.accentOf(parent)
+  local st = {}
+  local f = CreateFrame("Frame", nil, parent)
+  f:SetSize(210, 79)
+  st.frame = f
+
+  local who = UI.newText(f, FONT.sa, 12, COLOR.paper, "LEFT")
+  who:SetPoint("TOPLEFT", 0, 0)
+  who:SetText(("gloom|cff%s%s|r %s:"):format(hexOf(ac), mark or "", noun))
+
+  local note = UI.newText(f, FONT.sa, 11, COLOR.coral, "LEFT")
+  note:SetPoint("BOTTOMLEFT", f, "TOPLEFT", 0, 6); note:SetWidth(210); note:SetWordWrap(true)
+  function st:note(text) note:SetText(text or "") end
+
+  local dd
+  local function after(ok, err)
+    if ok then st:note(""); dd:refresh(); if api.onChange then api.onChange() end
+    else st:note(err or "") end
+  end
+  dd = UI.pillPick(f, 210,
+    function() return api.active() end,
+    function()
+      local out = {}
+      for _, name in ipairs(api.names() or {}) do out[#out + 1] = { value = name, label = name } end
+      return out
+    end,
+    function() return api.active() end,
+    function(val) st:note(""); api.switch(val); if api.onChange then api.onChange() end end,
+    { paper = true })
+  dd:SetPoint("TOPLEFT", 0, -22)
+  st.dropdown = dd
+
+  local act = profileActions(api, after)
+  local prev
+  local function btn(label, handler, danger)
+    local b = UI.pill(f, label, { h = 22, accent = ac, danger = danger, onClick = handler })
+    if prev then b:SetPoint("LEFT", prev, "RIGHT", 6, 0) else b:SetPoint("TOPLEFT", 0, -57) end
+    prev = b
+    return b
+  end
+  local bNew = btn("New", act.new)
+  local bCopy = hasCopy and btn("Copy", act.copy) or nil
+  local bRen = btn("Rename", act.rename)
+  local bDel = btn("Delete", act.delete, true)
+  profileTips(api, dd, bNew, bCopy, bRen, bDel)
+
+  function st:refresh() dd:refresh() end
+  return st
+end
+
+-- ------------------------------------------------------------
+-- The dark kit's smaller pieces (MINOR 13), each read off the GloomSuite UI 2
+-- mocks. All take their colour from UI.accentOf(parent) unless told otherwise,
+-- and all return objects with :refresh() / :setEnabled(on) where they hold a
+-- value, so a tool can drive them from one refresh loop. Disabled = 50%, never
+-- hidden (the suite's rule).
+-- ------------------------------------------------------------
+UI.CHECK   = lib.MEDIA .. "ui\\check.png"         -- the tick, white, 16x16
+UI.DISC    = lib.MEDIA .. "ui\\circle.png"        -- a colour swatch, white, 32x32
+UI.DISC_NO = lib.MEDIA .. "ui\\circle-dash.png"   -- the swatch with no colour set
+
+local function mix(a, b, t) return { r = a.r + (b.r - a.r) * t, g = a.g + (b.g - a.g) * t, b = a.b + (b.b - a.b) * t } end
+
+-- UI.plate(parent, title?) → a section plate: the accent at 10%, square, with an
+-- optional Saira Bold 14 white title 16 in and 10 down (the mocks' APPEARANCE,
+-- POSITION, …). A plate inside a plate adds another 10% on its own. Size it.
+function UI.plate(parent, title, accent)
+  local ac = accent or UI.accentOf(parent)
+  local f = CreateFrame("Frame", nil, parent)
+  f.bg = f:CreateTexture(nil, "BACKGROUND"); f.bg:SetAllPoints()
+  f.bg:SetColorTexture(ac.r, ac.g, ac.b, 0.1)
+  if title then
+    f.title = UI.newText(f, FONT.saB, 14, COLOR.paper, "LEFT")
+    f.title:SetPoint("TOPLEFT", 16, -10); f.title:SetText(title)
+  end
+  return f
+end
+
+-- UI.rule(parent) → the mocks' divider: 1px of the accent at 30%. Anchor it.
+function UI.rule(parent, accent)
+  local ac = accent or UI.accentOf(parent)
+  local t = parent:CreateTexture(nil, "ARTWORK"); t:SetHeight(1)
+  t:SetColorTexture(ac.r, ac.g, ac.b, 0.3)
+  return t
+end
+
+-- UI.text(parent, text, size?, bold?) → Saira white, the dark kit's label.
+function UI.text(parent, text, size, bold)
+  local fs = UI.newText(parent, bold and FONT.saB or FONT.sa, size or 12, COLOR.paper, "LEFT")
+  fs:SetText(text or "")
+  return fs
+end
+
+-- UI.box(parent, label?, get, set) → the checkbox: a 16px square, the accent at
+-- 10% inside a 1px accent line, a white tick when on; the label in Saira 12 at
+-- x=26. The whole row is the click target.
+function UI.box(parent, label, get, set, accent)
+  local ac = accent or UI.accentOf(parent)
+  local b = CreateFrame("Button", nil, parent)
+  b:SetSize(16, 16)
+  local fill = b:CreateTexture(nil, "BACKGROUND"); fill:SetPoint("TOPLEFT"); fill:SetSize(16, 16)
+  fill:SetColorTexture(ac.r, ac.g, ac.b, 0.1)
+  local edge = CreateFrame("Frame", nil, b); edge:SetPoint("TOPLEFT"); edge:SetSize(16, 16)
+  UI.addEdges(edge, { r = ac.r, g = ac.g, b = ac.b, a = 1 }, 1)
+  local tick = b:CreateTexture(nil, "ARTWORK"); tick:SetTexture(UI.CHECK); tick:SetPoint("TOPLEFT"); tick:SetSize(16, 16)
+  b.tick = tick
+  if label and label ~= "" then
+    b.label = UI.text(b, label, 12); b.label:SetPoint("LEFT", b, "LEFT", 26, 0)
+    b:SetWidth(26 + math.ceil(b.label:GetStringWidth()))
+    -- the hit area is the row, but the art stays a 16px square at the left
+  end
+  local enabled = true
+  function b:refresh() tick:SetShown(get() and true or false) end
+  function b:setEnabled(on) enabled = on and true or false; self:SetAlpha(enabled and 1 or 0.5) end
+  b:SetScript("OnClick", function(self)
+    if not enabled then return end
+    set(not get()); self:refresh()
+  end)
+  b:refresh()
+  return b
+end
+
+-- UI.colorDot(parent, opts) → a colour control, the mocks' "Frame 320": a
+-- checkbox (the colour is ON), an optional label, and a 20px circle of the
+-- colour — a dashed ring when none is set. Click the circle for the suite
+-- picker; unticking clears the colour (set(nil)), ticking opens the picker.
+-- `required` drops the checkbox (a colour that must always have a value).
+--   opts = { get, set, label?, title ("TEXT COLOR", the picker's), hasAlpha,
+--            required, accent }
+function UI.colorDot(parent, opts)
+  local f = CreateFrame("Frame", nil, parent)
+  f:SetHeight(22)
+  local x = 0
+  local chk
+  local function openPicker() end
+  if not opts.required then
+    chk = UI.box(f, nil, function() return opts.get() ~= nil end, function(on)
+      if on then openPicker() else opts.set(nil); f:refresh() end
+    end, opts.accent)
+    chk:SetPoint("LEFT", 0, 0)
+    x = 26
+  end
+  if opts.label then
+    local lbl = UI.text(f, opts.label, 12); lbl:SetPoint("LEFT", x, 0)
+    x = x + math.ceil(lbl:GetStringWidth()) + 10
+    f.label = lbl
+  end
+  local dot = CreateFrame("Button", nil, f); dot:SetSize(20, 20); dot:SetPoint("LEFT", x, 0)
+  local disc = dot:CreateTexture(nil, "ARTWORK"); disc:SetAllPoints()
+  f:SetWidth(x + 20)
+  f.dot = dot
+
+  local enabled = true
+  function f:refresh()
+    local c = opts.get()
+    if c then
+      if UI.NoteColor then UI.NoteColor(c) end   -- it is live somewhere: it belongs in the palette
+      disc:SetTexture(UI.DISC); disc:SetVertexColor(c[1] or 1, c[2] or 1, c[3] or 1, 1)
+    else
+      disc:SetTexture(UI.DISC_NO); disc:SetVertexColor(1, 1, 1, 0.5)
+    end
+    if chk then chk:refresh() end
+  end
+  -- A cancel must be able to put an UNSET colour back: the picker restores what
+  -- it opened with, and "unset" is not a colour it can hold (GA's MakeColor rule).
+  openPicker = function()
+    if not enabled then return end
+    local wasUnset = opts.get() == nil
+    UI.colorPicker({
+      color = opts.get() or { 1, 1, 1 },
+      hasAlpha = opts.hasAlpha,
+      title = (opts.title or opts.label or "Color"):upper(),
+      owner = dot,
+      onChange = function(c) opts.set(c); f:refresh() end,
+      onCancel = function() if wasUnset then opts.set(nil) end; f:refresh() end,
+    })
+  end
+  dot:SetScript("OnClick", openPicker)
+  function f:setEnabled(on)
+    enabled = on and true or false
+    if chk then chk:setEnabled(enabled) end
+    dot:SetEnabled(enabled)
+    self:SetAlpha(enabled and 1 or 0.5)
+    if chk then chk:SetAlpha(1) end   -- the frame's own alpha already dims it
+  end
+  f:refresh()
+  return f
+end
+
+-- UI.toggle2(parent, choices, get, set) → the mocks' two-part switch ("Off | On",
+-- "Enabled | Disabled"): one pill cut in two with a 1px line of the accent
+-- between the halves; the CHOSEN half at 30%, the other at 10%. Each half is as
+-- wide as its word + 11 each side. choices = { {value, label}, {value, label} }.
+function UI.toggle2(parent, choices, get, set, accent)
+  local ac = accent or UI.accentOf(parent)
+  local h, cw = 25, PILL_CAP[25]
+  local u, v = cw / 16, h / 32
+  local f = CreateFrame("Frame", nil, parent); f:SetHeight(h)
+  local halves = {}
+  local x = 0
+  for i, ch in ipairs(choices) do
+    local b = CreateFrame("Button", nil, f)
+    b.text = UI.newText(b, FONT.sa, 11, COLOR.paper, "CENTER"); b.text:SetText(ch[2])
+    local w = math.ceil(b.text:GetStringWidth()) + 22
+    b:SetSize(w, h); b:SetPoint("LEFT", x, 0); b.text:SetPoint("CENTER", 0, 0)
+    local left = (i == 1)
+    local capF = b:CreateTexture(nil, "BACKGROUND"); capF:SetTexture(UI.PILL_DIR .. "cap25-fill.png"); capF:SetSize(cw, h)
+    local capR = b:CreateTexture(nil, "BORDER");     capR:SetTexture(UI.PILL_DIR .. "cap25-rim.png");  capR:SetSize(cw, h)
+    local mid = b:CreateTexture(nil, "BACKGROUND"); mid:SetColorTexture(1, 1, 1, 1)
+    if left then
+      capF:SetTexCoord(0, u, 0, v); capF:SetPoint("LEFT"); capR:SetTexCoord(0, u, 0, v); capR:SetPoint("LEFT")
+      mid:SetPoint("TOPLEFT", cw, 0); mid:SetPoint("BOTTOMRIGHT", 0, 0)
+      local line = b:CreateTexture(nil, "BORDER"); line:SetWidth(1)
+      line:SetPoint("TOPRIGHT", 0, 0); line:SetPoint("BOTTOMRIGHT", 0, 0)
+      line:SetColorTexture(ac.r, ac.g, ac.b, 1)
+    else
+      capF:SetTexCoord(u, 0, 0, v); capF:SetPoint("RIGHT"); capR:SetTexCoord(u, 0, 0, v); capR:SetPoint("RIGHT")
+      mid:SetPoint("TOPLEFT", 0, 0); mid:SetPoint("BOTTOMRIGHT", -cw, 0)
+    end
+    capR:SetVertexColor(ac.r, ac.g, ac.b, 1)
+    b.fills = { capF, mid }
+    b.value = ch[1]
+    halves[i] = b
+    x = x + w
+  end
+  f:SetWidth(x)
+  local enabled, hot = true, nil
+  function f:refresh()
+    local cur = get()
+    for _, b in ipairs(halves) do
+      local a = ((b.value == cur) and 0.3 or 0.1) + ((hot == b) and 0.1 or 0)
+      for _, t in ipairs(b.fills) do t:SetVertexColor(ac.r, ac.g, ac.b, a) end
+    end
+  end
+  function f:setEnabled(on) enabled = on and true or false; self:SetAlpha(enabled and 1 or 0.5) end
+  for _, b in ipairs(halves) do
+    b:SetScript("OnEnter", function(self) if enabled then hot = self; f:refresh() end end)
+    b:SetScript("OnLeave", function() hot = nil; f:refresh() end)
+    b:SetScript("OnClick", function(self)
+      if not enabled or get() == self.value then return end
+      set(self.value); f:refresh()
+    end)
+  end
+  f:refresh()
+  return f
+end
+
+-- UI.pillField(parent, w, opts) → the white field: a 25-tall white pill with
+-- Saira 11 in the window's near-black, 6 in from the left. `button` hangs a
+-- "Choose" on its right end — an opaque dark-accent pill with the stroke on
+-- its right end only (the mocks' Icon/Art field).
+--   opts = { placeholder, numeric, justify, commit(text) — on Enter AND on
+--            losing focus, button = { label, onClick }, accent }
+-- Returns the EditBox; :SetText as usual; .button when there is one.
+function UI.pillField(parent, w, opts)
+  opts = opts or {}
+  local ac = opts.accent or UI.accentOf(parent)
+  local h, cw = 25, PILL_CAP[25]
+  local u, v = cw / 16, h / 32
+  local e = CreateFrame("EditBox", nil, parent)
+  e:SetSize(w, h); e:SetAutoFocus(false)
+  UI.setFont(e, FONT.sa, 11); e:SetTextColor(COLOR.void.r, COLOR.void.g, COLOR.void.b)
+  e:SetJustifyH(opts.justify or "LEFT")
+  if opts.numeric then e:SetNumeric(true) end
+  local capL = e:CreateTexture(nil, "BACKGROUND"); capL:SetTexture(UI.PILL_DIR .. "cap25-fill.png")
+  capL:SetSize(cw, h); capL:SetTexCoord(0, u, 0, v); capL:SetPoint("LEFT")
+  local capR = e:CreateTexture(nil, "BACKGROUND"); capR:SetTexture(UI.PILL_DIR .. "cap25-fill.png")
+  capR:SetSize(cw, h); capR:SetTexCoord(u, 0, 0, v); capR:SetPoint("RIGHT")
+  local mid = e:CreateTexture(nil, "BACKGROUND"); mid:SetColorTexture(1, 1, 1, 1)
+  mid:SetPoint("TOPLEFT", cw, 0); mid:SetPoint("BOTTOMRIGHT", -cw, 0)
+  local right = 6
+  if opts.button then
+    local b = UI.pill(e, opts.button.label or "Choose", { accent = ac, rim = "right",
+      solid = mix(COLOR.void, ac, 0.2), onClick = opts.button.onClick })
+    b:SetPoint("RIGHT", 0, 0)
+    e.button = b
+    right = b:GetWidth() + 4
+  end
+  e:SetTextInsets(6, right, 0, 0)
+  if opts.placeholder then
+    local ph = UI.newText(e, FONT.sa, 11, COLOR.void, opts.justify or "LEFT"); ph:SetAlpha(0.4)
+    ph:SetPoint("LEFT", 6, 0); ph:SetPoint("RIGHT", -right, 0); ph:SetText(opts.placeholder); ph:SetWordWrap(false)
+    local function upd() ph:SetShown((e:GetText() or "") == "") end
+    e:HookScript("OnTextChanged", upd); e:HookScript("OnShow", upd)
+    -- Text set from CODE must hide it too, without leaning on OnTextChanged
+    -- firing for a programmatic SetText.
+    local set = e.SetText
+    function e:SetText(t) set(self, t); upd() end
+    e.placeholder = ph
+  end
+  e:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+  e:SetScript("OnEscapePressed", function(self) self._escape = true; self:ClearFocus() end)
+  e:SetScript("OnEditFocusLost", function(self)
+    if self._escape then self._escape = nil; if opts.revert then opts.revert(self) end; return end
+    if opts.commit then opts.commit(self:GetText() or "") end
+  end)
+  function e:setEnabled(on)
+    self:SetEnabled(on and true or false)
+    if self.button then self.button:SetEnabled(on and true or false) end
+    self:SetAlpha(on and 1 or 0.5)
+  end
+  return e
+end
+
+-- UI.xbtn(parent, onClick) → the mocks' small X: 24 x 21, the accent solid with
+-- 4px corners, "X" in Saira Bold 11 near-black.
+function UI.xbtn(parent, onClick, accent)
+  local ac = accent or UI.accentOf(parent)
+  local b = CreateFrame("Button", nil, parent); b:SetSize(24, 21)
+  local bg = UI.roundFill(b, "BACKGROUND"); UI.tint(bg, ac)
+  local t = UI.newText(b, FONT.saB, 11, COLOR.void, "CENTER"); t:SetPoint("CENTER", 0, 0); t:SetText("X")
+  b:SetScript("OnEnter", function() bg:SetVertexColor(math.min(1, ac.r + 0.12), math.min(1, ac.g + 0.12), math.min(1, ac.b + 0.12), 1) end)
+  b:SetScript("OnLeave", function() UI.tint(bg, ac) end)
+  if onClick then b:SetScript("OnClick", onClick) end
+  return b
+end
+
+-- UI.scrollPane(parent, opts) → a ScrollFrame whose bar exists only while the
+-- content is taller than the pane (the owner, 2026-09-23: "I do NOT want the
+-- scrollbar present when/if the content doesn't require it"). A 4px bar in the
+-- accent, `barGap` right of the pane; the wheel scrolls 40 at a time.
+--   opts = { w, barGap = 6, accent } → pane with .child, :SetContentHeight(h),
+--   :ScrollTo(y)
+function UI.scrollPane(parent, opts)
+  opts = opts or {}
+  local ac = opts.accent or UI.accentOf(parent)
+  local sf = CreateFrame("ScrollFrame", nil, parent)
+  local child = CreateFrame("Frame", nil, sf); child:SetSize(opts.w or 10, 10)
+  sf:SetScrollChild(child); sf.child = child
+  sf:EnableMouseWheel(true)
+  local track = CreateFrame("Frame", nil, parent); track:SetWidth(4)
+  track:SetPoint("TOPLEFT", sf, "TOPRIGHT", opts.barGap or 6, 0)
+  track:SetPoint("BOTTOMLEFT", sf, "BOTTOMRIGHT", opts.barGap or 6, 0)
+  local tt = track:CreateTexture(nil, "BACKGROUND"); tt:SetAllPoints(); tt:SetColorTexture(ac.r, ac.g, ac.b, 0.1)
+  local thumb = CreateFrame("Button", nil, track); thumb:SetWidth(4); thumb:EnableMouse(true)
+  local th = thumb:CreateTexture(nil, "ARTWORK"); th:SetAllPoints(); th:SetColorTexture(ac.r, ac.g, ac.b, 0.7)
+  track:Hide()
+  local contentH, maxS = 10, 0
+  local function place()
+    local view = sf:GetHeight() or 1
+    local v = sf:GetVerticalScroll() or 0
+    if maxS <= 0 then return end
+    local hgt = math.max(24, view * view / contentH)
+    thumb:SetHeight(hgt)
+    thumb:ClearAllPoints(); thumb:SetPoint("TOPLEFT", track, "TOPLEFT", 0, -(view - hgt) * (v / maxS))
+  end
+  function sf:ScrollTo(y)
+    y = math.max(0, math.min(maxS, y or 0))
+    self:SetVerticalScroll(y); place()
+  end
+  function sf:SetContentHeight(h)
+    contentH = math.max(1, h or 1)
+    child:SetHeight(contentH)
+    maxS = math.max(0, contentH - (self:GetHeight() or 0))
+    track:SetShown(maxS > 0)
+    self:ScrollTo(self:GetVerticalScroll() or 0)
+  end
+  sf:SetScript("OnSizeChanged", function(self) self:SetContentHeight(contentH) end)
+  sf:SetScript("OnMouseWheel", function(self, d) self:ScrollTo((self:GetVerticalScroll() or 0) - d * 40) end)
+  local dragging, startY, startS = false, 0, 0
+  thumb:SetScript("OnMouseDown", function(self)
+    dragging = true; startS = sf:GetVerticalScroll() or 0
+    local _, cy = GetCursorPosition(); startY = cy / self:GetEffectiveScale()
+  end)
+  thumb:SetScript("OnMouseUp", function() dragging = false end)
+  thumb:SetScript("OnUpdate", function(self)
+    if not dragging then return end
+    if not IsMouseButtonDown("LeftButton") then dragging = false; return end
+    local view = sf:GetHeight() or 1
+    local range = view - self:GetHeight()
+    if range <= 0 then return end
+    local _, cy = GetCursorPosition()
+    local moved = startY - cy / self:GetEffectiveScale()
+    sf:ScrollTo(startS + moved / range * maxS)
+  end)
+  return sf
 end
 
 end   -- if lib

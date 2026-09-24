@@ -7,6 +7,10 @@
 > §§1–4 describe live code, not proposals. Phase ledger: [SUITE-STATE.md](SUITE-STATE.md).
 
 ## 1. Design tokens (the ONE copy)
+> **★ 2026-09-23 — the current design's tokens are the DARK KIT's** (`void · sky · jade · coral ·
+> flame`, Saira): listed in §4 under "THE DARK KIT". Everything below is the older families,
+> still in `Skin.lua` for the tools not yet rebuilt.
+
 Today GB and GA each hold a byte-identical `COLOR`/`FONT` table — that duplication is the drift
 we are removing. Post-migration these live ONLY in GloomsHub (`GloomsHub.COLOR/.FONT`) and are
 consumed via `LibGloomSkin`. Values are the established family language:
@@ -47,39 +51,45 @@ consumed via `LibGloomSkin`. Values are the established family language:
 ## 2. The tabbed-shell API (GloomsHub owns)
 ```lua
 GloomsHub:RegisterTab{
-  id       = "bars",           -- stable key; the slash focuses by this
-  title    = "BARS",          -- the tab button's label (uppercased by the kit)
-  order    = 20,              -- fallback sort weight — the shell orders KNOWN ids itself (below)
-  wordmark = "BARS",          -- MINOR 11: what the banner shows after "gloom"; defaults to `title`
-  profile  = api,             -- MINOR 11: a UI.profileBlock-style api → the shell draws the tool's
-                              --   PROFILE ROW in the window's footer (UI.profileRow); optional
+  id       = "auras",          -- stable key; the slash focuses by this
+  title    = "AURAS",          -- the tool's name in the tool switcher's list
+  order    = 10,               -- fallback sort weight — the shell orders KNOWN ids itself (below)
+  wordmark = "AURAS",          -- what the switcher band and the profile label show after "gloom"
+  profile  = api,              -- a UI.profileBlock-style api → the shell draws the tool's profile
+                               --   control in the SIDEBAR (UI.profileStack); optional
   build    = function(container) … end,  -- called ONCE, lazily, on first show; parent to `container`
-  refresh  = function() … end,           -- optional; called each focus (maps to a tool's C:Refresh)
+  refresh  = function() … end,           -- optional; called each focus
+  -- ★ 2026-09-23, the second design — a PAGED tool supplies these three:
+  accent   = COLOR.jade,       -- the tool's colour (switcher band, page list, title, dark-kit widgets);
+                               --   default the suite blue
+  pages    = { { id = "triggers", title = "Aura Triggers" }, … },  -- the sidebar's page list
+  showPage = function(pageId) … end,     -- show one page (the shell draws its title)
 }
 
-GloomsHub:Open(id)      -- show the Suite window + focus tab `id`
-GloomsHub:FocusTab(id)  -- switch tabs within an open window
-GloomsHub:ToggleWindow(id?)  -- slash semantics (added Phase B): open→close if on `id`
-                             -- (or no id), switch if on another tab, else Open(id)
+GloomsHub:Open(id)               -- show the Suite window + focus tool `id`
+GloomsHub:FocusTab(id)           -- switch tools within an open window
+GloomsHub:ShowPage(id, pageId)   -- a paged tool's page (focuses the tool first if needed)
+GloomsHub:ToggleWindow(id?)      -- slash semantics: open→close if on `id` (or no id), switch if
+                                 -- on another tool, else Open(id)
 ```
-- `build` runs lazily on first show (never at login). A tool whose addon isn't loaded simply
-  doesn't register; the shell shows present tools' tabs + the always-present Media tab.
-- A tool's former window-local footer controls move INTO its tab container, not the shared footer.
-- Reserved tab ids: `auras`, `bars`, `unitframes`, `portraits`, `overlays`, `media`. **The strip's
-  order is the MOCKS' and is fixed in the shell** (`TAB_ORDER`, 2026-09-21): Auras · Bars · Unit
-  Frames · Portraits · Overlays · Media; a tab's own `order` only places an unknown id.
-- **★ THE SHELL IS THE MOCKS' (2026-09-21, redesign stage 1): 1060 × 740, fixed**, the light plate,
-  three bands — HEADER 54 (the "gloomSUITE" wordmark; the tab pills right-aligned with the X; the
-  version line is the wordmark's hover-tip), BANNER 36 (a 250px violet block carrying
-  "gloom<wordmark>", the rest dim), FOOTER 65 (a line, then the tool's profile row, drawn only for
-  a tab that passed `profile`).
-- **Container content size — PINNED:** a tab WITH a footer profile row gets **1060 × 585**; a tab
-  WITHOUT one runs to the window's bottom and gets **1060 × 650**, so the pre-redesign pin of
-  **860 × 626** (Phase D) still holds for every un-migrated tab. The shell may GROW either, never
-  shrink one without updating its tabs in the same session.
-- The container fires normal OnShow/OnHide as the tab gains/loses visibility (window
-  open/close AND tab switches) — tools may hook these for show/hide side effects (GB ends
-  move mode there; GA toggles its editor preview + closes its docked drawers).
+- **★ THE SHELL IS THE SECOND DESIGN'S (2026-09-23): 1060 × 740, fixed, near-black.** A 250-wide
+  SIDEBAR: the "gloomSUITE" wordmark (art — its gradient is not a FontString thing), the TOOL
+  SWITCHER (a band in the tool's accent; click → the list of tools; it replaced the tab strip), a
+  paged tool's PAGE LIST (the chosen page in the accent with a ▸; the last-shown page is remembered
+  per tool), the tool's PROFILE control at the foot, a temporary unlabelled UI-scale dial above it.
+  **No close button in the mocks** — Escape, the slash and the minimap button close the window.
+- **Container sizes — PINNED.** A PAGED tool gets **810 × 740** right of the sidebar, on the dark
+  window, with `_gloomAccent` set so every dark-kit widget inside finds its colour; the page title
+  (Michroma 14, the accent) is drawn by the shell at (290, 26) window. A tool WITHOUT `pages` (not
+  yet rebuilt) keeps the size it was pinned to — **1060 × 585** with a profile, **860 × 650**
+  without (the old 860 × 626 pin fits) — drawn on the old light plate and SCALED to the 810 it has
+  (~76% / ~94%). Its dropdowns and dialogs are not scaled.
+- Reserved ids: `auras`, `bars`, `unitframes`, `portraits`, `overlays`, `media`. **The order is fixed
+  in the shell** (`TAB_ORDER`: Auras · Bars · Unit Frames · Portraits · Overlays · Media); a tool's
+  own `order` only places an unknown id.
+- `build` runs lazily on first show (never at login). A tool whose addon isn't loaded doesn't
+  register. The container fires normal OnShow/OnHide as the tool gains/loses the window (open/close
+  AND switches) — GB ends move mode there; GA toggles its editor preview and closes docked pickers.
 
 ## 3. Media / resolver (GloomsHub owns; salvaged from StoneTweaks)
 ```lua
@@ -129,7 +139,7 @@ shipper — its `Skin.lua` IS the lib body (embedding a copy in each tool via `.
 externals is Phase G work). `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are Hub-side aliases of the
 same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Phase E**.
 
-**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 12) — the whole API; nothing else is public:**
+**Exported surface (MAJOR `"LibGloomSkin-1.0"`, MINOR 13) — the whole API; nothing else is public:**
 - `Skin.COLOR` — `purple · heroic · green · red · orange` (each `{r,g,b,hex}`), `dark`, `rim`
   (both `{r,g,b,a}`), `text`, `mute` (`{r,g,b}`). The §1 literals.
 - `Skin.FONT` — `title · head · body · bodyM · label` → font files under
@@ -384,6 +394,41 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     returns the control, placed 18 under a Play Bold 12 label; `:refresh · :show · :setEnabled`
     (disabled by another setting = 50%, never hidden).
   · `UI.popover` wears the kit since MINOR 12 (night plate, indigo rim, Play Bold 14 white title).
+
+  **★ THE DARK KIT (MINOR 13, 2026-09-23) — the SECOND design ("GloomSuite UI 2").** Every widget's
+  header comment in `Skin.lua` is its spec. The first design's widgets above stay, for the tabs not
+  yet rebuilt.
+  · Tokens: `COLOR.void` #0c0d11 (window) · `sky` #13a0f7 (suite blue, the default accent) ·
+    `jade` #4fc667 (Auras) · `coral` #e14b4b (destructive) · `flame` #ea9438 (Auras' highlight);
+    `FONT.sa` / `FONT.saB` = Saira Regular / Bold (static OFL builds).
+  · **Accent by ancestry:** `UI.accentOf(frame)` walks up to the nearest `_gloomAccent` (the shell
+    sets it on a paged tool's container), else the suite blue. Widgets take `opts.accent` to override.
+  · `UI.pill(parent, label, opts)` → THE BUTTON: 1000px radius, a stroke on the ENDS only (a crescent
+    tapering to nothing top and bottom — CSS `border-l border-r`), the accent at 10% under it, 30%
+    when `selected`; heights 22 (Saira 9) and 25 (Saira 11); `danger` (coral) · `paper` (the white
+    field) · `rim = both|left|right|none` · `solid` (an opaque fill). Built from generated caps +
+    a plain rectangle, never stretched.
+  · `UI.pillPick(parent, w, getLabel, getOptions, getCurrent, onPick, opts)` → a pill that opens the
+    kit list; `paper = true` is the white field with a ▾ (the profile picker).
+  · `UI.openList(anchor, options, current, onPick)` → the kit list from any button; an option may be
+    `disabled` (greyed, click ignored).
+  · `UI.profileStack(parent, api, mark, accent)` → the sidebar's profile control (label · white
+    picker · New/Copy/Rename/Delete small pills); same `api`, dialogs and delete gate as the others.
+  · `UI.dial(parent, { dark = true, … })` → the dark dial: 21 accent ticks at a 5px pitch, a light-
+    grey ▲ under the value's tick, a 54px accent-30% box. Same behaviour as every dial.
+  · `UI.plate(parent, title?)` (accent 10%, Saira Bold 14 title at 16,10; nests to 20%) ·
+    `UI.rule(parent)` (1px, accent 30%) · `UI.text(parent, text, size?, bold?)` (Saira white) ·
+    `UI.box(parent, label?, get, set)` (16px checkbox) · `UI.colorDot(parent, opts)` (checkbox +
+    optional label + a round swatch; dashed ring = no colour; `required` drops the checkbox) ·
+    `UI.toggle2(parent, choices, get, set)` (two joined half-pills, the chosen one at 30%) ·
+    `UI.pillField(parent, w, opts)` (the white field; `button` hangs a "Choose" on its end;
+    `commit` on Enter AND on losing focus) · `UI.xbtn(parent, onClick)` (24 × 21, accent, 4px
+    corners) · `UI.scrollPane(parent, opts)` (a ScrollFrame whose bar exists ONLY while the content
+    overflows — the owner's rule).
+  · Art (`tools/gen-kit-art.py`): `Media/ui/pill/cap22|25-fill|rim.png`, `suite-wordmark.png`,
+    `check.png`, `circle.png`, `circle-dash.png`, `dial-ticks.png`.
+  · **Not yet in the dark kit** (no mocks): the kit LIST's look, the dialogs, the colour picker, the
+    tooltip, the popover — a dark page still opens the first design's versions.
   · `UI.wordmark(parent, suffix, size, opts?)` → "gloom" + SUFFIX in Michroma, `:SetMark`
   · `UI.profileRow(parent, api, mark)` → the footer form of `profileBlock` (same `api`, same
     dialogs, same delete gate); the shell calls it — a tab passes `profile` to `RegisterTab`.
@@ -506,6 +551,7 @@ end
 |---|---|
 | `GloomsBars/Config.lua` | MINOR **12** — the kit incl. `UI.chip` / `cell` / the bare dial and `RegisterTab`'s `profile` footer (bumped 2026-09-21, redesign stage 3, in the commit that first called them) |
 | `GloomsAuras/Config.lua` | MINOR **6** — calls `UI.colorPicker` directly (its `MakeColor` swatch) |
+| `GloomsAuras/Pages.lua` | MINOR **13** — the dark kit; gates itself (it prints "update Gloom's Hub" and does not register the tab below 13) |
 | `GloomsOverlays/GloomsOverlays_Editor.lua` | MINOR **4** — calls `UI.tabHeader` |
 | `GloomsOverlays/GloomsOverlays_Preview.lua` | MINOR **3** — the drawer needs nothing newer |
 | `GloomsPortraits/GloomsPortraits_Tab.lua` | MINOR **4** — calls `UI.tabHeader` |
@@ -517,7 +563,7 @@ added and the two files that call it were bumped **in the same commit**. GA foll
 same discipline on 2026-07-25 when its layout rework adopted `UI.tabHeader` — gate bumped
 in the commit that first called it, which is the only maintenance this gate ever needs.
 
-Hub currently ships **MINOR 12** (`Skin.lua`, 2026-09-21).
+Hub currently ships **MINOR 13** (`Skin.lua`, 2026-09-23).
 
 ⚠ **This line was stale for three weeks** — it still said MINOR 6 after 7 shipped on 2026-08-15, and
 was only caught on 09-08. It is the line a session reads to decide whether a `SKIN_NEEDS` bump is

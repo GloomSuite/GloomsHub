@@ -375,6 +375,8 @@ GU's `cNum` shows the live-stepping hook.
 - **`x and f()` keeps ONE return value.** Lua truncates a call in an `and`/`or` expression to its
   first result, so `local r, g, b = src.color and src.color()` gives `r` and two nils — the chip
   passed `SetVertexColor(0, nil, nil)` and the Power panel would not open. Write the `if` out.
+  **It bit again 2026-09-23** in `local Skin, minor = LibStub and LibStub(MAJOR, true)` — the version
+  gate then read nil and refused to load a page set that was fine. Caught in review, not in game.
 - **A FontString anchored `TOP` + `LEFT` + `RIGHT` is over-constrained** and WoW resolves it
   unpredictably (the Bars preview caption drifted 10px left). Anchor two corners on the same edge
   (`TOPLEFT` + `TOPRIGHT`) and give y through those.
@@ -384,6 +386,45 @@ GU's `cNum` shows the live-stepping hook.
 - **The Claude desktop app's Figma connector can say "connected, 0 tools" while the server is
   fine.** Do not wait for it or tell the owner his Figma is closed: `curl` the server
   (`127.0.0.1:3845/mcp`) — if `initialize` answers, drive it with `~/GloomsHub/tools/figma.py`.
+
+### Reading the Figma mocks (2026-09-23)
+- **A screen's TOP-LEVEL layers come back in CANVAS coordinates when the screen is not at the
+  page's origin; nested layers are relative to their parent; a Figma "Group"'s children are in the
+  screen's coordinates.** The Auras screens sit at x = 0, 1136, 2273 … on their page, so the first
+  one read true and the second read 1136px off. Subtract the screen's own x/y from its top-level
+  layers (and a Group's children) before using a number.
+- **`get_design_context` on a whole large screen can return METADATA ONLY** ("too large to fit") —
+  styles missing, silently. Ask for the sub-layers by id (the list, a row, a plate).
+- **The mock's small vectors are downloadable** from the same server (`localhost:3845/assets/…`,
+  the URLs are in the design context): the SVGs carry exact colours, stroke widths and opacities —
+  read those instead of guessing from a screenshot. No SVG rasteriser is installed; macOS Quick Look
+  is (`qlmanage -t -s 512 -o out file.svg`), but it renders on OPAQUE white — recolour the fills to
+  black first and turn darkness into alpha to get a white, tintable icon.
+- **A Figma gradient on a RANGE of text spans the WHOLE text layer**, not the range: the stops of
+  "SUITE"'s gradient are fractions of "gloomSUITE"'s width. Measured against the range alone the
+  letters came out stepped.
+- **CSS `border-l border-r` on a 1000px-radius pill is a crescent at each end that tapers to
+  nothing top and bottom** (the inner edge's horizontal radius is one pixel shorter; the vertical
+  one is not) — that is the whole look of the second design's buttons. The fill is under the
+  border (`background-clip: border-box`).
+
+### Verifying UI without the game — `tools/harness/`
+- **A syntax check proves nothing about a UI; the harness gets most of the way to the game.** It
+  loads the real TOCs against a WoW-API stand-in and the real SavedVariables, drives the Suite
+  window (click every control, pick every option, step every dial, commit every field), and
+  `render.py` draws the built frame tree to a PNG to compare with the mock. It found, before the
+  owner saw anything: the `x and f()` gate above, and a field's placeholder drawn over its value
+  (text set from code). It also drew a list name clipped where its width was pinned to its own
+  measurement — changed to cap only over-long names; whether WoW's own rounding clips it too is
+  UNTESTED (the stand-in measures fonts differently), and the change is harmless either way.
+- **Its blind spots are real:** unknown CamelCase methods are no-ops (a missing stub fails
+  QUIETLY — add the stub and re-run), fonts are measured approximately, and nothing about combat,
+  secret values, the CDM or Blizzard's own frames is exercised. It says "no Lua errors and the
+  layout matches"; only the owner's eyes say "works".
+- **When a render disagrees with expectation, check the DATA before the code.** Twice on 09-23 the
+  "wrong" render was right: Gloombound's saved Garrote trigger really was a group, and its bar
+  texture really had been cleared since the morning. (Profile-aware, as above: `d1` exists in
+  every profile.)
 
 - **`luac -p` does NOT catch an orphaned global.** Delete a block, leave a module-local that another
   function still calls, and it becomes a nil global — valid Lua, passes the syntax check, throws at

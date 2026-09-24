@@ -1,8 +1,9 @@
 # Bundled font licenses
 
-This addon ships eight font files in `Media/fonts/`. None is modified in any way.
+This addon ships ten font files in `Media/fonts/`. None is modified in any way.
 
-The Suite UI (2026-09) is set in **Play** and **Michroma**; **Khand** and
+The Suite UI's second redesign (2026-09-23) is set in **Saira** and **Michroma**; **Play**
+belongs to the first redesign and stays until the last tab has moved off it. **Khand** and
 **General Sans** remain for the tools' own bar/aura text and for the transition.
 
 ---
@@ -63,3 +64,15 @@ Licensed under the SIL Open Font License, Version 1.1. Full text in
 
 Licensed under the SIL Open Font License, Version 1.1. Full text in
 [OFL-Michroma.txt](OFL-Michroma.txt). Source: <https://github.com/google/fonts/tree/main/ofl/michroma>
+
+---
+
+## Saira — SIL Open Font License 1.1
+
+`Saira-Regular.ttf` · `Saira-Bold.ttf`
+
+> Copyright 2020 The Saira Project Authors (https://github.com/Omnibus-Type/Saira)
+
+Licensed under the SIL Open Font License, Version 1.1. Full text in
+[OFL-Saira.txt](OFL-Saira.txt). Source: <https://github.com/google/fonts/tree/main/ofl/saira>
+(static instances, unmodified).

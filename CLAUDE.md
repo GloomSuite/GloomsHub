@@ -185,8 +185,10 @@ the ledger recorded two suspicions in the same confident voice as its measuremen
 - Namespace `GloomsHub` → `_G.GloomsHub`; SavedVariables `GloomsHubDB`.
 - Plain frames, plain SavedVariables, **no Ace3**. Libraries embedded under `Libs/` and pulled by
   the BigWigs packager via `.pkgmeta` externals; `Libs/` is git-ignored.
-- **Design language:** bright purple `#936bff` on near-black navy, Khand titles + GeneralSans body,
-  sliding switches, no native Blizzard chrome. The tokens LIVE here, in `Skin.lua`.
+- **Design language:** the SECOND redesign (2026-09-23, Figma "GloomSuite UI 2") — a near-black
+  window with a sidebar, Saira + Michroma, flat pill buttons, a per-tool accent (Auras green; the
+  rest the suite blue until mocked). No native Blizzard chrome. The tokens LIVE here, in `Skin.lua`
+  (CONTRACTS §4, "THE DARK KIT"); BACKLOG 16 holds the brief.
 - Slash: `/gloom` opens the Suite window on the last-used tab. Each tool keeps its own (`/gb`,
   `/ga`, `/go`) to open focused on its tab.
 - Symlinked into the client at `…/Interface/AddOns/GloomsHub` — **every suite addon is a symlink on

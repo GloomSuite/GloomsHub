@@ -6,81 +6,63 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-09-21, night (**redesign STAGES 2 and 3 are built and owner-QA'd in one
-session** — the whole Unit Frames tab and the whole Bars tab draw from the kit, at their mocks'
-coordinates; `LibGloomSkin` is at **MINOR 12** (the colour chip, the picker's colour sources, the
-short and bare dials, `UI.cell`, the revised dropdown list, the kit popover). **Next: stage 4, the
-Auras tab (7 mocks), item 16.**)
+**Last updated:** 2026-09-23 (**the first redesign was discarded and the SECOND is under way** —
+the new sidebar window, `LibGloomSkin` **MINOR 13** (the dark kit), and the **Auras tab rebuilt as
+six pages**, verified outside the game but **not yet reviewed in game**. **Next: the owner's review
+of Auras, item 16.**)
 ---
 
 ## Open items
 
-### 16 · ★ THE SUITE UI REDESIGN — stage 4 next: the Auras tab
-**Repo:** `~/GloomsAuras` (the seven panels), `~/GloomsHub` for anything the kit still lacks · **Size:** ONE stage per session; stage 4 is a full session · **Evidence:** stages 1–3 owner-QA'd 2026-09-21 (Unit Frames ×7 and Bars ×10 built from the mocks and reviewed panel by panel)
+### 16 · ★ THE SUITE UI — THE SECOND DESIGN ("GloomSuite UI 2")
+**Repo:** `~/GloomsHub` (the shell + the dark kit) · each tool for its own pages · **Size:** Auras: the owner's review + small fixes; every other tool a full session once it is mocked · **Evidence:** Auras BUILT 2026-09-23 and verified OUTSIDE the game (`tools/harness`: all 6 pages × 8 of Gloombound's auras, every control clicked, 606 list options picked, every dial/field/colour exercised, drag-into-group and back — 0 errors; each page rendered to PNG and compared with its mock) — **NOT YET SEEN BY THE OWNER IN GAME.** The shell was seen in game (2026-09-23, before Auras moved in).
 
-The owner: *"I've grown to hate how it looks."* He mocked it all in Figma, file page **"GloomSuite UI"
-(node `646:144`)**: 24 screens at **1060 × 740** plus a **PRIMITIVES** frame (`674:13578`). The
-Auras screens, in mock order: Trigger `648:376` · Appearance `649:704` · Bar Fill `650:1390` · Text
-`650:1615` · Effects & Motion `651:1788` · Sounds `651:1925` · Load Conditions `651:2206` (the
-full list is one `get_metadata` on the page). ⚠ **The app-side Figma connector lists zero tools
-even when the server is up.** Drive the server directly: **`~/GloomsHub/tools/figma.py`** (its
-docstring has the three calls). `get_metadata` gives every control's x/y; `get_screenshot` the
-look; `get_design_context` colours and fonts. ⚠ **`get_metadata` may prefix the tree with a
-"Currently selected nodes" line — join every `content[].text` before parsing.**
+The first design (built 2026-09-21 for the shell, Unit Frames and Bars) was **discarded** on 09-22 —
+*"in the context of the game, it's just wrong"* — record in ARCHIVE. The second is Figma page
+**"GloomSuite UI 2"**; Auras screens `722:130` Triggers · `724:1226` Appearance · `726:1963` Bar Fill ·
+`736:2645` Text · `736:3132` Effects & Sound · `736:3639` Load. **Nothing else is mocked yet.**
 
-**STAGES 1–3 ARE DONE** (2026-09-21): the shell, the kit (CONTRACTS §4, MINOR 12), the Unit Frames
-tab (Global with its default font · Health / Power / Class Resource / Cast as ONE panel with an arc
-face and a bar face · Texts · Auras) and the Bars tab (the rail with the kit preset block over the
-dark preview pane, the accordion, all ten sections, GB's profile row in the footer).
-**The transition theme** — the pre-kit widgets draw dark text and light plates so the un-migrated
-tabs (Auras, Overlays, Portraits, Media) stay usable — is scaffolding; it goes with stage 5.
-
-**How a stage goes (the method that worked for 2 and 3):** per mock, list every control with its
-body-relative x/y (`headerY + 36` is the body's top; headers 26 apart), build each at THOSE numbers
-— **no inferred columns** (the owner: "I put things where they are for a reason") — with the kit's
-cells (`UI.cell` + `UI.segments / toggleBar / chip / pick / dial`), reload, he looks. Per-mock segment
-padding differs (four-way bars ~8, three-way ~10, two-way 20); read the frame widths.
+**Next, in order:**
+1. **The owner reviews Auras in game** (`/reload` is enough). BugSack text first. Placed WITHOUT a mock
+   (he was told; confirm or move): *Hide Blizzard's CDM* at the foot of the aura list · the scale dial
+   in the sidebar · a width/height **lock** beside SIZE · **Stacks Max** (Stack Count mode only) ·
+   **right-click** clears a bar texture · the short notes ("isn't a bar", "Needs a Shape", the red
+   sound-timing line) · the **group pane** · rename = click the header's name, move group = click
+   its "Group:" line · **Level** (new — `Displays.lua` applies `cfg.level`; 0 = Auto).
+2. Once he approves: delete `Config.lua`'s unmounted previous editor (`BuildTab`, the accordion, the
+   `Build*Section`s — ~2,000 lines). **Keep `C.X` and every function it exports.**
+3. **Mocks needed from him:** the dropdown list, the texture / sound / font / shape / spell pickers,
+   the colour picker, the dialogs, the tooltip, the popover — all still wear the first design.
+4. Bars and Unit Frames: re-mock in the second design (their accents are his to pick), then rebuild.
+   Overlays, Portraits, Media share the suite blue.
+5. **UI scale:** he likes it "as a feature" → a real Settings control (placement his). Today it is a
+   temporary unlabelled dark dial in the sidebar (`Shell.lua`, `GloomsHubDB.uiScale`, EUI's ladder
+   75–200%, trimmed to what the screen fits; the window resizes on RELEASE).
+6. Retire the first design's kit and the light plate under un-rebuilt tools when the last one moves.
+7. Delete the glass probe (`GlassProbe.lua`, `Media/probe/`, `Media/ui/glow.png`, `rim4.png` —
+   UNTRACKED, not loaded) when he agrees.
 
 **Decisions taken (do not re-ask):**
-- **Window 1060 × 740, fixed.** Content 1060 × 585 with a footer profile row, 1060 × 650 without. CONTRACTS §2.
-- **The scrub dial replaces every slider** — definition in `UI.dial`'s header; **do not redesign it**.
-  It has a `short` form (78px strip, the mocks' 133px dial) and a `bare` form (no label, for table rows).
-- **Buttons:** dark = an action or an unchosen chip, violet = the chosen one / persisting state,
-  amber = destructive, 50% = unavailable. **Segmented bars sit on the LIGHT track** (dim 50%);
-  a two-way bar flips when its lit side is clicked. **Links / actions are violet** ("(Remove)").
-- **Colour swatches are SQUARE** (the one kit surface without corners). "(Remove)" only on optional
-  colours; removed = the engine's default. A chip holds a fixed colour OR a source.
-- **Colour SOURCES live in the picker** ("Use Class / Power / Resource Color" buttons): picking one
-  SELECTS it — the button lights, the field takes the source's colour, the consumer previews live —
-  and **OK commits it**; Cancel restores. The "use class colour" toggles are gone (the Texts mock
-  still draws one; it was deliberately not built).
-- **Disabled by another setting = 50%, never hidden.** Hide only the other MODE's face (arc vs bar).
-- **Collapsing the open section scrolls to the top** so every header shows.
-- **ONE layer control** per element: Global's strata + level, each element inherits or overrides
-  with the Layer Override plate (OFF|ON · Layer · Level field). Texts and aura groups got it too.
-- **The dropdown list** is the owner's revised look (Figma "Dropdown" `682:14067`): plate grey, dim
-  rim on three sides, 14px rows, the current row a 20% violet band, centred under the button.
-- **Modals dim the Suite WINDOW only**; the picker never dims. The kit POPOVER (GU's filter panel)
-  wears the picker's night plate + indigo rim.
-- **GU Visibility has "Never"**: the frame hides at once and every other section header dims.
-- **GU aura filters:** the spell-ID lists are GONE (engine and panel) — "three of four cases isn't
-  good enough, and is just confusing." Only the class tri-states + Only Timed remain.
-- **GB:** the master switch and the preset-highlight button live at the end of the Layout section's
-  button row (the owner's pick from three options); the aura-icon "dark edge" toggle was dropped
-  (not in the mock; the saved value still applies); the old font flyout that previewed each font in
-  its own face is gone — the kit list shows names in Play (**he has not asked for the preview back**).
+- Window **1060 × 740**, a **250** sidebar; a paged tool gets **810 × 740**. No close button (Escape /
+  slash / minimap). Scrollbars exist **only** while content overflows.
+- **A per-tool accent**, and a colour may mean different things in different tools (*"just accept the
+  inconsistency"*): Auras green `#4fc667` (flame `#ea9438` for its selection), Bars and Unit Frames
+  their own (not chosen yet), everything else the suite blue.
+- Buttons are **flat pills**, stroke on the ends only, fill 10% (chosen 30%); rounded corners kept;
+  **no glass** (see "Not open"). Saira + Michroma.
+- **Load conditions:** a tick = "only while true", clear = "doesn't matter", every tick must hold; the
+  combat and target PAIRS and the specs row read "any of these" and the last one can't be unticked.
+  (This is GA's existing storage — nothing saved changed meaning.)
+- **Trigger groups:** make one empty any time, **drag** conditions in and out; a group's X deletes the
+  group and its conditions drop to the top level; Shift+click is gone; each group has its own Match.
+- **Eye** on every row, one icon: flame = on screen (the selected aura counts), white 40% = hidden.
+- The silent-yes warning is a **red triangle** after the name with its hover text; a greyed row means
+  DISABLED, nothing else.
+- Colour controls are a **checkbox + a round swatch** (unticked = the default; a dashed ring = none).
 
-**Stage 4 — the seven Auras panels** in mock order (Trigger · Appearance · Bar Fill · Text ·
-Effects & Motion · Sounds · Load Conditions). GA's tab is the most complex (the list + editor, the
-`AuraContainer` bars, the frozen decisions in its HANDOFF) — **read its `CLAUDE.md` and
-`docs/HANDOFF.md` before touching it.** Then stage 5 (Overlays, Portraits, Media from the kit alone,
-the Suite SETTINGS tab with the UI-scale control, and retiring the transition theme).
-
-**Read first:** the Trigger screen (`648:376`) through the server · the `★ THE KIT` section of
-`~/GloomsHub/Skin.lua` (every widget's header comment is its spec) · [CONTRACTS.md](CONTRACTS.md)
-§2 and §4's kit block · `~/GloomsAuras/CLAUDE.md` and `~/GloomsAuras/docs/HANDOFF.md` · for the
-pattern, `kitRingSection` in `~/GloomsUnitFrames/GloomsUnitFrames_Tab.lua` and `buildLayoutSection`
-in `~/GloomsBars/Config.lua`
+**Read first:** the header of `~/GloomsAuras/Pages.lua` · the top block of `~/GloomsAuras/docs/HANDOFF.md`
+· [CONTRACTS.md](CONTRACTS.md) §2 and §4's "DARK KIT" · the header of `~/GloomsHub/tools/harness/run.lua`
+· for mocks, `tools/figma.py` and [LESSONS.md](LESSONS.md) § "Reading the Figma mocks"
 
 ---
 
@@ -124,6 +106,17 @@ from him; each is: drop the files in, run the script, paste the rows.
 ## Not open — recorded so nobody re-raises them
 
 > Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
+
+- **GLASS buttons for the second design** — **REJECTED by the owner 2026-09-22** ("Flat buttons it
+  is"), after a long look. The facts that decided it: WoW gives addons **no backdrop blur and no
+  render-to-texture**, so real glass is impossible; a pre-blurred copy of a static background,
+  cropped per element with `SetTexCoord`, is buildable (and refraction as ~4 nested inset crops),
+  but it did not look like his Figma glass; baking each control's glass into a PNG works only if
+  nothing moves (no scroll, no accordion) and costs ~2 files per control (the glow sits BEHIND the
+  glass, so it must be baked too). Do not re-offer glass without a new API.
+- **WEBP textures** — **NOT SUPPORTED** (Warcraft Wiki, `TextureBase:SetTexture`: BLP, JPEG, PNG,
+  TGA only, power-of-two sizes; PNG since 10.0.7 and it needs the `.png` extension written out).
+  For a large opaque background BLP (DXT) or JPEG is the small option; PNG for crisp small art.
 
 - **The Unit Frames tab tidy pass (item 13)** — **CLOSED 2026-09-21 as superseded**: the whole
   Suite UI is being redesigned from mocks (item 16). Do not tidy the old tab.
