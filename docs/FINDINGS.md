@@ -1696,3 +1696,40 @@ image instead.
   the fill (the gradient is per-vertex on the shrinking region). ALONG the fill axis GU uses a ramp
   IMAGE as the StatusBar texture (a StatusBar crops rather than stretches its texture, so the ramp
   stays put in space); ACROSS the axis `SetGradient` on the base is fine — that axis never shrinks.
+
+---
+
+## §22 — Why the Suite window looked soft in game and sharp in Figma ✅ `TESTED` 2026-09-26
+
+**The symptom (owner, in game, 2026-09-26):** the glass pages "razor sharp and crisp in Figma … so
+soft and unpleasant in the game", at every UI Scale setting.
+
+**The cause — `TESTED` with `/gloom px` (Shell.lua), in game, 2026-09-26, the owner's 4K screen
+(3840 × 2160, game UI scale 70%):** one UIParent unit = **1.828 screen pixels**. A 1-unit line
+straddled two pixels and every texture was resampled. Two self-inflicted extras made it worse:
+the glass exports were squeezed from 2120 to 2048 wide and then stretched back up by the game,
+and the kit's small art was drawn at 1× and enlarged ~2×.
+**The fix, `TESTED` the same way:** the Suite window's UI Scale steps are chosen so 1 unit is a
+whole number of pixels (computed live: `n / (physH/768 × UIParent:GetEffectiveScale())`), the
+window's position snaps to the pixel grid, the glass is cut into four unscaled tiles, and the marks
+are drawn at 4×. `/gloom px` then read **"Suite window (scale 1.09): 1 unit = 2.000 px · the window
+is 2120 x 1480 px"**. The owner: "maybe looks better".
+
+**Text sat high in its boxes — `OBSERVED` (one owner screenshot, 2026-09-26):** capitals inside
+buttons, switches and dropdowns sat ~1.5 units above centre (≈3 units over, ≈6 under). Saira's own
+metrics centre its capitals to 0.02 em, so it is WoW's placement of a line in a FontString. Every
+boxed text in the glass kit is anchored `UI.G_NUDGE` (1.5) lower; the owner: "the text in the
+buttons for sure looks better positioned". Only one font/size family was checked this way.
+
+**KILLED:**
+- ~~"Text in a SCALED frame is rasterised small and stretched, so our text is soft"~~ — **KILLED
+  2026-09-26** by `/gloom texttest`: the same lines drawn in a frame scaled ×1.094 and in an
+  unscaled frame at 1.094× the font size, side by side, have **identical** edge energy on every row
+  (owner's screenshot, measured). WoW re-rasterises text at the final size. Do not rebuild the kit
+  to avoid `SetScale`.
+- ~~"A game UI scale of 71.1% puts Blizzard's UI on exactly 2 px"~~ — **KILLED 2026-09-26**: it
+  assumed the uiScale CVar equals UIParent's effective scale; measured, CVar 0.70 gives an
+  effective ~0.65 at 4K. (And the game's slider takes whole percents only.)
+
+**What is left is not ours:** WoW's font rasteriser is not macOS's, so type in Figma will always
+look a little smoother than type in the game — Blizzard's own panels included.

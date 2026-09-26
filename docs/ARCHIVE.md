@@ -19,6 +19,24 @@
 
 ---
 
+# THE SECOND DESIGN, SUPERSEDED BY "GLASS" — 2026-09-25/26
+
+The second design (2026-09-23: the 250-wide SIDEBAR window, per-tool ACCENTS — Auras green, the
+rest the suite blue — flat PILL buttons, `LibGloomSkin` MINOR 13's dark kit) was built for the
+shell and the Auras tab, and seen in game only for the shell. On 2026-09-25 the owner re-mocked
+Auras AND Bars as 13 "Glass" screens and built glass PANELS into them. He had rejected glass
+BUTTONS on 2026-09-22; glass panels that never move were feasible because each page's background
+could be baked from his own export (no backdrop blur exists for addons). Decided with it: one
+palette for every tool (the accent is gone), square buttons, a close button again. Built: the glass
+window + MINOR 14's glass kit + both tools' pages (BACKLOG 16). The dark kit's widgets remain in
+`Skin.lua`, unused by any rebuilt tool, until the last tool moves.
+Also that session: the glass probe (`GlassProbe.lua`, `Media/probe/`, two `Media/ui` images — never
+tracked, never loaded) was deleted on the owner's word; its technique (pre-blurred background
+cropped per element) lives on only as the idea the baked pages replaced. The first sharpness pass
+and its evidence are FINDINGS §22.
+
+---
+
 # THE CLEARING SESSION — 2026-09-20, twelve backlog items closed
 
 **Closed on owner evidence, no code:** **1** (GA's Corruption / UA bars — "using it for weeks",

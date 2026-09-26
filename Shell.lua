@@ -6,51 +6,61 @@
 -- Tabs' build(container) runs ONCE, lazily, on first show —
 -- never at login.
 --
--- ★ REDESIGNED AGAIN 2026-09-23 from the owner's Figma page "GloomSuite UI 2"
--- (Auras screens 722:130 …). The first redesign's light window with a tab strip,
--- a violet banner and a footer profile row (2026-09-21) is RETIRED. Now:
---   a near-black 1060 × 740 window; on the left a 250-wide SIDEBAR —
---     the "gloomSUITE" wordmark (art: its gradient is not a FontString thing)
---     the TOOL SWITCHER, a band in the tool's accent: "gloom<TOOL> ▾" opens the
---       list of tools (the tab strip's replacement)
---     the tool's PAGES, one row each, the chosen one in the accent with a ▸
---     the tool's PROFILE control at the foot (UI.profileStack)
---   and to the right the tool's CONTENT, 810 × 740, with the page's title in
---   Michroma over it at (290, 26).
--- A tool that registers `pages` + `accent` gets all of that (a PAGED tool). A
--- tool that has not been rebuilt yet (a LEGACY tool) keeps its old layout: it is
--- drawn on the old light plate, SCALED to fit the 810 it now has — so it stays
--- usable, just smaller, until its own stage. No legacy tool changed for this.
+-- ★ REDESIGNED A THIRD TIME 2026-09-25 — "Glass" (13 screens on the Figma page
+-- "GloomSuite UI 2", named "Glass Auras, …" / "Glass Bars, …"). The second
+-- design's sidebar and per-tool accent are RETIRED. Now, on a 1060 × 740 window:
+--   a 50-tall TOP BAR — at the left (273 wide, violet 20%) the TOOL SWITCHER,
+--     "gloom" + the tool's name in lime + a white ▾, which opens the list of
+--     tools; to its right (black 50%) the tool's PROFILE row (UI.gProfileBar)
+--     and, at the far right, the CLOSE disc. A 1px violet rule under it.
+--     The bar's blank space is the drag handle.
+--   the tool's PAGES as a stack of 250 × 24 buttons at (30, 80), 6 apart: the
+--     chosen one violet 50% with a lime ▸, the rest violet 20% with a white 40%
+--     ▸, the name in Saira 12 right-aligned.
+--   the page's GLASS: the owner's own export of the page's background with its
+--     glass panels composited in (WoW has no backdrop blur, and the panels never
+--     move, so baking them is exact). A tool names one per page (`bg`).
+--   UI SCALE at the bottom right, 30% until the mouse is on it.
+-- A tool that registers `pages` is a GLASS tool: its container is the WHOLE
+-- window (1060 × 740 at 0,0), so it places everything at the mocks' own window
+-- coordinates. A tool without pages (not rebuilt yet — a LEGACY tool) keeps
+-- its old layout, unscaled, on the old light plate under the top bar.
 -- ============================================================
 
 local Hub = GloomsHub
 local UI, COLOR, FONT = Hub.UI, Hub.COLOR, Hub.FONT
 
 local SHELL_W, SHELL_H = 1060, 740
-local SIDE_W    = 250                   -- the sidebar
-local CONTENT_W = SHELL_W - SIDE_W      -- 810: a tool's width now
-local BAND_Y, BAND_H = 60, 36           -- the tool switcher
-local NAV_Y     = 96                    -- the page list; the sidebar's gradient starts here too
-local NAV_TEXT_R = 220                  -- every page name ends here (right-aligned)
-local TITLE_X, TITLE_Y = 290, 26        -- the page title
-local PROF_X, PROF_Y   = 20, 641        -- the profile control
--- The window wordmark is art (tools/gen-kit-art.py): 354 × 45 ink on a 512 × 64
--- canvas, drawn at half size — exactly the mock's 177-wide text box.
-local WORDMARK = Hub.MEDIA .. "ui\\suite-wordmark.png"
-local WM_W, WM_H, WM_U, WM_V = 177, 22.5, 354 / 512, 45 / 64
+local TOP_H    = 50                     -- the top bar
+local SWITCH_W = 273                    -- the tool switcher's block
+local PROF_X   = 303                    -- the profile row (the mocks' Frame 414 + 30)
+local NAV_X, NAV_Y, NAV_W, NAV_H, NAV_GAP = 30, 80, 250, 24, 6
+-- UI Scale: the mocks' "Group 9" row (y 713), now with the dial's value box, so
+-- the whole control (ticks + box, 164 wide) ends at the panels' right edge, 1030.
+local SCALE_X, SCALE_Y = 866, 714.5
+-- A page's glass is the owner's 2120 × 1480 export (2 × the window), NOT
+-- resampled: cut into four power-of-two tiles (tools/gen-glass-art.py bg) that
+-- lie edge to edge here. { suffix, x, y, w, h (window units), u, v (texcoords) }.
+local GLASS_TILES = {
+  { "a", 0,    0,   1024, 512, 1,        1 },
+  { "b", 1024, 0,   36,   512, 72 / 128, 1 },
+  { "c", 0,    512, 1024, 228, 1,        456 / 512 },
+  { "d", 1024, 512, 36,   228, 72 / 128, 456 / 512 },
+}
 -- A LEGACY tool's container keeps the size it was pinned to (CONTRACTS §2): with
--- a profile row 1060 × 585, without one 860 × 650 (the 860 × 626 pin fits).
+-- a profile 1060 × 585, without one 860 × 650 — both fit under the top bar.
 local LEGACY_PROFILE_W, LEGACY_PROFILE_H = 1060, 585
 local LEGACY_W, LEGACY_H = 860, 650
 
--- The strip's order is the MOCKS' (Auras · Bars · Unit Frames · Portraits ·
+-- The switcher's order is the MOCKS' (Auras · Bars · Unit Frames · Portraits ·
 -- Overlays · Media), fixed here so no tool's registration can reorder it;
 -- an unknown id falls back to its own `order`.
 local TAB_ORDER = { auras = 10, bars = 20, unitframes = 30, portraits = 40, overlays = 50, media = 90 }
 
 local tabs = {}       -- id → def
 local ordered = {}    -- defs sorted by order
-local panel, side, band, nav, pageTitle, legacyPlate
+local panel, top, switcher, nav, legacyPlate, scaleHolder
+local glassBg = {}    -- the four tiles of a page's glass
 local current         -- id of the focused tab
 
 -- The suite's addons, in tab order. ★ Gloom's Build Barn is deliberately
@@ -97,10 +107,23 @@ end
 -- NOW, unlabelled, in the window's lower right, to judge the redesigned pages
 -- at other sizes before deciding whether the design continues at all.
 --
--- The ladder is EUI's, from his own reference: a large-grain dial stepping
--- through presets rather than a continuous scrub, because at arbitrary
--- fractional scales the kit's 1px rules and the dial's 3px tick pitch
--- resample into mush and he would be judging blur, not size.
+-- ★ WHOLE PIXELS ONLY (2026-09-26). The glass pages looked razor-sharp in Figma
+-- and soft in the game. Measured with /gloom px on the owner's 4K screen: one UI
+-- unit was 1.828 screen pixels at his game-wide UI scale, so every 1-unit line
+-- straddled two pixels and every texture was resampled. The dial therefore
+-- offers ONLY the window scales at which one unit is a WHOLE number of screen
+-- pixels (1, 2, 3 …), worked out LIVE from this screen and the game's own UI
+-- scale (his screen: 1 px = 55% · 2 px = 109%), and the window's position is
+-- snapped to the pixel grid after every drag and rescale. What is stored is the
+-- PIXELS PER UNIT, not a percentage, so the same choice stays sharp on another
+-- screen or after a UI-scale change. The owner's glass exports are 2x, so at
+-- 2 px per unit they land on the screen pixel for pixel.
+-- ★ IN-BETWEEN STEPS (the owner, 2026-09-26: "only huge or tiny"): on his 4K
+-- screen only 1 and 2 px fit, so the ladder also offers 1.25 · 1.5 · 1.75 px a
+-- unit. Measured the same day (/gloom texttest): WoW redraws scaled TEXT
+-- crisply at any scale, so these cost only the 1-unit outlines (drawn 1 or 2 px
+-- wide, a little uneven) and the glass (resampled, a little soft). The tooltip
+-- says which kind of step is chosen.
 --
 -- ⚠ The dial is a CHILD OF THE WINDOW and scales with it, like everything
 -- else in the window. The window therefore resizes only when the drag is
@@ -108,24 +131,23 @@ end
 -- happen until after the drag is released"). That is not a shortcut — it is
 -- what makes a dial inside its own subject work at all: UI.dial captures its
 -- drag origin in its own effective-scale units, so rescaling mid-drag would
--- leave the origin on a stale ruler and the value would run away, and the
--- dial would slide out from under the cursor as it went. The ticks and the
--- read-out still follow the pull live; only the window waits.
+-- leave the origin on a stale ruler and the value would run away.
 --
--- ⚠ Do NOT assume the screen's size. UIParent's height in UI units is
--- 768 / uiScale, so it is 768 only at uiScale 1.0 and well past 1200 at the
--- low UI scales a high-res display wants — the owner's window is about a
--- QUARTER of his screen at 100%. The ladder is MEASURED against UIParent at
--- build and trimmed to the presets that fit, which is also why no escape
--- hatch is needed: the dial cannot push its own corner off the screen.
+-- ⚠ Do NOT assume the screen's size. The ladder keeps only the sizes whose
+-- window fits the screen, so the dial cannot push its own corner off it.
 --
 -- If the redesign survives, this becomes a real control on the Settings tab.
 -- ------------------------------------------------------------
 
-local ALL_SCALES = { 0.75, 0.90, 1.00, 1.10, 1.25, 1.50, 2.00 }
-local SCALES = ALL_SCALES          -- trimmed to what fits, at build
+local SCALES, PXS = { 1 }, { 1 }   -- window scale and pixels-per-unit, per step (built by buildLadder)
 local scaleDial
 local pendingScale = false   -- a value picked mid-drag, applied on release
+
+-- Screen pixels per UI unit for a frame at effective scale 1.
+local function pxPerUnit()
+  local _, ph = GetPhysicalScreenSize()
+  return (ph and ph > 0) and (ph / 768) or 1
+end
 
 local function clampIdx(i)
   i = math.floor((tonumber(i) or 1) + 0.5)
@@ -134,32 +156,34 @@ end
 
 local function scaleLabel(i) return math.floor(SCALES[clampIdx(i)] * 100 + 0.5) .. "%" end
 
--- The index nearest the SAVED scale — the VALUE is stored, not the index, so
--- trimming the ladder can never move his window to a different size.
+-- The step for the SAVED pixels-per-unit (GloomsHubDB.uiPx); a window saved by
+-- the old percentage ladder takes the step nearest its old size.
 local function scaleIndex()
-  local want = (GloomsHubDB and GloomsHubDB.uiScale) or 1.00
+  local want = GloomsHubDB and GloomsHubDB.uiPx
+  if want then
+    for i, n in ipairs(PXS) do if n == want then return i end end
+  end
+  local old = (GloomsHubDB and GloomsHubDB.uiScale) or 1.0
   local best, bestD = 1, math.huge
   for i, v in ipairs(SCALES) do
-    local d = math.abs(v - want)
+    local d = math.abs(v - old)
     if d < bestD then best, bestD = i, d end
   end
   return best
 end
 
--- Keep only the presets this screen can hold. A window larger than the screen
--- cannot be clamped back into it — SetClampedToScreen pins a corner and the
--- rest, the dial included, goes where no mouse can reach.
-local function trimLadder()
-  local fit = math.min(UIParent:GetWidth() / SHELL_W, UIParent:GetHeight() / SHELL_H)
-  local out = {}
-  for _, v in ipairs(ALL_SCALES) do
-    if v <= fit + 0.001 then out[#out + 1] = v end
+-- The whole-pixel steps that fit this screen, at the game's current UI scale.
+local function buildLadder()
+  local pw, ph = GetPhysicalScreenSize()
+  local base = pxPerUnit() * UIParent:GetEffectiveScale()   -- px per unit at window scale 1
+  SCALES, PXS = {}, {}
+  for _, n in ipairs({ 1, 1.25, 1.5, 1.75, 2, 3, 4 }) do
+    if SHELL_W * n <= (pw or 0) and SHELL_H * n <= (ph or 0) then
+      SCALES[#SCALES + 1] = n / base; PXS[#PXS + 1] = n
+    end
   end
-  if #out == 0 then out[1] = ALL_SCALES[1] end   -- a screen smaller than 75% of the window
-  SCALES = out
-  if #out < #ALL_SCALES then
-    Hub:Print(("Scale dial: your screen fits the %d × %d window up to %d%%, so the ladder stops at %s.")
-      :format(SHELL_W, SHELL_H, math.floor(fit * 100), scaleLabel(#out)))
+  if #SCALES == 0 then   -- a screen smaller than the window at 1 px a unit: the largest size that fits
+    SCALES[1] = math.min((pw or 1) / SHELL_W, (ph or 1) / SHELL_H) / base; PXS[1] = 0
   end
 end
 
@@ -176,12 +200,29 @@ local function scaleDetached(s)
   end
 end
 
+-- Put the window's top-left corner on a whole screen pixel: at a whole-pixel
+-- scale everything inside it then lands on the grid too. SetPoint offsets and
+-- GetLeft/GetTop are in the window's own units; × effective scale × pixels per
+-- unit gives screen pixels.
+local function snapPosition()
+  if not panel then return end
+  local l, t = panel:GetLeft(), panel:GetTop()
+  if not (l and t) then return end
+  local k = panel:GetEffectiveScale() * pxPerUnit()
+  if k <= 0 then return end
+  local pl, pt = math.floor(l * k + 0.5), math.floor(t * k + 0.5)
+  panel:ClearAllPoints()
+  panel:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pl / k, pt / k)
+end
+
 -- Scale about the window's CENTRE: SetPoint offsets resolve in the anchored
 -- frame's own effective scale, so the screen-space centre has to be recomputed
 -- into the new units. Without this the window walks across the screen.
 local function applyScale()
   if not panel then return end
-  local s = SCALES[scaleIndex()]
+  local i = scaleIndex()
+  local s = SCALES[i]
+  if GloomsHubDB then GloomsHubDB.uiPx = PXS[i] end
   local x, y = panel:GetCenter()
   local old = panel:GetEffectiveScale()
   panel:SetScale(s)
@@ -191,74 +232,59 @@ local function applyScale()
     panel:ClearAllPoints()
     panel:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x * k, y * k)
   end
+  snapPosition()
   scaleDetached(s)
 end
 
 -- ------------------------------------------------------------
--- Accent — a tool's own colour; the suite blue for one without
+-- The page buttons (a glass tool's `pages`)
 -- ------------------------------------------------------------
-
-local function accentOf(def) return (def and def.accent) or COLOR.sky end
-
--- ------------------------------------------------------------
--- The page list (a PAGED tool's `pages`)
--- ------------------------------------------------------------
--- The mock's rows (node 718:29): the first 33 tall, the rest 32, each with a 1px
--- rule in the accent along its foot except the last; the name in Saira 12,
--- right-aligned to x=220, white; the chosen page in the accent with a white ▸ at
--- x=240. A hovered row borrows the accent (not in the mock — the rows had to say
--- they are clickable somehow).
 local navRows = {}
 
 local function navRow(i)
   local r = navRows[i]
   if r then return r end
   r = CreateFrame("Button", nil, nav)
+  r:SetSize(NAV_W, NAV_H)
+  r.fill = UI.roundFill(r, "BACKGROUND")
   r.text = UI.newText(r, FONT.sa, 12, COLOR.paper, "RIGHT")
-  r.text:SetPoint("RIGHT", r, "TOPLEFT", NAV_TEXT_R, -16)
-  r.rule = r:CreateTexture(nil, "ARTWORK"); r.rule:SetHeight(1)
-  r.rule:SetPoint("BOTTOMLEFT", 0, 0); r.rule:SetPoint("BOTTOMRIGHT", 0, 0)
-  r.tri = r:CreateTexture(nil, "ARTWORK"); r.tri:SetTexture(UI.TRI); r.tri:SetSize(10, 10)
+  r.text:SetPoint("RIGHT", r, "RIGHT", -26, -UI.G_NUDGE)   -- text in a box sits low: see UI.G_NUDGE
+  r.tri = r:CreateTexture(nil, "ARTWORK"); r.tri:SetTexture(UI.G_TRI); r.tri:SetSize(9, 8)
   r.tri:SetRotation(math.pi / 2)           -- tri.png points down; +90° = right
-  r.tri:SetPoint("CENTER", r, "TOPLEFT", 245, -16)
-  r:SetScript("OnEnter", function(self) if not self._on then self.text:SetTextColor(self._ac.r, self._ac.g, self._ac.b) end end)
-  r:SetScript("OnLeave", function(self) if not self._on then self.text:SetTextColor(1, 1, 1) end end)
+  r.tri:SetPoint("CENTER", r, "RIGHT", -15, 0)
+  function r:paint()
+    local a = self._on and 0.5 or (self._hot and 0.35 or 0.2)
+    UI.tint(self.fill, COLOR.violet, a)
+    if self._on then UI.tint(self.tri, COLOR.lime) else self.tri:SetVertexColor(1, 1, 1, 0.4) end
+  end
+  r:SetScript("OnEnter", function(self) self._hot = true; self:paint() end)
+  r:SetScript("OnLeave", function(self) self._hot = false; self:paint() end)
   navRows[i] = r
   return r
 end
 
 local function paintNav(def)
   local pages = (def and def.pages) or {}
-  local ac = accentOf(def)
-  local top = 0
   for i, pg in ipairs(pages) do
     local r = navRow(i)
-    local h = (i == 1) and 33 or 32
-    r:ClearAllPoints(); r:SetPoint("TOPLEFT", 0, -top); r:SetSize(SIDE_W, h)
-    r._ac, r._on = ac, (pg.id == def._page)
+    r:ClearAllPoints(); r:SetPoint("TOPLEFT", 0, -(i - 1) * (NAV_H + NAV_GAP))
+    r._on = (pg.id == def._page)
     r.text:SetText(pg.title or pg.id)
-    if r._on then r.text:SetTextColor(ac.r, ac.g, ac.b) else r.text:SetTextColor(1, 1, 1) end
-    r.tri:SetShown(r._on)
-    r.rule:SetColorTexture(ac.r, ac.g, ac.b, 1); r.rule:SetShown(i < #pages)
     r:SetScript("OnClick", function() Hub:ShowPage(def.id, pg.id) end)
-    r:Show()
-    top = top + h
+    r:paint(); r:Show()
   end
   for i = #pages + 1, #navRows do navRows[i]:Hide() end
 end
 
--- Everything in the sidebar that wears the focused tool's colour.
-local function paintSide(def)
-  local ac = accentOf(def)
-  band.fill:SetColorTexture(ac.r, ac.g, ac.b, 1)
-  band.mark:SetMark(def.wordmark or def.title or def.id:upper())
-  -- The mock's sidebar (718:41): the accent at 10% at the top, the suite blue at
-  -- 10% at the foot. SetGradient's first colour is the BOTTOM of a vertical one.
-  side.grad:SetGradient("VERTICAL",
-    CreateColor(COLOR.sky.r, COLOR.sky.g, COLOR.sky.b, 0.1),
-    CreateColor(ac.r, ac.g, ac.b, 0.1))
-  pageTitle:SetTextColor(ac.r, ac.g, ac.b)
-  paintNav(def)
+-- The page's glass, or none. `bg` names the tiles' common prefix
+-- ("…\\glass\\triggers" → triggers-a.png … -d.png).
+local function paintGlass(def)
+  local pg
+  for _, p in ipairs((def and def.pages) or {}) do if p.id == def._page then pg = p end end
+  for i, t in ipairs(glassBg) do
+    if pg and pg.bg then t:SetTexture(pg.bg .. "-" .. GLASS_TILES[i][1] .. ".png"); t:Show()
+    else t:Hide() end
+  end
 end
 
 -- ------------------------------------------------------------
@@ -278,98 +304,146 @@ local function BuildPanel()
   panel:HookScript("OnMouseDown", function(self) self:Raise() end)
   local bg = panel:CreateTexture(nil, "BACKGROUND", nil, -8)
   bg:SetAllPoints(); bg:SetColorTexture(COLOR.void.r, COLOR.void.g, COLOR.void.b, 1)
+  for i, g in ipairs(GLASS_TILES) do
+    local t = panel:CreateTexture(nil, "BACKGROUND", nil, -7)
+    t:SetPoint("TOPLEFT", g[2], -g[3]); t:SetSize(g[4], g[5]); t:SetTexCoord(0, g[6], 0, g[7])
+    t:Hide()
+    glassBg[i] = t
+  end
 
   -- The light plate a LEGACY tool still draws on (the first redesign's
-  -- transition theme needs it: its text is dark), right of the sidebar.
-  legacyPlate = panel:CreateTexture(nil, "BACKGROUND", nil, -7)
-  legacyPlate:SetPoint("TOPLEFT", SIDE_W, 0); legacyPlate:SetPoint("BOTTOMRIGHT", 0, 0)
+  -- transition theme needs it: its text is dark), under the top bar.
+  legacyPlate = panel:CreateTexture(nil, "BACKGROUND", nil, -6)
+  legacyPlate:SetPoint("TOPLEFT", 0, -TOP_H); legacyPlate:SetPoint("BOTTOMRIGHT", 0, 0)
   legacyPlate:SetColorTexture(COLOR.plate.r, COLOR.plate.g, COLOR.plate.b, 1)
   legacyPlate:Hide()
 
-  -- SIDEBAR
-  side = CreateFrame("Frame", nil, panel)
-  side:SetPoint("TOPLEFT", 0, 0); side:SetSize(SIDE_W, SHELL_H)
-  side.grad = side:CreateTexture(nil, "BACKGROUND")
-  side.grad:SetPoint("TOPLEFT", 0, -NAV_Y); side.grad:SetPoint("BOTTOMRIGHT", 0, 0)
-  side.grad:SetColorTexture(1, 1, 1, 1)
+  -- THE TOP BAR — above every tool's container.
+  top = CreateFrame("Frame", nil, panel)
+  top:SetPoint("TOPLEFT", 0, 0); top:SetSize(SHELL_W, TOP_H)
+  top:SetFrameLevel(panel:GetFrameLevel() + 40)
+  local lf = top:CreateTexture(nil, "BACKGROUND"); lf:SetPoint("TOPLEFT", 0, 0); lf:SetSize(SWITCH_W, TOP_H)
+  lf:SetColorTexture(COLOR.violet.r, COLOR.violet.g, COLOR.violet.b, 0.2)
+  local rf = top:CreateTexture(nil, "BACKGROUND"); rf:SetPoint("TOPLEFT", SWITCH_W, 0); rf:SetPoint("BOTTOMRIGHT", 0, 0)
+  rf:SetColorTexture(0, 0, 0, 0.5)
+  local rule = top:CreateTexture(nil, "BORDER"); rule:SetHeight(1)
+  rule:SetPoint("TOPLEFT", 0, -TOP_H); rule:SetPoint("TOPRIGHT", 0, -TOP_H)
+  rule:SetColorTexture(COLOR.violet.r, COLOR.violet.g, COLOR.violet.b, 1)
 
-  -- The wordmark (the mock's text box is 177 × 31 at 73,14; the art is the ink,
-  -- centred on that box) and, over the sidebar's top, the drag handle — which
-  -- also carries the version line as its hover-help, as the old wordmark did.
-  local wm = side:CreateTexture(nil, "ARTWORK")
-  wm:SetTexture(WORDMARK); wm:SetTexCoord(0, WM_U, 0, WM_V); wm:SetSize(WM_W, WM_H)
-  wm:SetPoint("LEFT", side, "TOPLEFT", 73, -29.5)
-  local drag = CreateFrame("Frame", nil, side)
-  drag:SetPoint("TOPLEFT", 0, 0); drag:SetSize(SIDE_W, BAND_Y)
+  -- The drag handle: the whole bar, under its controls (★ the owner, 2026-09-24:
+  -- "the entire top blank area … should be an area that you can click and drag").
+  local drag = CreateFrame("Frame", nil, top)
+  drag:SetAllPoints(); drag:SetFrameLevel(top:GetFrameLevel() + 1)
   drag:EnableMouse(true); drag:RegisterForDrag("LeftButton")
   drag:SetScript("OnDragStart", function() if panel:IsMovable() then panel:StartMoving() end end)
-  drag:SetScript("OnDragStop", function() panel:StopMovingOrSizing() end)
-  UI.attachTip(drag, "Gloom Suite", function() return Hub:VersionLine() end)
+  drag:SetScript("OnDragStop", function() panel:StopMovingOrSizing(); snapPosition() end)
 
-  -- The TOOL SWITCHER (node 691:14197): the band in the accent, "gloom" white +
-  -- the tool in the window's near-black, Michroma 14, ending at x=224, then the
-  -- white ▾ at x=230. Click → the list of tools.
-  band = CreateFrame("Button", nil, side)
-  band:SetPoint("TOPLEFT", 0, -BAND_Y); band:SetSize(SIDE_W, BAND_H)
-  band.fill = band:CreateTexture(nil, "BACKGROUND"); band.fill:SetAllPoints()
-  band.hot = band:CreateTexture(nil, "BORDER"); band.hot:SetAllPoints()
-  band.hot:SetColorTexture(1, 1, 1, 0.08); band.hot:Hide()
-  band.mark = UI.wordmark(band, "", 14, { prefixColor = COLOR.paper, suffixColor = COLOR.void, justify = "RIGHT" })
-  band.mark:SetPoint("RIGHT", band, "LEFT", 224, 0)
-  local caret = band:CreateTexture(nil, "ARTWORK"); caret:SetTexture(UI.TRI); caret:SetSize(10, 10)
-  caret:SetPoint("LEFT", band, "LEFT", 230, 0)
-  band:SetScript("OnEnter", function(self) self.hot:Show() end)
-  band:SetScript("OnLeave", function(self) self.hot:Hide() end)
-  band:SetScript("OnClick", function(self)
+  -- THE TOOL SWITCHER (the mocks' Frame 59): "gloom" white + the tool in lime,
+  -- Michroma 14, 30 in; a white ▾ 6 after it. Click → the list of tools. It
+  -- carries the version line as its hover-help, as the old wordmark did.
+  switcher = CreateFrame("Button", nil, top)
+  switcher:SetPoint("TOPLEFT", 0, 0); switcher:SetSize(SWITCH_W, TOP_H)
+  switcher:SetFrameLevel(top:GetFrameLevel() + 5)
+  switcher.hot = switcher:CreateTexture(nil, "BACKGROUND"); switcher.hot:SetAllPoints()
+  switcher.hot:SetColorTexture(1, 1, 1, 0.05); switcher.hot:Hide()
+  switcher.mark = UI.wordmark(switcher, "", 14, { prefixColor = COLOR.paper, suffixColor = COLOR.lime })
+  switcher.mark:SetPoint("LEFT", 30, 0)
+  switcher.caret = switcher:CreateTexture(nil, "ARTWORK"); switcher.caret:SetTexture(UI.G_TRI)
+  switcher.caret:SetSize(9, 8); switcher.caret:SetPoint("LEFT", switcher.mark, "RIGHT", 6, 0)
+  switcher:SetScript("OnEnter", function(self) self.hot:Show() end)
+  switcher:SetScript("OnLeave", function(self) self.hot:Hide() end)
+  switcher:SetScript("OnClick", function(self)
     local list = {}
     for _, d in ipairs(ordered) do list[#list + 1] = { value = d.id, label = d.title or d.id } end
-    UI.openList(self, list, current, function(v) Hub:FocusTab(v) end)
+    UI.gList(self.mark, list, current, function(v) Hub:FocusTab(v) end, { minW = 180 })
   end)
+  UI.attachTip(switcher, "Gloom Suite", function() return Hub:VersionLine() end)
 
-  nav = CreateFrame("Frame", nil, side)
-  nav:SetPoint("TOPLEFT", 0, -NAV_Y); nav:SetSize(SIDE_W, 10)
+  -- THE CLOSE DISC (the mocks' "cross 1"), 10 in from the right.
+  local close = CreateFrame("Button", nil, top); close:SetSize(23, 23)
+  close:SetFrameLevel(top:GetFrameLevel() + 5)
+  close:SetPoint("RIGHT", top, "RIGHT", -10, 0)
+  local ci = close:CreateTexture(nil, "ARTWORK"); ci:SetTexture(UI.G_CLOSE); ci:SetTexCoord(0, 23 / 32, 0, 23 / 32)
+  ci:SetAllPoints(); UI.tint(ci, COLOR.violet)
+  close:SetScript("OnEnter", function() UI.tint(ci, COLOR.lilac) end)
+  close:SetScript("OnLeave", function() UI.tint(ci, COLOR.violet) end)
+  close:SetScript("OnClick", function() panel:Hide() end)
 
-  -- The page's title, over the tool's content. Its own frame so it draws above
-  -- the container (a region on `panel` would sit under every child frame).
-  local titleHolder = CreateFrame("Frame", nil, panel)
-  titleHolder:SetAllPoints(); titleHolder:SetFrameLevel(panel:GetFrameLevel() + 50)
-  pageTitle = UI.newText(titleHolder, FONT.mark, 14, COLOR.sky, "LEFT")
-  pageTitle:SetPoint("TOPLEFT", TITLE_X, -TITLE_Y)
-  pageTitle:Hide()
+  -- THE PAGE BUTTONS
+  nav = CreateFrame("Frame", nil, panel)
+  nav:SetPoint("TOPLEFT", NAV_X, -NAV_Y); nav:SetSize(NAV_W, 10)
+  nav:SetFrameLevel(panel:GetFrameLevel() + 30)
 
-  -- ★ TEMPORARY: the unlabelled scale dial. It lived in the old footer's lower
-  -- right; the second redesign has no footer, and that corner is now the tool's
-  -- content, so it moved into the SIDEBAR, above the profile control — dark,
-  -- bare (ticks and a read-out, nothing else), on every tab.
-  trimLadder()
-  scaleDial = UI.dial(side, {
-    dark = true, bare = true,
+  -- UI SCALE (the mocks' "Group 9"): the word, then the dial with its value box,
+  -- as every glass dial shows it (the owner, 2026-09-26: show the current value).
+  -- The whole control rests at 30%, the mock's opacity — persistent but rarely
+  -- used, so it must not pull the eye (the owner, 2026-09-26: "it's
+  -- distracting") — and comes up to full only while the mouse is on it or it
+  -- is being dragged, so the value can be read as it changes.
+  -- ★ Still the TEMPORARY dial of 2026-09-22 in behaviour (see above).
+  buildLadder()
+  scaleHolder = CreateFrame("Frame", nil, panel)
+  scaleHolder:SetPoint("TOPLEFT", SCALE_X, -SCALE_Y); scaleHolder:SetSize(164, 18)
+  scaleHolder:SetFrameLevel(panel:GetFrameLevel() + 30)
+  local sl = UI.gLabel(scaleHolder, "UI Scale", 12)
+  sl:SetPoint("RIGHT", scaleHolder, "TOPLEFT", -10, -8)
+  scaleDial = UI.gDial(scaleHolder, {
+    bare = true, label = "UI Scale",
     min = 1, max = #SCALES, step = 1,
-    dragPx = 300,                      -- large grain: ~50px of pull per preset
+    dragPx = 300,                      -- large grain: a long pull across the steps
     fmt = scaleLabel,
     get = scaleIndex,
     set = function(v)
       local i = clampIdx(v)
-      if GloomsHubDB then GloomsHubDB.uiScale = SCALES[i] end
-      -- Mid-drag the value is banked, not applied; the wheel and a typed
-      -- number have no drag and so land at once.
+      if GloomsHubDB then GloomsHubDB.uiPx = PXS[i]; GloomsHubDB.uiScale = SCALES[i] end
+      -- Mid-drag the value is banked, not applied; the wheel has no drag and
+      -- so lands at once.
       local st = scaleDial and scaleDial.strip
       if st and st._drag then pendingScale = true else applyScale() end
     end,
   })
+  scaleDial:SetPoint("TOPLEFT", scaleHolder, "TOPLEFT", 0, 0)
+  -- The box READS the size; typing a percentage into it would mean nothing to a
+  -- ladder of steps, so it takes no clicks (the ticks and the wheel set it).
+  scaleDial.box:EnableMouse(false); scaleDial.box:EnableKeyboard(false)
+  -- (hooked after the dial's own tooltip, so this one is what shows)
+  UI.attachTip(scaleDial.strip, "UI Scale", function()
+    local n = PXS[scaleIndex()] or 0
+    local sharp = (n > 0 and n == math.floor(n))
+    return (sharp and "A sharp size: every line lands on whole screen pixels."
+      or "Between the sharp sizes: text stays sharp; thin outlines and the glass are a little soft.")
+      .. " Pull along the ticks; the window resizes when you let go."
+  end)
   -- The release. NOT OnMouseUp: UI.dial also ends a drag from its OnUpdate
   -- when the button comes up away from the strip, and that path fires no
   -- mouse-up here. Watching `_drag` clear catches every way a drag can end.
+  local function dim()
+    local on = scaleHolder:IsMouseOver() or (scaleDial.strip._drag ~= nil)
+    scaleHolder:SetAlpha(on and 1 or 0.3)
+    sl:SetAlpha(1)   -- (the label is the holder's child: it dims with it)
+  end
   scaleDial.strip:HookScript("OnUpdate", function(self)
     if pendingScale and not self._drag then
       pendingScale = false
       applyScale()
     end
+    dim()
   end)
-  scaleDial:SetPoint("TOPLEFT", side, "TOPLEFT", PROF_X, -596)
+  scaleDial.strip:HookScript("OnEnter", dim); scaleDial.strip:HookScript("OnLeave", dim)
+  scaleHolder:SetAlpha(0.3)
   applyScale()
 
   tinsert(UISpecialFrames, "GloomsSuiteWindow")   -- Escape closes it
+
+  -- The screen or the game's UI scale changed: the whole-pixel sizes moved with it.
+  local ev = CreateFrame("Frame")
+  ev:RegisterEvent("UI_SCALE_CHANGED"); ev:RegisterEvent("DISPLAY_SIZE_CHANGED")
+  ev:SetScript("OnEvent", function()
+    buildLadder()
+    if scaleDial then scaleDial:refresh() end
+    applyScale()
+  end)
+  panel:HookScript("OnShow", snapPosition)
 end
 
 -- ------------------------------------------------------------
@@ -395,18 +469,16 @@ local function EnsureContainer(def)
   if def._container then return def._container end
   local c = CreateFrame("Frame", nil, panel)
   if def.pages then
-    -- PAGED: the 810 × 740 right of the sidebar, on the dark window. The accent
-    -- rides on the container so every dark-kit widget inside finds it.
-    c:SetPoint("TOPLEFT", SIDE_W, 0); c:SetSize(CONTENT_W, SHELL_H)
-    c._gloomAccent = accentOf(def)
+    -- GLASS: the whole window, so a tool places things at the mocks' own
+    -- window coordinates. Under the top bar and the page buttons.
+    c:SetPoint("TOPLEFT", 0, 0); c:SetSize(SHELL_W, SHELL_H)
+    c:SetFrameLevel(panel:GetFrameLevel() + 2)
   else
-    -- LEGACY: the size it was pinned to, scaled to the 810 it has now. ⚠ A
-    -- scaled frame's SetPoint offsets are in its OWN units, hence SIDE_W / k.
+    -- LEGACY: the size it was pinned to, unscaled, centred under the top bar.
     local w, h = LEGACY_W, LEGACY_H
     if def.profile then w, h = LEGACY_PROFILE_W, LEGACY_PROFILE_H end
-    local k = CONTENT_W / w
-    c:SetSize(w, h); c:SetScale(k)
-    c:SetPoint("TOPLEFT", panel, "TOPLEFT", SIDE_W / k, 0)
+    c:SetSize(w, h)
+    c:SetPoint("TOP", panel, "TOP", 0, -TOP_H - math.floor((SHELL_H - TOP_H - h) / 2))
   end
   c:Hide()
   def._container = c
@@ -414,12 +486,13 @@ local function EnsureContainer(def)
   return c
 end
 
--- The sidebar's profile control, built once per tab that supplies `profile`.
+-- The top bar's profile row, built once per tab that supplies `profile`.
 local function EnsureProfile(def)
-  if def._profileStack or not def.profile then return def._profileStack end
-  local st = UI.profileStack(side, def.profile, def.wordmark or def.title or "", accentOf(def))
-  st.frame:SetPoint("TOPLEFT", PROF_X, -PROF_Y)
-  def._profileStack = st
+  if def._profileBar or not def.profile then return def._profileBar end
+  local st = UI.gProfileBar(top, def.profile, def.wordmark or def.title or "")
+  st.frame:SetPoint("LEFT", top, "LEFT", PROF_X, 0)
+  st.frame:SetFrameLevel(top:GetFrameLevel() + 5)
+  def._profileBar = st
   return st
 end
 
@@ -429,28 +502,30 @@ function Hub:FocusTab(id)
   if current and tabs[current] then
     local old = tabs[current]
     if old._container then old._container:Hide() end
-    if old._profileStack then old._profileStack.frame:Hide() end
+    if old._profileBar then old._profileBar.frame:Hide() end
   end
   current = id
   if GloomsHubDB then GloomsHubDB.lastTab = id end
   legacyPlate:SetShown(not def.pages)
+  switcher.mark:SetMark(def.wordmark or def.title or def.id:upper())
   local c = EnsureContainer(def)
-  -- A paged tool opens on the page it was last on, else its first.
+  -- A glass tool opens on the page it was last on, else its first.
   if def.pages and #def.pages > 0 then
     local want = def._page or (GloomsHubDB and GloomsHubDB.lastPage and GloomsHubDB.lastPage[id])
     def._page = def.pages[1].id
     for _, pg in ipairs(def.pages) do if pg.id == want then def._page = want end end
   end
-  paintSide(def)
+  paintNav(def)
+  paintGlass(def)
   c:Show()
   local st = EnsureProfile(def)
   if st then st.frame:Show(); st:refresh() end
-  if def.pages then Hub:ShowPage(id, def._page) else pageTitle:Hide() end
+  if def.pages then Hub:ShowPage(id, def._page) end
   if def.refresh then def.refresh() end
 end
 
--- Show one page of a PAGED tool: its title, its row in the sidebar, and the
--- tool's own `showPage(pageId)`. Focuses the tool first if it is not in front.
+-- Show one page of a glass tool: its glass, its button, and the tool's own
+-- `showPage(pageId)`. Focuses the tool first if it is not in front.
 function Hub:ShowPage(id, pageId)
   local def = tabs[id]
   if not (def and def.pages and panel) then return end
@@ -467,8 +542,8 @@ function Hub:ShowPage(id, pageId)
     GloomsHubDB.lastPage = GloomsHubDB.lastPage or {}
     GloomsHubDB.lastPage[id] = pageId
   end
-  pageTitle:SetText(page.title or pageId); pageTitle:Show()
   paintNav(def)
+  paintGlass(def)
   if def.showPage then def.showPage(pageId) end
 end
 
@@ -500,7 +575,97 @@ end
 -- /gloom — the neutral Suite slash (last-used tab)
 -- ------------------------------------------------------------
 
+-- /gloom px — the PIXEL GRID probe (2026-09-26). The glass pages look soft in
+-- the game and razor-sharp in Figma; the suspicion (from Config.wtf, not yet
+-- measured) is that one UI unit is a FRACTION of a screen pixel (~2.16 on the
+-- owner's display), so every 1-unit line and every texture is resampled. This
+-- prints the measured ratio and the Suite-window scales that would make it a
+-- whole number. A slash subcommand, not a /run line (LESSONS: the 255-char chat limit).
+local function pixelProbe()
+  local pw, ph = GetPhysicalScreenSize()
+  local uiH = UIParent:GetHeight()
+  local ues = UIParent:GetEffectiveScale()
+  local unit = ph / 768                    -- screen pixels per unit at effective scale 1
+  Hub:Print(("screen %d x %d px · UIParent %.1f x %.1f units · uiScale %s (use %s)"):format(
+    pw, ph, UIParent:GetWidth(), uiH, tostring(GetCVar("uiScale")), tostring(GetCVar("useUiScale"))))
+  Hub:Print(("UIParent: 1 unit = %.3f px"):format(unit * ues))
+  if panel then
+    local es = panel:GetEffectiveScale()
+    Hub:Print(("Suite window (scale %.2f): 1 unit = %.3f px · the window is %.0f x %.0f px"):format(
+      panel:GetScale(), unit * es, SHELL_W * unit * es, SHELL_H * unit * es))
+  else
+    Hub:Print("Suite window: not built yet — open it once with /gloom, then run /gloom px again.")
+  end
+  local fits = {}
+  for n = 1, 4 do
+    local s = n / (unit * ues)             -- the window scale that makes 1 unit = n px
+    if SHELL_W * n <= pw and SHELL_H * n <= ph then fits[#fits + 1] = ("%d px = %d%%"):format(n, math.floor(s * 100 + 0.5)) end
+  end
+  Hub:Print("Whole-pixel window scales on this screen: " .. (#fits > 0 and table.concat(fits, " · ") or "none"))
+end
+
+-- /gloom texttest — SCALED vs NATIVE text (2026-09-26). The window reaches whole
+-- pixels by SetScale (~1.09 × the game's UI on the owner's 4K screen). If WoW
+-- rasterises a scaled frame's text at the UNSCALED size and stretches it, all
+-- our text is a little soft however sharp the lines are. This draws the same
+-- words at the same final size two ways, side by side: LEFT inside a frame
+-- scaled like the Suite window (2 px a unit), RIGHT in an unscaled frame with
+-- the font size itself raised to match. Every text sits on a whole screen pixel
+-- in both, so the only difference is the scaling. Run it again to close it.
+local textTest
+local function textTestToggle()
+  if textTest then textTest:SetShown(not textTest:IsShown()); return end
+  local ppu = pxPerUnit()
+  local ue = UIParent:GetEffectiveScale()
+  local sA = 2 / (ppu * ue)                       -- the Suite window's 2-px scale
+  local W, H = 1100, 520                          -- the panel, in SCREEN PIXELS
+  local f = CreateFrame("Frame", nil, UIParent)
+  f:SetFrameStrata("TOOLTIP")
+  local kP = ppu * ue                             -- px per unit of an unscaled child of UIParent
+  f:SetSize(W / kP, H / kP)
+  local pw, ph = GetPhysicalScreenSize()
+  f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", math.floor((pw - W) / 2) / kP, math.floor((ph + H) / 2) / kP)
+  local bg = f:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(0.06, 0.03, 0.12, 1)
+  f:EnableMouse(true); f:SetScript("OnMouseDown", function(self) self:Hide() end)
+  -- a column: a child frame at `scale`, its texts placed at whole screen pixels
+  local function column(xpx, scale, native, title)
+    local c = CreateFrame("Frame", nil, f)
+    c:SetScale(scale)
+    local k = kP * scale                          -- px per unit inside this column
+    c:SetSize(520 / k, (H - 20) / k)
+    c:SetPoint("TOPLEFT", f, "TOPLEFT", xpx / k, -10 / k)
+    local y = 20
+    local function line(font, size, text, gap, c1)
+      local fs = c:CreateFontString(nil, "OVERLAY")
+      local sz = native and size * sA or size    -- the unscaled side raises the font size instead
+      UI.setFont(fs, font, sz)
+      fs:SetTextColor((c1 or COLOR.paper).r, (c1 or COLOR.paper).g, (c1 or COLOR.paper).b)
+      fs:SetPoint("TOPLEFT", c, "TOPLEFT", 20 / k, -y / k)
+      fs:SetText(text)
+      y = y + (gap or (size * 2 * 1.6))
+      return fs
+    end
+    line(FONT.sa, 12, title, 40, COLOR.lime)
+    line(FONT.mark, 18, "Appearance")
+    line(FONT.sa, 14, "Haunt Progress Bar")
+    line(FONT.sa, 12, "Horizontal Offset   Vertical Offset   Rotation")
+    line(FONT.saM, 10, "NEW   COPY   RENAME   DELETE   CHOOSE", nil, COLOR.lilac)
+    line(FONT.sa, 11, "OFF   ON   80px   100%   -265px", nil)
+    line(FONT.saB, 11, "Garrote   Rupture   Envenom")
+    line(FONT.sa, 11, "Unstable Affliction Bar   Corruption/Wither Missing")
+  end
+  column(20, sA, false, "LEFT — scaled frame (like the Suite window)")
+  column(560, 1, true, "RIGHT — unscaled frame, bigger font")
+  local mid = f:CreateTexture(nil, "ARTWORK"); mid:SetColorTexture(COLOR.violet.r, COLOR.violet.g, COLOR.violet.b, 1)
+  mid:SetPoint("TOPLEFT", f, "TOPLEFT", 550 / kP, -20 / kP); mid:SetSize(2 / kP, (H - 40) / kP)
+  textTest = f
+  Hub:Print(("Text test: LEFT is scaled ×%.3f, RIGHT is unscaled with the font ×%.3f. Click the panel (or /gloom texttest) to close."):format(sA, sA))
+end
+
 SLASH_GLOOMSUITE1 = "/gloom"
-SlashCmdList["GLOOMSUITE"] = function()
+SlashCmdList["GLOOMSUITE"] = function(msg)
+  msg = (msg or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
+  if msg == "px" then return pixelProbe() end
+  if msg == "texttest" then return textTestToggle() end
   Hub:ToggleWindow()
 end

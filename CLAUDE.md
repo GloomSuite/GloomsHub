@@ -185,10 +185,11 @@ the ledger recorded two suspicions in the same confident voice as its measuremen
 - Namespace `GloomsHub` → `_G.GloomsHub`; SavedVariables `GloomsHubDB`.
 - Plain frames, plain SavedVariables, **no Ace3**. Libraries embedded under `Libs/` and pulled by
   the BigWigs packager via `.pkgmeta` externals; `Libs/` is git-ignored.
-- **Design language:** the SECOND redesign (2026-09-23, Figma "GloomSuite UI 2") — a near-black
-  window with a sidebar, Saira + Michroma, flat pill buttons, a per-tool accent (Auras green; the
-  rest the suite blue until mocked). No native Blizzard chrome. The tokens LIVE here, in `Skin.lua`
-  (CONTRACTS §4, "THE DARK KIT"); BACKLOG 16 holds the brief.
+- **Design language:** the GLASS design (2026-09-25, Figma page "GloomSuite UI 2", the "Glass …"
+  screens) — a near-black window with a top bar, page buttons, each page's glass baked into its
+  background from the owner's own exports; Saira + Michroma; square outlined buttons; ONE palette
+  (violet · lilac · lime) for every tool. The tokens LIVE here, in `Skin.lua` (CONTRACTS §4, "THE
+  GLASS KIT"); BACKLOG 16 holds the brief; FINDINGS §22 why the window must sit on whole pixels.
 - Slash: `/gloom` opens the Suite window on the last-used tab. Each tool keeps its own (`/gb`,
   `/ga`, `/go`) to open focused on its tab.
 - Symlinked into the client at `…/Interface/AddOns/GloomsHub` — **every suite addon is a symlink on

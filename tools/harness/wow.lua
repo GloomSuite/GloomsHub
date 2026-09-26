@@ -144,6 +144,8 @@ Enum = setmetatable({ UITextureSliceMode = { Stretched = 0, Tiled = 1 }, PowerTy
   { __index = function() return setmetatable({}, { __index = function() return 0 end }) end })
 function CreateColor(r, g, b, a) return { r = r, g = g, b = b, a = a, GetRGBA = function(s) return s.r, s.g, s.b, s.a end } end
 function GetCursorPosition() return 0, 0 end
+function GetPhysicalScreenSize() return 3840, 2160 end   -- the owner's screen, measured by /gloom px 2026-09-26
+function GetCVar() return nil end
 function IsMouseButtonDown() return false end
 function IsShiftKeyDown() return false end
 function IsControlKeyDown() return false end
@@ -154,6 +156,7 @@ function UnitName() return "Gloombound" end
 function GetRealmName() return "Stormrage" end
 function GetNormalizedRealmName() return "Stormrage" end
 function UnitClass() return "Rogue", "ROGUE", 4 end
+function UnitClassBase() return "ROGUE", 4 end
 function UnitGUID() return "Player-1-0000" end
 function UnitIsDeadOrGhost() return false end
 function UnitCastingInfo() return nil end

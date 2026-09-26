@@ -408,6 +408,29 @@ GU's `cNum` shows the live-stepping hook.
   one is not) — that is the whole look of the second design's buttons. The fill is under the
   border (`background-clip: border-box`).
 
+### Pixel sharpness in the game (2026-09-26, FINDINGS §22)
+- **A UI unit is not a pixel, and the ratio is almost never whole.** On the owner's 4K screen at a
+  70% game UI scale, 1 unit was 1.828 pixels, so every 1-unit line and every texture resampled — the
+  whole window looked soft next to Figma. **Measure before theorising: `/gloom px`.** A window is
+  pixel-sharp only when `physH/768 × its effective scale` is a whole number, and only if its corner
+  also sits on a whole pixel (snap after every drag and rescale).
+- **Never resize art to fit a power-of-two texture.** Squeezing a 2120-wide export to 2048 and
+  letting the game stretch it back up is TWO resamples. Cut it into power-of-two tiles instead
+  (`tools/gen-glass-art.py bg`). Draw small marks at 4×: the game should only ever shrink art.
+- **Scaled TEXT is not the problem** — WoW re-rasterises at the final size (`/gloom texttest`,
+  KILLED in §22). Don't redesign around `SetScale` for text.
+- **The uiScale CVar is not UIParent's effective scale** (0.70 → ~0.65 at 4K). Compute from
+  `UIParent:GetEffectiveScale()`, never from the CVar.
+
+### Exporting the glass from Figma (2026-09-25)
+- The export recipe: per screen, Shift-click the glass panels, **Enter** (selects their direct
+  children), type **0 0** (opacity 0% — NOT hide: hiding collapses an auto-layout panel), hide the
+  non-glass layers, export 2×, then undo. **Undo each screen before the next one** — the undo history
+  is short; the owner lost his mocks' state doing all 13 first. The way back is **File → Show
+  version history → right-click a checkpoint → Duplicate** (Restore rolls back the whole file).
+- **The Figma connector's screenshots are capped at 1024 px wide** and cannot hide layers, so it
+  cannot produce the glass — the owner exports it.
+
 ### Verifying UI without the game — `tools/harness/`
 - **A syntax check proves nothing about a UI; the harness gets most of the way to the game.** It
   loads the real TOCs against a WoW-API stand-in and the real SavedVariables, drives the Suite

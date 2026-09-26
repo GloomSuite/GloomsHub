@@ -20,6 +20,7 @@ out = sys.argv[2]; S = float(sys.argv[3]) if len(sys.argv) > 3 else 1.0
 WIN_W, WIN_H = 1060, 740
 FONTS = {"Saira-Regular": os.path.join(HUB, "Media", "fonts", "Saira-Regular.ttf"),
          "Saira-Bold": os.path.join(HUB, "Media", "fonts", "Saira-Bold.ttf"),
+         "Saira-Medium": os.path.join(HUB, "Media", "fonts", "Saira-Medium.ttf"),
          "Michroma-Regular": os.path.join(HUB, "Media", "fonts", "Michroma-Regular.ttf"),
          "Play-Regular": os.path.join(HUB, "Media", "fonts", "Play-Regular.ttf"),
          "Play-Bold": os.path.join(HUB, "Media", "fonts", "Play-Bold.ttf"),

@@ -69,10 +69,10 @@ Licensed under the SIL Open Font License, Version 1.1. Full text in
 
 ## Saira — SIL Open Font License 1.1
 
-`Saira-Regular.ttf` · `Saira-Bold.ttf`
+`Saira-Regular.ttf` · `Saira-Medium.ttf` · `Saira-Bold.ttf`
 
 > Copyright 2020 The Saira Project Authors (https://github.com/Omnibus-Type/Saira)
 
 Licensed under the SIL Open Font License, Version 1.1. Full text in
-[OFL-Saira.txt](OFL-Saira.txt). Source: <https://github.com/google/fonts/tree/main/ofl/saira>
+[OFL-Saira.txt](OFL-Saira.txt). Source: <https://github.com/google/fonts/tree/main/ofl/saira> (Medium, 2026-09-25: the project's own static build, <https://github.com/Omnibus-Type/Saira>, the same Version 1.101)
 (static instances, unmodified).

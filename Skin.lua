@@ -9,7 +9,7 @@
 -- change it THERE and every consumer in the same session.
 -- ============================================================
 
-local MAJOR, MINOR = "LibGloomSkin-1.0", 13  -- MINOR 13 (2026-09-23, the SECOND redesign, "GloomSuite UI 2"): THE DARK KIT — COLOR.void/sky/jade/coral/flame, FONT.sa/saB (Saira), UI.accentOf, UI.pill, UI.pillPick, UI.profileStack, and UI.openList (the kit list, openable from any button), the dark UI.dial, UI.plate/rule/text/box/colorDot/toggle2/pillField/xbtn/scrollPane. MINOR 12 (2026-09-21, redesign stages 2–3): UI.chip (the colour chip), the picker's colour SOURCES (selected, committed by OK), the SHORT and BARE dials, UI.cell, the revised dropdown list, the kit popover. MINOR 11: THE KIT — the redesign's tokens (COLOR.plate/ink/violet/…, FONT.ui/uiB/mark) and widgets (UI.button · segments · toggleBar · check · field · label · pick · sectionHeader · dial · wordmark · profileRow); the old widgets stay for tabs not yet migrated
+local MAJOR, MINOR = "LibGloomSkin-1.0", 14  -- MINOR 14 (2026-09-25, the THIRD redesign, "Glass"): THE GLASS KIT — COLOR.lime/slate/deep/list, FONT.saM, UI.gTitle/gLabel/gButton/gSwitch/gList/gDrop/gField/gDial/gCheck/gColor/gX/gScroll/gProfileBar, UI.dial `glass` + `nobox`, UI.colorDot `dot` + `gap`. MINOR 13 (2026-09-23, the SECOND redesign, "GloomSuite UI 2"): THE DARK KIT — COLOR.void/sky/jade/coral/flame, FONT.sa/saB (Saira), UI.accentOf, UI.pill, UI.pillPick, UI.profileStack, and UI.openList (the kit list, openable from any button), the dark UI.dial, UI.plate/rule/text/box/colorDot/toggle2/pillField/xbtn/scrollPane. MINOR 12 (2026-09-21, redesign stages 2–3): UI.chip (the colour chip), the picker's colour SOURCES (selected, committed by OK), the SHORT and BARE dials, UI.cell, the revised dropdown list, the kit popover. MINOR 11: THE KIT — the redesign's tokens (COLOR.plate/ink/violet/…, FONT.ui/uiB/mark) and widgets (UI.button · segments · toggleBar · check · field · label · pick · sectionHeader · dial · wordmark · profileRow); the old widgets stay for tabs not yet migrated
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if lib then
@@ -1638,7 +1638,13 @@ local WARM = {   -- the Hub's own pairs (Shell + Media tab + the lib's own widge
   -- wordmarks 12 (footer) / 14 (banner, Player/Target) / 22 (the window).
   { "ui",    { 11 } },
   { "uiB",   { 12, 14 } },
-  { "mark",  { 12, 14, 22 } },
+  { "mark",  { 12, 14, 18, 22 } },  -- 18: the glass panels' titles (MINOR 14)
+  -- The dark and glass kits (MINOR 13-14): Saira 10 (buttons, dropdowns, small
+  -- notes) · 11 (values, switches, rows) · 12 (labels) · 14 (the aura header);
+  -- Bold 11/12 (the aura list, group titles); Medium 10 (buttons, dropdowns, lists).
+  { "sa",    { 10, 11, 12, 14 } },
+  { "saB",   { 11, 12, 14 } },
+  { "saM",   { 10 } },
 }
 local warmer, warmRan
 local pendingPairs = {}   -- registered before the PEW batch
@@ -2411,11 +2417,15 @@ function UI.dial(parent, opts)
   end
 
   local short, bare = opts.short and true or false, opts.bare and true or false
-  local dark = opts.dark and true or false
+  -- `glass` (MINOR 14) is the third design's dial — UI.gDial's; it is the dark
+  -- dial with shorter ticks (10), a 16-tall box and the glass palette.
+  local glass = opts.glass and true or false
+  local dark = (opts.dark or glass) and true or false
   local ac = dark and (opts.accent or UI.accentOf(parent)) or nil
-  local TOP = bare and 0 or (dark and 19 or 18)
+  if glass then ac = COLOR.violet end
+  local TOP = bare and 0 or (glass and 23 or (dark and 19 or 18))
   local f = CreateFrame("Frame", nil, parent)
-  f:SetSize(opts.w or (dark and 164 or (short and 133 or 194)), bare and (dark and 21 or 17) or (dark and 40 or 35))
+  f:SetSize(opts.w or (dark and 164 or (short and 133 or 194)), bare and (glass and 18 or (dark and 21 or 17)) or (glass and 41 or (dark and 40 or 35)))
   if dark then
     f.label = UI.newText(f, FONT.sa, 12, COLOR.paper, "LEFT"); f.label:SetText(bare and "" or (opts.label or ""))
   else
@@ -2426,11 +2436,22 @@ function UI.dial(parent, opts)
   local WIN_W = dark and 101 or (short and 78 or 141)   -- the strip art: posts at 0-1 and W-2..W-1, ticks at 4+3i (45, or 24 short), the centre one at 69-71
   local TICKS = dark and 21 or (short and 26 or 47)     -- positions the mark can take: post, the ticks, post
   local strip = CreateFrame("Frame", nil, f)
-  strip:SetPoint("TOPLEFT", 0, -TOP); strip:SetSize(WIN_W, dark and 21 or 17)
+  strip:SetPoint("TOPLEFT", 0, -TOP); strip:SetSize(WIN_W, glass and 18 or (dark and 21 or 17))
   strip:EnableMouse(true); strip:EnableMouseWheel(true)
   local ticks = strip:CreateTexture(nil, "ARTWORK")
   local mark = strip:CreateTexture(nil, "OVERLAY")
-  if dark then
+  if glass then
+    -- ★ 21 separate 1-unit rectangles, not a texture: at the Suite window's
+    -- whole-pixel scales each lands exactly on the screen's pixels (2026-09-26).
+    ticks:Hide()
+    for i = 0, 20 do
+      local t = strip:CreateTexture(nil, "ARTWORK")
+      t:SetPoint("TOPLEFT", i * 5, 0); t:SetSize(1, 10)
+      t:SetColorTexture(COLOR.lilac.r, COLOR.lilac.g, COLOR.lilac.b, 1)
+    end
+    mark:SetTexture(UI.G_TRI); mark:SetRotation(math.pi)
+    mark:SetSize(6, 5); mark:SetVertexColor(0xd9 / 255, 0xd9 / 255, 0xd9 / 255, 1)
+  elseif dark then
     ticks:SetTexture(UI.DIAL_D); ticks:SetTexCoord(0, 101 / 128, 0, 12 / 16)
     ticks:SetSize(101, 12); ticks:SetPoint("TOPLEFT", 0, -0.5); UI.tint(ticks, ac)
     mark:SetTexture(UI.TRI); mark:SetRotation(math.pi)   -- tri.png points down; turned, it points up at the tick
@@ -2448,7 +2469,7 @@ function UI.dial(parent, opts)
   -- A dark dial's pointer sits under tick `idx`, 2px below the strip's ticks.
   local function markAt(idx)
     if dark then
-      mark:ClearAllPoints(); mark:SetPoint("TOP", strip, "TOPLEFT", idx * 5 + 0.5, -14)
+      mark:ClearAllPoints(); mark:SetPoint("TOP", strip, "TOPLEFT", idx * 5 + 0.5, glass and -12 or -14)
       return
     end
     local x, w
@@ -2464,13 +2485,13 @@ function UI.dial(parent, opts)
   -- A dark dial's box is the accent at 30% under Saira 11 white, 54 wide at least.
   local box
   if dark then
-    box = CreateFrame("EditBox", nil, f); box:SetAutoFocus(false); box:SetHeight(21)
+    box = CreateFrame("EditBox", nil, f); box:SetAutoFocus(false); box:SetHeight(glass and 16 or 21)
     UI.setFont(box, FONT.sa, 11); box:SetTextColor(1, 1, 1); box:SetJustifyH("CENTER")
     local bbg = box:CreateTexture(nil, "BACKGROUND"); bbg:SetAllPoints(); bbg:SetColorTexture(ac.r, ac.g, ac.b, 0.3)
   else
     box = UI.field(f, 42, { justify = "CENTER" })
   end
-  box:SetTextInsets(4, 4, 0, 0)
+  box:SetTextInsets(4, 4, glass and 2 * UI.G_NUDGE or 0, 0)
   do
     local m = UI.newText(f, dark and FONT.sa or FONT.ui, 11, nil, "LEFT"); m:Hide()
     local widest = 0
@@ -2484,6 +2505,7 @@ function UI.dial(parent, opts)
   if dark then box:SetPoint("TOPLEFT", f, "TOPLEFT", 110, -TOP)
   else box:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, -TOP) end
   f.box = box
+  if opts.nobox then box:Hide(); f:SetWidth(WIN_W) end
 
   local cur, enabled = snap(opts.get() or minV), true
   local editing, dragging = false, false   -- our own flags; HasFocus() proved unreliable mid-drag
@@ -3061,21 +3083,24 @@ function UI.colorDot(parent, opts)
   local x = 0
   local chk
   local function openPicker() end
+  local ds = opts.dot or 20
   if not opts.required then
     chk = UI.box(f, nil, function() return opts.get() ~= nil end, function(on)
       if on then openPicker() else opts.set(nil); f:refresh() end
     end, opts.accent)
     chk:SetPoint("LEFT", 0, 0)
-    x = 26
+    x = opts.gap or 26
   end
   if opts.label then
     local lbl = UI.text(f, opts.label, 12); lbl:SetPoint("LEFT", x, 0)
     x = x + math.ceil(lbl:GetStringWidth()) + 10
     f.label = lbl
   end
-  local dot = CreateFrame("Button", nil, f); dot:SetSize(20, 20); dot:SetPoint("LEFT", x, 0)
+  local dot = CreateFrame("Button", nil, f); dot:SetSize(ds, ds); dot:SetPoint("LEFT", x, 0)
   local disc = dot:CreateTexture(nil, "ARTWORK"); disc:SetAllPoints()
-  f:SetWidth(x + 20)
+  f:SetWidth(x + ds)
+  if opts.dot then f:SetHeight(16) end
+  f.check = chk
   f.dot = dot
 
   local enabled = true
@@ -3083,9 +3108,9 @@ function UI.colorDot(parent, opts)
     local c = opts.get()
     if c then
       if UI.NoteColor then UI.NoteColor(c) end   -- it is live somewhere: it belongs in the palette
-      disc:SetTexture(UI.DISC); disc:SetVertexColor(c[1] or 1, c[2] or 1, c[3] or 1, 1)
+      disc:SetTexture(opts.disc or UI.DISC); disc:SetVertexColor(c[1] or 1, c[2] or 1, c[3] or 1, 1)
     else
-      disc:SetTexture(UI.DISC_NO); disc:SetVertexColor(1, 1, 1, 0.5)
+      disc:SetTexture(opts.discNo or UI.DISC_NO); disc:SetVertexColor(1, 1, 1, 0.5)
     end
     if chk then chk:refresh() end
   end
@@ -3302,6 +3327,517 @@ function UI.scrollPane(parent, opts)
     sf:ScrollTo(startS + moved / range * maxS)
   end)
   return sf
+end
+
+-- ------------------------------------------------------------
+-- ★ THE GLASS KIT (MINOR 14, 2026-09-25) — the THIRD redesign ("Glass", 13
+-- screens on the Figma page "GloomSuite UI 2", named "Glass Auras, …" and
+-- "Glass Bars, …"). The second design's per-tool accent is GONE: one palette
+-- for the whole suite (the owner, 2026-09-25: "All pages are going to use this
+-- same palette"). The glass itself is ART — each page's background with its
+-- glass panels already composited, exported by the owner from Figma and drawn
+-- by the Suite window behind the page (WoW has no backdrop blur; the panels
+-- never move, so baking them is exact). Everything here draws ON the glass.
+--
+-- Read off the mocks (every number below is a mock's):
+--   · violet #6c2fe6 — every outline, the checkbox, a row's marker square
+--   · lilac  #a881f8 — a button's word, a picked outline, the dial's ticks
+--   · lime   #28d65c — the tool's name in the switcher, "+ ADD NEW AURA", a
+--                      visible eye, the chosen page's ▸
+--   · slate  #464646 — a destructive button at rest (DELETE, DELETE AURA)
+--   · fills are violet at 10% (a switch's unpicked half), 20% (a row, a
+--     picked button), 30% (a switch's picked half, a field, a dial's box),
+--     50% (the chosen page)
+--   · type: Saira 12 labels, Saira 11 values, Saira MEDIUM 10 capitals on
+--     buttons and dropdowns, Michroma 18 panel titles / 14 sub-titles
+-- Every control is 16 tall. Disabled = 50%, never hidden (the suite's rule).
+-- ------------------------------------------------------------
+COLOR.violet = COLOR.violet or color("6c2fe6")
+COLOR.lilac  = COLOR.lilac or color("a881f8")
+COLOR.lime   = color("28d65c")
+COLOR.slate  = color("464646")
+COLOR.deep   = color("110034")    -- a row nested in a trigger group (at 75%)
+COLOR.list   = color("150a26")    -- the dropdown list's plate (not mocked yet)
+
+-- The mocks' buttons and dropdowns are Saira MEDIUM (shipped 2026-09-25).
+-- ⚠ NEW FONTS LOAD AT CLIENT LAUNCH — the first time it ships, a /reload is not
+-- enough (CLAUDE.md working agreement 4).
+FONT.saM = FONT_DIR .. "Saira-Medium.ttf"
+
+-- ★ The marks are drawn at 4x their display size (tools/gen-glass-art.py): one UI
+-- unit is 1.8-3 screen pixels in the game, so 1x art was being ENLARGED, and soft.
+-- The texcoords below are fractions of the canvas, so they did not change.
+UI.G_TICKS = lib.MEDIA .. "ui\\g-ticks.png"   -- 21 ticks, 101 x 10 on 128 x 16 (no longer drawn — see UI.dial)
+UI.G_CLOSE = lib.MEDIA .. "ui\\g-close.png"   -- the window's close disc, 23 on 32 (x4)
+UI.G_X     = lib.MEDIA .. "ui\\g-x.png"       -- a row's remove X, 9 on 16 (x4)
+UI.G_EYE   = lib.MEDIA .. "ui\\g-eye.png"     -- 14 x 8.5 on 16 (x4)
+UI.G_WARN  = lib.MEDIA .. "ui\\g-warn.png"    -- 12 x 11.5 on 16 (x4)
+UI.G_TRI   = lib.MEDIA .. "ui\\g-tri.png"     -- the ▾ (points DOWN; +90° = right), 64 x 64
+UI.G_CHECK = lib.MEDIA .. "ui\\g-check.png"   -- the checkbox's tick in its 16px box, 64 x 64
+UI.G_DISC  = lib.MEDIA .. "ui\\g-disc.png"    -- a colour swatch, 128 x 128
+UI.G_DISC_NO = lib.MEDIA .. "ui\\g-disc-dash.png"   -- the swatch with no colour set
+
+local function rgba(t, c, a) t:SetColorTexture(c.r, c.g, c.b, a or 1) end
+
+-- ★ TEXT IN A BOX SITS 1.5 UNITS LOW (2026-09-26). The owner's in-game screenshot
+-- (OBSERVED, one screenshot, 4K at 2 px a unit): capitals inside every glass
+-- button, switch and dropdown sat ~1.5 units ABOVE centre — ~3 units of space
+-- over them, ~6 under. Saira's own metrics centre its capitals to within 0.02
+-- em, so the offset is how WoW places a line of text in its FontString, not the
+-- font. 1.5 is a whole number of pixels at the window's 2-px scale. Every text
+-- that sits inside a glass box is anchored this much lower.
+UI.G_NUDGE = 1.5
+local NUDGE = UI.G_NUDGE
+
+-- A 1px outline that can change colour; four OVERLAY textures.
+local function outline(f, c, a)
+  local e = UI.addEdges(f, c, 1)
+  if a then e:SetColor(c, a) end
+  return e
+end
+
+-- The small ▾ every dropdown ends with: 9px box, a 7-wide triangle, violet.
+local function caret(parent, c)
+  local t = parent:CreateTexture(nil, "ARTWORK")
+  t:SetTexture(UI.G_TRI); t:SetSize(7, 6); UI.tint(t, c or COLOR.violet)
+  return t
+end
+UI.gCaret = caret
+
+-- UI.gTitle(parent, text, size?) → Michroma, white: 18 for a panel's title (at
+-- 20,20 in the panel), 14 for a sub-title ("Icon Border", "Preview").
+function UI.gTitle(parent, text, size)
+  local fs = UI.newText(parent, FONT.mark, size or 18, COLOR.paper, "LEFT")
+  fs:SetText(text or "")
+  return fs
+end
+
+-- UI.gLabel(parent, text, size?, c?) → Saira, white by default; 12 for a label.
+function UI.gLabel(parent, text, size, c)
+  local fs = UI.newText(parent, FONT.sa, size or 12, c or COLOR.paper, "LEFT")
+  fs:SetText(text or "")
+  return fs
+end
+
+-- UI.gButton(parent, label, opts?) — the mocks' button: a 1px violet outline
+-- round a word of Saira Medium 10 in lilac, 4 each side, 16 tall. `selected`
+-- (MATCH ALL, the picked state) fills violet 20% with a lilac outline and a
+-- white word. `danger` (DELETE …) rests in slate and turns coral under the
+-- mouse. Hover (not mocked) lays violet 20% under it.
+--   opts = { w, onClick, selected, danger, size = 10, upper = true }
+-- Returns the Button with :SetLabel, :SetSelected, :paint.
+function UI.gButton(parent, label, opts)
+  opts = opts or {}
+  local b = CreateFrame("Button", nil, parent)
+  b:SetHeight(opts.h or 16)
+  b.fill = b:CreateTexture(nil, "BACKGROUND"); b.fill:SetAllPoints()
+  b.edge = outline(b, COLOR.violet)
+  b.text = UI.newText(b, FONT.saM, opts.size or 10, COLOR.lilac, "CENTER")
+  b.text:SetPoint("CENTER", 0, -NUDGE); b.text:SetWordWrap(false)
+  b._w, b._sel, b._danger, b._hot = opts.w, opts.selected and true or false, opts.danger, false
+  b._upper = opts.upper ~= false
+  function b:paint()
+    local on = self:IsEnabled()
+    local ec, tc, fa = COLOR.violet, COLOR.lilac, 0
+    if self._sel then ec, tc, fa = COLOR.lilac, COLOR.paper, 0.2 end
+    if self._danger and not self._sel then
+      ec, tc = COLOR.slate, COLOR.slate
+      if self._hot and on then ec, tc = COLOR.coral, COLOR.coral end
+    elseif self._hot and on then fa = math.max(fa, 0.2) + (self._sel and 0.1 or 0) end
+    rgba(self.fill, COLOR.violet, fa)
+    self.edge:SetColor(ec)
+    self.text:SetTextColor(tc.r, tc.g, tc.b)
+    self:SetAlpha(on and 1 or 0.5)
+  end
+  function b:SetLabel(s)
+    s = tostring(s or "")
+    self.text:SetText(self._upper and s:upper() or s)
+    self:SetWidth(self._w or (math.ceil(self.text:GetStringWidth()) + 10))
+  end
+  function b:SetSelected(on) self._sel = on and true or false; self:paint() end
+  b:SetScript("OnEnter", function(self) self._hot = true; self:paint() end)
+  b:SetScript("OnLeave", function(self) self._hot = false; self:paint() end)
+  b:SetScript("OnEnable", function(self) self:paint() end)
+  b:SetScript("OnDisable", function(self) self._hot = false; self:paint() end)
+  if opts.onClick then b:SetScript("OnClick", opts.onClick) end
+  b:SetLabel(label)
+  b:paint()
+  return b
+end
+
+-- UI.gSwitch(parent, choices, get, set, opts?) — the mocks' segmented switch
+-- (OFF | ON, NORMAL | DIM | HIDDEN, UP | DOWN | LEFT | RIGHT, the tab strips):
+-- segments of Saira 11, 10 each side, 16 tall, joined by 1px violet lines; the
+-- PICKED one violet 30% with a lilac outline and a white word, the rest violet
+-- 10% with a lilac word. `w` stretches it to a total width (the extra shared
+-- out evenly); `upper` capitalises the words.
+--   choices = { {value, label}, … } → Frame with :refresh(), :setEnabled(on),
+--   :setChoiceEnabled(value, on) (a greyed segment ignores its click)
+function UI.gSwitch(parent, choices, get, set, opts)
+  opts = opts or {}
+  local f = CreateFrame("Frame", nil, parent); f:SetHeight(16)
+  local segs, widths, total = {}, {}, 0
+  for i, ch in ipairs(choices) do
+    local s = CreateFrame("Button", nil, f)
+    s.text = UI.newText(s, opts.font or FONT.sa, opts.size or 11, COLOR.lilac, "CENTER")
+    local lbl = tostring(ch[2] or ch[1])
+    s.text:SetText(opts.upper and lbl:upper() or lbl); s.text:SetPoint("CENTER", 0, -NUDGE); s.text:SetWordWrap(false)
+    widths[i] = math.ceil(s.text:GetStringWidth()) + 20
+    total = total + widths[i]
+    s.fill = s:CreateTexture(nil, "BACKGROUND"); s.fill:SetAllPoints()
+    s.value, s.enabled = ch[1], true
+    segs[i] = s
+  end
+  total = total + (#choices + 1)                 -- the outer lines and the joins
+  local extra = opts.w and math.max(0, opts.w - total) or 0
+  local x = 1
+  for i, s in ipairs(segs) do
+    local w = widths[i] + math.floor(extra / #segs + ((i <= extra % #segs) and 1 or 0))
+    s:SetSize(w, 14); s:SetPoint("TOPLEFT", x, -1)
+    x = x + w + 1
+  end
+  f:SetWidth(x)
+  -- The frame: violet all round and between the segments.
+  outline(f, COLOR.violet)
+  for i = 1, #segs - 1 do
+    local j = f:CreateTexture(nil, "BORDER"); j:SetWidth(1)
+    j:SetPoint("TOPLEFT", segs[i], "TOPRIGHT", 0, 0); j:SetPoint("BOTTOMLEFT", segs[i], "BOTTOMRIGHT", 0, 0)
+    rgba(j, COLOR.violet)
+  end
+  -- The picked segment's lilac outline sits OVER the violet one, 1px out.
+  local pick = CreateFrame("Frame", nil, f); pick:SetFrameLevel(f:GetFrameLevel() + 3)
+  local pe = outline(pick, COLOR.lilac)
+  local enabled, hot = true, nil
+  function f:refresh()
+    local cur = get()
+    local picked
+    for _, s in ipairs(segs) do
+      local on = (s.value == cur)
+      if on then picked = s end
+      local a = (on and 0.3 or 0.1) + ((hot == s and not on and s.enabled) and 0.1 or 0)
+      rgba(s.fill, COLOR.violet, a)
+      local tc = on and COLOR.paper or COLOR.lilac
+      s.text:SetTextColor(tc.r, tc.g, tc.b)
+      s:SetAlpha(s.enabled and 1 or 0.4)
+    end
+    if picked then
+      pick:ClearAllPoints(); pick:SetPoint("TOPLEFT", picked, "TOPLEFT", -1, 1); pick:SetPoint("BOTTOMRIGHT", picked, "BOTTOMRIGHT", 1, -1)
+      pick:Show()
+    else pick:Hide() end
+  end
+  function f:setEnabled(on) enabled = on and true or false; self:SetAlpha(enabled and 1 or 0.5) end
+  function f:setChoiceEnabled(value, on)
+    for _, s in ipairs(segs) do if s.value == value then s.enabled = on and true or false end end
+    self:refresh()
+  end
+  for _, s in ipairs(segs) do
+    s:SetScript("OnEnter", function(self) hot = self; f:refresh() end)
+    s:SetScript("OnLeave", function() hot = nil; f:refresh() end)
+    s:SetScript("OnClick", function(self)
+      if not enabled or not self.enabled or get() == self.value then return end
+      set(self.value); f:refresh()
+    end)
+  end
+  f.segs = segs
+  f:refresh()
+  return f
+end
+
+-- ------------------------------------------------------------
+-- UI.gList(anchor, options, current, onPick, opts?) — the glass kit's list,
+-- for every dropdown and every right-click menu. ★ NOT MOCKED YET: the owner,
+-- 2026-09-25, "do your best, based on what the rest of these new designs look
+-- like". So: a near-black violet plate with the violet outline, rows of Saira
+-- Medium 10 capitals 18 tall; the current row violet 30% with a lilac word,
+-- the hovered row violet 20%. At least as wide as the anchor; past 16 rows it
+-- scrolls. Closes on any outside click, on the anchor hiding, on another list.
+--   options = { {value, label, disabled?, danger?, divider?} , … }
+--   opts = { cursor = true (open at the mouse — a context menu), upper = true,
+--            minW }
+-- ------------------------------------------------------------
+local GL_ROWS, GL_ROW_H, GL_PAD = 16, 18, 4
+local gFly
+local function gFlyout()
+  if gFly then return gFly end
+  local catcher = CreateFrame("Button", nil, UIParent)
+  catcher:SetFrameStrata("FULLSCREEN"); catcher:SetAllPoints(UIParent); catcher:Hide()
+  catcher:SetFrameLevel(20)
+  catcher:RegisterForClicks("AnyUp")
+  local fly = CreateFrame("Frame", nil, catcher)
+  fly:SetFrameStrata("FULLSCREEN_DIALOG"); fly:EnableMouse(true)
+  local plate = fly:CreateTexture(nil, "BACKGROUND"); plate:SetAllPoints(); rgba(plate, COLOR.list, 0.97)
+  outline(fly, COLOR.violet)
+  local scroll = CreateFrame("ScrollFrame", nil, fly)
+  scroll:SetPoint("TOPLEFT", 1, -GL_PAD); scroll:SetPoint("BOTTOMRIGHT", -1, GL_PAD)
+  scroll:EnableMouseWheel(true)
+  local child = CreateFrame("Frame", nil, scroll); child:SetSize(10, 10)
+  scroll:SetScrollChild(child)
+  scroll:SetScript("OnMouseWheel", function(self, delta)
+    local range = math.max(0, child:GetHeight() - self:GetHeight())
+    self:SetVerticalScroll(math.max(0, math.min(range, self:GetVerticalScroll() - delta * GL_ROW_H * 2)))
+  end)
+  catcher:SetScript("OnClick", function() catcher:Hide() end)
+  fly.catcher, fly.scroll, fly.child, fly.rows = catcher, scroll, child, {}
+  gFly = fly
+  return fly
+end
+function UI.gListClose() if gFly then gFly.catcher:Hide() end end
+-- The list's own frame, so a caller can scale it with the window.
+function UI.gListFrame() return gFlyout() end
+
+function UI.gList(anchor, options, current, onPick, opts)
+  opts = opts or {}
+  local fly = gFlyout()
+  local y, widest = 0, 0
+  for i, opt in ipairs(options) do
+    local row = fly.rows[i]
+    if not row then
+      row = CreateFrame("Button", nil, fly.child); row:SetHeight(GL_ROW_H)
+      row.fill = row:CreateTexture(nil, "BACKGROUND"); row.fill:SetAllPoints()
+      row.rule = row:CreateTexture(nil, "BORDER"); row.rule:SetHeight(1)
+      row.rule:SetPoint("TOPLEFT", 6, 0); row.rule:SetPoint("TOPRIGHT", -6, 0); rgba(row.rule, COLOR.violet, 0.6)
+      row.text = UI.newText(row, FONT.saM, 10, COLOR.paper, "LEFT")
+      row.text:SetPoint("LEFT", 8, -NUDGE); row.text:SetPoint("RIGHT", -8, -NUDGE); row.text:SetWordWrap(false)
+      row:SetScript("OnEnter", function(self) if not self._off then self._hot = true; self:paintRow() end end)
+      row:SetScript("OnLeave", function(self) self._hot = false; self:paintRow() end)
+      function row:paintRow()
+        local a = self._cur and 0.3 or (self._hot and 0.2 or 0)
+        rgba(self.fill, COLOR.violet, a)
+        local tc = self._danger and COLOR.coral or (self._cur and COLOR.lilac or COLOR.paper)
+        self.text:SetTextColor(tc.r, tc.g, tc.b)
+        self.text:SetAlpha(self._off and 0.4 or 1)
+      end
+      fly.rows[i] = row
+    end
+    row:ClearAllPoints()
+    row:SetPoint("TOPLEFT", 0, y); row:SetPoint("TOPRIGHT", 0, y)
+    local lbl = tostring(opt.label or opt.value or "")
+    row.text:SetText(opts.upper == false and lbl or lbl:upper())
+    widest = math.max(widest, row.text:GetStringWidth())
+    row._cur = (current ~= nil and opt.value == current)
+    row._off, row._danger, row._hot = opt.disabled and true or false, opt.danger, false
+    row.rule:SetShown(opt.divider and true or false)
+    row:paintRow()
+    row:SetScript("OnClick", function()
+      if opt.disabled then return end
+      fly.catcher:Hide(); onPick(opt.value)
+    end)
+    row:Show()
+    y = y - GL_ROW_H
+  end
+  for i = #options + 1, #fly.rows do fly.rows[i]:Hide() end
+  local shown = math.min(#options, GL_ROWS)
+  local w = math.max(math.ceil(widest) + 18, opts.minW or 0, (not opts.cursor and anchor and anchor:GetWidth()) or 0)
+  fly.child:SetSize(w - 2, math.max(10, #options * GL_ROW_H))
+  fly:SetSize(w, shown * GL_ROW_H + 2 * GL_PAD)
+  fly.scroll:SetVerticalScroll(0)
+  -- The list lives on UIParent; it wears the anchor's effective scale so it
+  -- lines up with a scaled window.
+  local es = anchor and anchor:GetEffectiveScale() or 1
+  fly:SetScale(es / UIParent:GetEffectiveScale())
+  fly:ClearAllPoints()
+  if opts.cursor then
+    local cx, cy = GetCursorPosition()
+    local s = fly:GetEffectiveScale()
+    fly:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", cx / s, cy / s)
+  else
+    fly:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -2)
+  end
+  if anchor and not anchor._gFlyHooked then
+    anchor._gFlyHooked = true
+    anchor:HookScript("OnHide", function() if gFly then gFly.catcher:Hide() end end)
+  end
+  fly.catcher:Show()
+end
+
+-- UI.gDrop(parent, w, getLabel, getOptions, getCurrent, onPick, opts?) — the
+-- mocks' dropdown: a 1px outline, the value in Saira Medium 10 capitals 4 in
+-- from the left, the ▾ 4 from the right; 16 tall. With a value it is a lilac
+-- outline and a white word; with none it reads `placeholder` ("CHOOSE") in
+-- lilac inside a violet outline. `onClick` replaces the list (a picker that
+-- opens its own window — the texture, sound and font choosers).
+--   opts = { placeholder = "CHOOSE", onClick, upper = true }
+-- Returns the Button with :refresh(), :setEnabled(on).
+function UI.gDrop(parent, w, getLabel, getOptions, getCurrent, onPick, opts)
+  opts = opts or {}
+  local b = CreateFrame("Button", nil, parent)
+  b:SetSize(w, 16)
+  b.fill = b:CreateTexture(nil, "BACKGROUND"); b.fill:SetAllPoints()
+  b.edge = outline(b, COLOR.lilac)
+  b.text = UI.newText(b, FONT.saM, 10, COLOR.paper, "LEFT")
+  b.text:SetPoint("LEFT", 5, -NUDGE); b.text:SetPoint("RIGHT", -16, -NUDGE); b.text:SetWordWrap(false)
+  b.tri = caret(b); b.tri:SetPoint("RIGHT", -5, 0)
+  local enabled, hot = true, false
+  function b:refresh()
+    local s = getLabel and getLabel()
+    local empty = (s == nil or s == "")
+    if empty then s = opts.placeholder or "CHOOSE" end
+    s = tostring(s)
+    self.text:SetText(opts.upper == false and s or s:upper())
+    local ec, tc = empty and COLOR.violet or COLOR.lilac, empty and COLOR.lilac or COLOR.paper
+    self.edge:SetColor(ec); self.text:SetTextColor(tc.r, tc.g, tc.b)
+    rgba(self.fill, COLOR.violet, hot and enabled and 0.2 or 0)
+  end
+  function b:setEnabled(on) enabled = on and true or false; self:SetAlpha(enabled and 1 or 0.5) end
+  b:SetScript("OnEnter", function(self) hot = true; self:refresh() end)
+  b:SetScript("OnLeave", function(self) hot = false; self:refresh() end)
+  b:SetScript("OnClick", function(self, btn)
+    if not enabled then return end
+    if opts.onClick then opts.onClick(self, btn); return end
+    UI.gList(self, (getOptions and getOptions()) or {}, getCurrent and getCurrent(), function(v)
+      onPick(v); self:refresh()
+    end)
+  end)
+  b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+  b:refresh()
+  return b
+end
+
+-- UI.gField(parent, w, opts?) — the mocks' text field: violet 30%, Saira 11
+-- white, 6 in from the left, 16 tall. Commits on Enter AND on losing focus;
+-- Escape puts it back (opts.revert). `placeholder` shows at 40% while empty.
+--   opts = { placeholder, numeric, justify, commit(text), revert(self), maxLetters }
+function UI.gField(parent, w, opts)
+  opts = opts or {}
+  local e = CreateFrame("EditBox", nil, parent)
+  e:SetSize(w, 16); e:SetAutoFocus(false)
+  UI.setFont(e, FONT.sa, 11); e:SetTextColor(1, 1, 1)
+  e:SetJustifyH(opts.justify or "LEFT"); e:SetTextInsets(6, 4, 2 * NUDGE, 0)
+  if opts.numeric then e:SetNumeric(true) end
+  if opts.maxLetters then e:SetMaxLetters(opts.maxLetters) end
+  e:SetHighlightColor(COLOR.lilac.r, COLOR.lilac.g, COLOR.lilac.b, 0.5)
+  local bg = e:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); rgba(bg, COLOR.violet, 0.3)
+  if opts.placeholder then
+    local ph = UI.newText(e, FONT.sa, 11, COLOR.paper, opts.justify or "LEFT"); ph:SetAlpha(0.4)
+    ph:SetPoint("LEFT", 6, -NUDGE); ph:SetPoint("RIGHT", -4, -NUDGE); ph:SetText(opts.placeholder); ph:SetWordWrap(false)
+    local function upd() ph:SetShown((e:GetText() or "") == "") end
+    e:HookScript("OnTextChanged", upd); e:HookScript("OnShow", upd)
+    local set = e.SetText
+    function e:SetText(t) set(self, t); upd() end
+    e.placeholder = ph
+  end
+  e:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+  e:SetScript("OnEscapePressed", function(self) self._escape = true; self:ClearFocus() end)
+  e:SetScript("OnEditFocusLost", function(self)
+    if self._escape then self._escape = nil; if opts.revert then opts.revert(self) end; return end
+    if opts.commit then opts.commit(self:GetText() or "") end
+  end)
+  function e:setEnabled(on) self:SetEnabled(on and true or false); self:SetAlpha(on and 1 or 0.5) end
+  -- a caller that re-insets the field keeps the nudge
+  local si = e.SetTextInsets
+  function e:SetTextInsets(l, r) si(self, l, r, 2 * NUDGE, 0) end
+  return e
+end
+
+-- UI.gDial(parent, opts) — the mocks' dial: a Saira 12 label; under it (4px)
+-- 21 lilac ticks, 101 x 10, with a light-grey ▲ 2px under the value's tick;
+-- a 54 x 16 box of violet 30% with Saira 11 white, 10 right of the ticks.
+-- 164 wide, 39 tall (21 with `bare`, no label). `nobox` drops the box (the
+-- window's UI Scale). Same behaviour as every dial in the suite (UI.dial).
+--   opts = the UI.dial opts + { bare, nobox }
+function UI.gDial(parent, opts)
+  opts.glass = true
+  return UI.dial(parent, opts)
+end
+
+-- UI.gCheck(parent, label?, get, set) — the checkbox: violet 10% in a violet
+-- line, a white tick; the label (Saira 12) 10 right of the box.
+function UI.gCheck(parent, label, get, set)
+  local b = UI.box(parent, label, get, set, COLOR.violet)
+  b.tick:SetTexture(UI.G_CHECK)
+  return b
+end
+
+-- UI.gColor(parent, opts) — a colour control as the mocks draw it: the
+-- checkbox and, 8 right of it, a 15px disc of the colour (a dashed ring when
+-- none is set). Same behaviour as UI.colorDot, which it is.
+function UI.gColor(parent, opts)
+  opts.accent, opts.dot, opts.gap = COLOR.violet, 15, 24
+  opts.disc, opts.discNo = UI.G_DISC, UI.G_DISC_NO
+  local f = UI.colorDot(parent, opts)
+  if f.check then f.check.tick:SetTexture(UI.G_CHECK) end
+  return f
+end
+
+-- UI.gX(parent, onClick) — a row's remove X: a 9px violet X in a 23 x 23 hit
+-- area; lilac under the mouse.
+function UI.gX(parent, onClick)
+  local b = CreateFrame("Button", nil, parent); b:SetSize(23, 23)
+  local t = b:CreateTexture(nil, "ARTWORK"); t:SetTexture(UI.G_X); t:SetTexCoord(0, 9 / 16, 0, 9 / 16)
+  t:SetSize(9, 9); t:SetPoint("CENTER", 0, 0); UI.tint(t, COLOR.violet)
+  b:SetScript("OnEnter", function() UI.tint(t, COLOR.lilac) end)
+  b:SetScript("OnLeave", function() UI.tint(t, COLOR.violet) end)
+  if onClick then b:SetScript("OnClick", onClick) end
+  b.icon = t
+  return b
+end
+
+-- UI.gScroll(parent, opts) — UI.scrollPane in the glass palette (the bar exists
+-- only while the content overflows).
+function UI.gScroll(parent, opts)
+  opts = opts or {}
+  opts.accent = COLOR.violet
+  return UI.scrollPane(parent, opts)
+end
+
+-- UI.gProfileBar(parent, api, mark) — the top bar's profile control (the mocks'
+-- "Frame 414"): "gloom" + the tool's name in lilac + " profile:" in Michroma
+-- 12; 10 on, a 210 x 18 picker (near-black, a violet 30% outline, Saira 11,
+-- the violet ▾); 10 on, NEW · COPY · RENAME · DELETE, 10 apart. Same `api`,
+-- dialogs and delete gate as every other profile control. An error shows in
+-- coral under the row. Returns { frame, refresh, note, dropdown }.
+function UI.gProfileBar(parent, api, mark)
+  local noun = api.noun or "profile"
+  local st = {}
+  local f = CreateFrame("Frame", nil, parent); f:SetSize(600, 18)
+  st.frame = f
+  local who = UI.newText(f, FONT.mark, 12, COLOR.paper, "LEFT")
+  who:SetPoint("LEFT", 0, 0)
+  who:SetText(("gloom|cff%s%s|r %s:"):format(hexOf(COLOR.lilac), mark or "", noun))
+  local note = UI.newText(f, FONT.sa, 11, COLOR.coral, "LEFT")
+  note:SetPoint("TOPLEFT", f, "BOTTOMLEFT", 0, -4)
+  function st:note(text) note:SetText(text or "") end
+
+  local dd = CreateFrame("Button", nil, f); dd:SetSize(210, 18)
+  dd:SetPoint("LEFT", who, "RIGHT", 10, 0)
+  local dbg = dd:CreateTexture(nil, "BACKGROUND"); dbg:SetAllPoints(); rgba(dbg, COLOR.void)
+  local dhl = dd:CreateTexture(nil, "BORDER"); dhl:SetAllPoints(); rgba(dhl, COLOR.violet, 0.15); dhl:Hide()
+  outline(dd, COLOR.violet, 0.3)
+  dd.text = UI.newText(dd, FONT.sa, 11, COLOR.paper, "LEFT")
+  dd.text:SetPoint("LEFT", 6, -NUDGE); dd.text:SetPoint("RIGHT", -18, -NUDGE); dd.text:SetWordWrap(false)
+  local tri = caret(dd); tri:SetSize(9, 7); tri:SetPoint("RIGHT", -6, 0)
+  function dd:refresh() self.text:SetText(api.active() or "") end
+  dd:SetScript("OnEnter", function() dhl:Show() end)
+  dd:SetScript("OnLeave", function() dhl:Hide() end)
+  local function after(ok, err)
+    if ok then st:note(""); dd:refresh(); if api.onChange then api.onChange() end
+    else st:note(err or "") end
+  end
+  dd:SetScript("OnClick", function(self)
+    local out = {}
+    for _, name in ipairs(api.names() or {}) do out[#out + 1] = { value = name, label = name } end
+    UI.gList(self, out, api.active(), function(val)
+      st:note(""); api.switch(val); self:refresh(); if api.onChange then api.onChange() end
+    end, { upper = false })
+  end)
+  st.dropdown = dd
+
+  local act = profileActions(api, after)
+  local prev = dd
+  local function btn(label, handler, danger)
+    local b = UI.gButton(f, label, { onClick = handler, danger = danger })
+    b:SetPoint("LEFT", prev, "RIGHT", 10, 0)
+    prev = b
+    return b
+  end
+  local bNew = btn("New", act.new)
+  local bCopy = (type(api.copy) == "function") and btn("Copy", act.copy) or nil
+  local bRen = btn("Rename", act.rename)
+  local bDel = btn("Delete", act.delete, true)
+  profileTips(api, dd, bNew, bCopy, bRen, bDel)
+  function st:refresh() dd:refresh() end
+  dd:refresh()
+  return st
 end
 
 end   -- if lib

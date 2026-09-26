@@ -9,12 +9,11 @@
 > **Keep this file short enough to re-read.** If it passes ~180 lines, move the settled history to
 > [ARCHIVE.md](ARCHIVE.md). A document nobody re-reads is a document nobody corrects.
 
-**Last updated:** 2026-09-23 (**the SECOND Suite redesign is on master**: the owner discarded the
-first one's look on 2026-09-22 and re-mocked it ("GloomSuite UI 2"). The Suite window is now the
-dark SIDEBAR shell; `LibGloomSkin` is at **MINOR 13** (the dark kit); the **Auras tab is rebuilt
-as six pages** and verified outside the game, **not yet reviewed by the owner in game**. Bars, Unit
-Frames, Overlays, Portraits and Media draw their previous layouts, scaled into the new window.
-BACKLOG 16 holds the brief.)
+**Last updated:** 2026-09-26 (**the THIRD Suite design, "Glass", is on master for the window,
+Auras and Bars**: `LibGloomSkin` **MINOR 14** (the glass kit), each page drawn on the owner's own
+baked glass background, the window pixel-sharp at whole-pixel UI Scale steps. The owner has seen it
+in game and is mid-review. Unit Frames, Overlays, Portraits and Media draw their old layouts under
+the new top bar. BACKLOG 16 holds the brief.)
 
 ---
 
@@ -56,14 +55,14 @@ of it.
 ## Locked decisions — do not reopen
 
 - **Shared base = GloomsHub**, permanent asset path `Interface\AddOns\GloomsHub\…`.
-- **★ THE SUITE UI IS BEING REBUILT FROM THE OWNER'S FIGMA MOCKS — THE SECOND DESIGN** (Figma
-  page "GloomSuite UI 2", 2026-09-23; the first design, "GloomSuite UI", was built 2026-09-21 and
-  DISCARDED 2026-09-22 — its record is in ARCHIVE). Near-black 1060 × 740 window with a 250-wide
-  sidebar (tool switcher, page list, profile); Saira + Michroma; flat PILL buttons (stroke on the
-  ends only); a per-tool ACCENT — Auras green, Bars and Unit Frames their own, everything else the
-  suite blue — and **a colour may mean different things in different tools** (the owner's call);
-  the scrub dial for every slider; **every control at its mock's own x/y**; glass was considered
-  and REJECTED (BACKLOG "Not open"). CONTRACTS §1/§2/§4 hold the tokens, the shell and the kit.
+- **★ THE SUITE UI IS BEING REBUILT FROM THE OWNER'S FIGMA MOCKS — THE GLASS DESIGN** (13
+  screens "Glass Auras/Bars, …" on the page "GloomSuite UI 2", 2026-09-25; the two earlier designs
+  are in ARCHIVE). Near-black 1060 × 740 window: a top bar (tool switcher · profile row · close),
+  page buttons at 30,80, each page's GLASS baked into its background from the owner's own export;
+  **ONE palette for every tool** (violet · lilac · lime — the per-tool accent is gone); square
+  outlined buttons; Saira (Regular · Medium · Bold) + Michroma; **every control at its mock's own
+  x/y**; a control that cannot apply DIMS, never hides; the UI Scale offers whole-pixel sizes (+ three
+  in-between). CONTRACTS §2/§4 hold the shell and the kit; FINDINGS §22 the sharpness evidence.
   **Do not tidy or restyle an un-rebuilt tab on its own** — each is rebuilt from its mocks.
 - **★ THE SILHOUETTE CATALOG AND THE ANIMATION ENGINE ARE THE HUB'S** (2026-08-25). Shapes, their
   art, and the eight effect modules serve GB *and* GA, so they have one home like every other shared
@@ -153,54 +152,54 @@ panel, every edit box's Tab ring and Up / Down stepping, the profile-delete gate
 (2026-09-21): the redesign's tokens and widgets — `UI.button / segments / toggleBar / check /
 field / pick / sectionHeader / dial (short · bare) / chip / cell / wordmark / profileRow`, the kit
 scrollbar, the dialogs, tooltip, popover and picker (with its colour SOURCES) on the night plate,
-the revised dropdown list**, **and THE DARK KIT (MINOR 13, 2026-09-23): `COLOR.void/sky/jade/coral/
-flame`, `FONT.sa/saB` (Saira), `UI.accentOf` (accent by ancestry), `UI.pill` / `pillPick` /
-`profileStack` / `openList`, the `dark` dial, `UI.plate / rule / text / box / colorDot / toggle2 /
-pillField / xbtn / scrollPane`** — the older widgets kept, drawing on the light plate for the tabs
+the revised dropdown list**, **and THE DARK KIT (MINOR 13, 2026-09-23 — the second design's, unused by any rebuilt tool now)**,
+**and THE GLASS KIT (MINOR 14, 2026-09-25): `COLOR.lime/slate/deep/list`, `FONT.saM`, `UI.gTitle /
+gLabel / gButton / gSwitch / gList / gDrop / gField / gDial / gCheck / gColor / gX / gScroll /
+gProfileBar`, `UI.G_NUDGE` (boxed text sits 1.5 units lower)** — the older widgets kept, drawing on the light plate for the tabs
 not yet rebuilt; `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are aliases) · **`Shapes.lua`** (the suite's silhouette catalog — 21 shapes,
 `GloomsHub:ShapeAsset/ShapeInfo/GrowAnchor` — **the ONE grow-anchor; GB's `hgAnchor` delegates
 to it since 2026-09-20**) · **`Effects.lua`** (the eight shaped animation
 modules + `GloomsHub.Effects`) · `Shell.lua` (the Suite window: `RegisterTab`/`Open`/`FocusTab`/
-`ToggleWindow` + `/gloom`) · `Media.lua` (LSM registration — `RegisterAll` at the Hub's
+`ToggleWindow` + `/gloom`, `/gloom px` (the pixel-grid probe), `/gloom texttest`) · `Media.lua` (LSM registration — `RegisterAll` at the Hub's
 ADDON_LOADED, `VerifyFonts` at PLAYER_ENTERING_WORLD — `ResolveAssetPath`, `ListMedia`, the
 Media tab) · `MinimapButton.lua` (**the ONE suite launcher** — never one per tool). `Shell.lua`
-is the SECOND design's shell since 2026-09-23 (CONTRACTS §2): the sidebar (the "gloomSUITE"
-wordmark as art, the tool switcher, a PAGED tool's page list, the tool's profile control, a
-temporary unlabelled UI-scale dial), the tool's 810 × 740 content right of it; a tool that has
-not been rebuilt is drawn on the old light plate, SCALED to fit. `tools/figma.py` reads the
+is the GLASS design's window since 2026-09-25 (CONTRACTS §2): the top bar, a glass tool's page
+buttons and its four background tiles, UI Scale (whole-pixel steps, position snapped to the pixel
+grid); a glass tool's container is the WHOLE window; a tool not yet rebuilt draws its old layout
+unscaled on the light plate under the top bar. `tools/figma.py` reads the
 mocks straight from the Figma desktop server (the app's connector lists no tools).
-`tools/gen-kit-art.py` generates the dark kit's art (pill caps, the wordmark, tick, discs, dial
-ticks). **`tools/harness/`** runs the suite's UI outside the game (a WoW-API stand-in, the real
+`tools/gen-kit-art.py` generates the dark kit's art; **`tools/gen-glass-art.py`** the glass
+kit's (4× marks, from the owner's SVGs in `tools/glass-svg/`) and, with `bg`, every page's glass
+tiles from his exports. **`tools/harness/`** runs the suite's UI outside the game (a WoW-API stand-in, the real
 TOCs and SavedVariables, a click-everything sweep, and a renderer that draws the built window
-to PNG) — how the Auras pages were verified before the owner saw them.
+to PNG) — how the Auras and Bars pages were verified before the owner saw them (`sweep.lua`,
+`sweep-bars.lua`, `shoot.lua`, `shoot-bars.lua`).
 
 **The shape catalog and the animation engine are the Hub's since 2026-08-25** (a locked decision
 above); GB keeps the aliases so its call sites never moved, and **GB's `Glows.lua` shaped halo
 deliberately did NOT move** (entangled with Blizzard's spell-alert hooks). The move's record and
 QA are in [ARCHIVE.md](ARCHIVE.md).
 
-**Tracked assets are `Media/` ONLY** — Khand ×2, GeneralSans ×3, Play ×2, Michroma, **Saira ×2
-(the second design's face, 2026-09-23)** — all licences beside them — the GS and Gh marks, the
+**Tracked assets are `Media/` ONLY** — Khand ×2, GeneralSans ×3, Play ×2, Michroma, **Saira ×3
+(Regular · Bold 2026-09-23, Medium 2026-09-25)** — all licences beside them — the GS and Gh marks, the
 kit's UI art (`Media/ui/`: `round4` `pill` `dot` `tri` `dial` `dial-c`, and the dark kit's
-`pill/cap22|25-fill|rim` `suite-wordmark` `check` `circle` `circle-dash` `dial-ticks`), plus **`Media/art/shapes/` (136 silhouette files) and `Media/art/effects/` (5 shared effect
+`pill/cap22|25-fill|rim` `suite-wordmark` `check` `circle` `circle-dash` `dial-ticks`, and the glass
+kit's `g-*` marks), plus **`Media/art/shapes/` (136 silhouette files) and `Media/art/effects/` (5 shared effect
 textures)**. `Libs/` is gitignored and pulled by the packager. ⚠ **`Fonts/`, `Textures/` and `Graphics/`
 are the USER's drop-in directories and are gitignored** (2026-07-26). They still exist on the
 owner's disk — 7 / 13 / 45 files, which his catalog resolves normally — but they are not in the repo,
 not in history, and not in any release. **Never track them.**
 
 **`~/GloomsBars`** — `main`. Hard-deps the Hub; local toolkit and standalone window deleted; mounts
-the **Bars** tab; `/gb` → `ToggleWindow("bars")`. `SKIN_NEEDS = 12`: **built on the FIRST design's kit
-(2026-09-21) — since 2026-09-23 drawn scaled (~76%) inside the new window until its rebuild** — the 250px rail (the kit preset block on a faint plate over the dark
-preview pane with the 13 state buttons, the construction and the "Styled in:" links), GB's
-profile row in the window's footer, and all ten sections built from their mocks (Shape & Icon ·
-Plate Construction · Decoration Layers · Text · Glows · Animations · Cast & Channel · Cooldown &
-Availability · Empty Slots · Bar Layout & Preset, which also holds Move Bars / Quick Keybind /
-Reset Positions / the preset highlight / the master switch). `Config.lua` lost its pre-kit
-helpers (the font flyout, the swatch wrapper, the stub body).
+the **Bars** tab; `/gb` → `ToggleWindow("bars")`. `SKIN_NEEDS = 14`: **a GLASS tool since 2026-09-25** — seven pages (Icon Size & Shape ·
+Decoration Layers · Text · Glows & Animations · Casts & Channels · Cooldowns & Availability · Bar
+Visibility, Layout & Presets), the Editing-Preset row and the live Preview panel on every page, the
+glass tiles in `Media/glass/`; all in `Config.lua` (the accordion and the rail are gone). The per-bar
+Empty Icons is a Global / Show / Hide override (`Skin.lua` `emptyOverride`).
 
 **`~/GloomsAuras`** — `main`. Hard-deps the Hub; mounts the **Auras** tab — since 2026-09-23 a
-PAGED tool drawn by **`Pages.lua`** (six pages from the second design's mocks; it gates itself on
-LibGloomSkin 13), running on `Config.lua`'s logic through its `C.X` exports; the previous editor's
+GLASS tool drawn by **`Pages.lua`** (six pages from the glass mocks, on `Media/glass/`; it gates
+itself on LibGloomSkin 14; groups have a right-click menu and drag to reorder), running on `Config.lua`'s logic through its `C.X` exports; the previous editor's
 builders in `Config.lua` are unmounted and kept until the owner approves the new one.
 `Config.lua`'s own `SKIN_NEEDS = 6`. An aura now has a frame **Level** (`cfg.level`, applied in
 `Displays.lua`; nil = the frame's own). Since 2026-08-25 it

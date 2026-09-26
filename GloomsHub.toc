@@ -34,7 +34,3 @@ Shell.lua
 SoundsManifest.lua
 Media.lua
 MinimapButton.lua
-
-# The glass-button probe (2026-09-22) is OFF: the owner chose flat buttons. The
-# file and its art (Media/probe, Media/ui/glow.png, rim4.png) are still on disk.
-# GlassProbe.lua

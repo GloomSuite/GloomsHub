@@ -59,11 +59,11 @@ GloomsHub:RegisterTab{
                                --   control in the SIDEBAR (UI.profileStack); optional
   build    = function(container) … end,  -- called ONCE, lazily, on first show; parent to `container`
   refresh  = function() … end,           -- optional; called each focus
-  -- ★ 2026-09-23, the second design — a PAGED tool supplies these three:
-  accent   = COLOR.jade,       -- the tool's colour (switcher band, page list, title, dark-kit widgets);
-                               --   default the suite blue
-  pages    = { { id = "triggers", title = "Aura Triggers" }, … },  -- the sidebar's page list
-  showPage = function(pageId) … end,     -- show one page (the shell draws its title)
+  -- ★ 2026-09-25, the GLASS design — a glass tool supplies these two:
+  pages    = { { id = "triggers", title = "Aura Triggers",
+                 bg = MEDIA .. "glass\\triggers" }, … },   -- the page buttons; `bg` = the prefix of
+                               --   the page's four glass tiles (<bg>-a|b|c|d.png, gen-glass-art.py bg)
+  showPage = function(pageId) … end,     -- show one page (the tool draws its own titles)
 }
 
 GloomsHub:Open(id)               -- show the Suite window + focus tool `id`
@@ -72,18 +72,18 @@ GloomsHub:ShowPage(id, pageId)   -- a paged tool's page (focuses the tool first 
 GloomsHub:ToggleWindow(id?)      -- slash semantics: open→close if on `id` (or no id), switch if
                                  -- on another tool, else Open(id)
 ```
-- **★ THE SHELL IS THE SECOND DESIGN'S (2026-09-23): 1060 × 740, fixed, near-black.** A 250-wide
-  SIDEBAR: the "gloomSUITE" wordmark (art — its gradient is not a FontString thing), the TOOL
-  SWITCHER (a band in the tool's accent; click → the list of tools; it replaced the tab strip), a
-  paged tool's PAGE LIST (the chosen page in the accent with a ▸; the last-shown page is remembered
-  per tool), the tool's PROFILE control at the foot, a temporary unlabelled UI-scale dial above it.
-  **No close button in the mocks** — Escape, the slash and the minimap button close the window.
-- **Container sizes — PINNED.** A PAGED tool gets **810 × 740** right of the sidebar, on the dark
-  window, with `_gloomAccent` set so every dark-kit widget inside finds its colour; the page title
-  (Michroma 14, the accent) is drawn by the shell at (290, 26) window. A tool WITHOUT `pages` (not
-  yet rebuilt) keeps the size it was pinned to — **1060 × 585** with a profile, **860 × 650**
-  without (the old 860 × 626 pin fits) — drawn on the old light plate and SCALED to the 810 it has
-  (~76% / ~94%). Its dropdowns and dialogs are not scaled.
+- **★ THE SHELL IS THE GLASS DESIGN'S (2026-09-25): 1060 × 740, fixed, near-black.** A 50-tall
+  TOP BAR — the TOOL SWITCHER at the left ("gloom" + the tool's name in lime; click → the list of
+  tools), the tool's PROFILE row (`UI.gProfileBar`, from `profile`), the CLOSE disc at the right; the
+  bar's blank space drags the window. A glass tool's PAGE BUTTONS at (30, 80), 250 × 24, 6 apart.
+  UI SCALE at the bottom right: only whole-pixel sizes plus 1.25 / 1.5 / 1.75 px a unit (computed
+  live from the screen), 30% at rest; the window's corner snaps to the pixel grid (FINDINGS §22).
+  `accent` is IGNORED now — one palette for every tool.
+- **Container sizes — PINNED.** A GLASS tool (one with `pages`) gets the **WHOLE window**, 1060 × 740
+  at 0,0, under the top bar and the page buttons, so it places everything at the mocks' own window
+  coordinates; the shell lays the page's glass tiles behind it. A tool WITHOUT `pages` (not yet
+  rebuilt) keeps the size it was pinned to — **1060 × 585** with a profile, **860 × 650** without —
+  UNSCALED, centred under the top bar on the old light plate. Its dropdowns and dialogs are unchanged.
 - Reserved ids: `auras`, `bars`, `unitframes`, `portraits`, `overlays`, `media`. **The order is fixed
   in the shell** (`TAB_ORDER`: Auras · Bars · Unit Frames · Portraits · Overlays · Media); a tool's
   own `order` only places an unknown id.
@@ -395,6 +395,21 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     (disabled by another setting = 50%, never hidden).
   · `UI.popover` wears the kit since MINOR 12 (night plate, indigo rim, Play Bold 14 white title).
 
+  **★ THE GLASS KIT (MINOR 14, 2026-09-25) — the GLASS design, the one every rebuilt tool uses.**
+  Every widget's header comment in `Skin.lua` is its spec. One palette, no accent.
+  · Tokens: `COLOR.violet` #6c2fe6 (outlines) · `lilac` #a881f8 (words, picked outlines, ticks) ·
+    `lime` #28d65c (the tool's name, "+ ADD", a visible eye, the chosen page's ▸) · `slate` #464646
+    (destructive at rest) · `deep` · `list`; `FONT.saM` = Saira Medium (buttons, dropdowns, lists).
+  · `UI.gTitle(parent, text, size?)` Michroma 18/14 · `UI.gLabel(parent, text, size?, c?)` Saira ·
+    `UI.gButton(parent, label, {w, onClick, selected, danger})` · `UI.gSwitch(parent, choices, get,
+    set, {w, upper})` (`:setChoiceEnabled`) · `UI.gList(anchor, options, current, onPick, {cursor,
+    minW, upper})` — every dropdown AND right-click menu (not mocked yet) · `UI.gDrop(parent, w,
+    getLabel, getOptions, getCurrent, onPick, {placeholder, onClick, upper})` · `UI.gField(parent, w,
+    opts)` · `UI.gDial(parent, opts)` = `UI.dial{glass=true}` (+ `nobox`) · `UI.gCheck` · `UI.gColor`
+    (= `UI.colorDot` with `dot`/`gap`/`disc`) · `UI.gX` · `UI.gScroll` · `UI.gProfileBar` · `UI.gCaret`.
+  · Every control is 16 tall; disabled = 50%, never hidden. **Boxed text sits `UI.G_NUDGE` (1.5)
+    units lower** (FINDINGS §22). Marks are 4× art (`UI.G_TRI/G_CHECK/G_DISC/G_DISC_NO/G_CLOSE/G_X/
+    G_EYE/G_WARN`, `tools/gen-glass-art.py`); the glass dial draws its ticks as 1-unit rectangles.
   **★ THE DARK KIT (MINOR 13, 2026-09-23) — the SECOND design ("GloomSuite UI 2").** Every widget's
   header comment in `Skin.lua` is its spec. The first design's widgets above stay, for the tabs not
   yet rebuilt.
@@ -549,9 +564,9 @@ end
 ### Current requirement
 | Consumer | needs |
 |---|---|
-| `GloomsBars/Config.lua` | MINOR **12** — the kit incl. `UI.chip` / `cell` / the bare dial and `RegisterTab`'s `profile` footer (bumped 2026-09-21, redesign stage 3, in the commit that first called them) |
+| `GloomsBars/Config.lua` | MINOR **14** — the glass kit (`UI.gButton / gSwitch / gDrop / gDial / gColor …`), bumped 2026-09-25 in the commit that first called it |
 | `GloomsAuras/Config.lua` | MINOR **6** — calls `UI.colorPicker` directly (its `MakeColor` swatch) |
-| `GloomsAuras/Pages.lua` | MINOR **13** — the dark kit; gates itself (it prints "update Gloom's Hub" and does not register the tab below 13) |
+| `GloomsAuras/Pages.lua` | MINOR **14** — the glass kit; gates itself (it prints "update Gloom's Hub" and does not register the tab below 14) |
 | `GloomsOverlays/GloomsOverlays_Editor.lua` | MINOR **4** — calls `UI.tabHeader` |
 | `GloomsOverlays/GloomsOverlays_Preview.lua` | MINOR **3** — the drawer needs nothing newer |
 | `GloomsPortraits/GloomsPortraits_Tab.lua` | MINOR **4** — calls `UI.tabHeader` |
@@ -563,7 +578,7 @@ added and the two files that call it were bumped **in the same commit**. GA foll
 same discipline on 2026-07-25 when its layout rework adopted `UI.tabHeader` — gate bumped
 in the commit that first called it, which is the only maintenance this gate ever needs.
 
-Hub currently ships **MINOR 13** (`Skin.lua`, 2026-09-23).
+Hub currently ships **MINOR 14** (`Skin.lua`, 2026-09-25).
 
 ⚠ **This line was stale for three weeks** — it still said MINOR 6 after 7 shipped on 2026-08-15, and
 was only caught on 09-08. It is the line a session reads to decide whether a `SKIN_NEEDS` bump is

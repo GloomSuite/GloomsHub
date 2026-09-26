@@ -19,6 +19,8 @@ local UI = GloomsHub.UI
 local lastList
 local realOpen = UI.openList
 UI.openList = function(anchor, options, current, onPick) lastList = { options = options, onPick = onPick }; return realOpen(anchor, options, current, onPick) end
+local realG = UI.gList
+UI.gList = function(anchor, options, current, onPick, o) lastList = { options = options, onPick = onPick }; return realG(anchor, options, current, onPick, o) end
 UI.colorPicker = function(o) bump("color"); if o.onChange then o.onChange({ 0.5, 0.2, 0.1 }) end end
 UI.confirm = function() bump("confirm-skipped") end
 try("open", function() GloomsHub:Open("auras") end)
@@ -79,36 +81,53 @@ local t = C:TrigTree()
 print("after drag-in: top-level items " .. #t.conditions .. ", group holds " .. #((function() for _, n in ipairs(t.conditions) do if n.conditions then return n.conditions end end return {} end)()))
 try("drag out of group", function()
   local g = TR.groups[1]; local row = g.rows[1]; P.trigDragStart(row)
-  TR.page.IsMouseOver = function() return true end
-  P.trigDragStop(row); TR.page.IsMouseOver = nil
+  TR.pane.IsMouseOver = function() return true end
+  P.trigDragStop(row); TR.pane.IsMouseOver = nil
 end)
 print("after drag-out: top-level items " .. #t.conditions)
 try("group match", function() W.fire(TR.groups[1].match[3], "OnClick") end)
 try("dissolve", function() P.dissolveGroup(TR.groups[1]._ti) end)
-try("cycle", function() W.fire(TR.rows[1].pill, "OnClick") end)
+try("state list", function()
+  lastList = nil; W.fire(TR.rows[1].pill, "OnClick")
+  for _, opt in ipairs(lastList.options) do bump("state"); lastList.onPick(opt.value) end
+end)
 try("remove", function() W.fire(TR.rows[1].x, "OnClick") end)
--- list: groups, fold, add-to-group, eye
+-- list: each group's right-click menu (every item but Delete), its load pop-up, drag
+if #X.GroupList() == 0 then try("make a group", function() X.CreateGroup("Harness Group"); X.RefreshList() end) end
 for _, gid in ipairs(X.GroupList()) do
-  try("select group " .. gid, function() C:SelectGroup(gid) end)
-  for _, o in ipairs(descendants(P.groupPage)) do
-    if o:IsVisible() and o._scripts.OnClick then
-      lastList = nil
-      try("group click", function() W.fire(o, "OnClick", "LeftButton") end)
-      if lastList then for _, opt in ipairs(lastList.options) do try("group pick", function() lastList.onPick(opt.value) end) end end
+  try("group menu " .. gid, function()
+    lastList = nil; P.groupContext(gid, P.listClip)
+    for _, opt in ipairs(lastList.options) do
+      if opt.value ~= "delete" then bump("group menu"); lastList.onPick(opt.value) end
     end
-  end
-  try("header rename group", function() W.fire(P.header.dup, "OnClick") end)
+  end)
+  try("group load clicks", function()
+    for _, o in ipairs(descendants(P.groupLoad)) do
+      if o:IsVisible() and o._scripts.OnClick then
+        lastList = nil
+        W.fire(o, "OnClick", "LeftButton")
+        if lastList then for _, opt in ipairs(lastList.options) do if not opt.disabled then lastList.onPick(opt.value) end end end
+      end
+    end
+  end)
+  try("group load close", function() P.groupLoad:Hide() end)
 end
+try("group drag", function()
+  for _, r in ipairs(descendants(P.listClip)) do
+    if r:IsVisible() and r.kind == "group" then P.groupDragStart(r); P.groupDragStop(r); bump("group drag"); break end
+  end
+end)
 try("list clicks", function()
-  for _, r in ipairs(descendants(P.list)) do
+  for _, r in ipairs(descendants(P.listFrame)) do
     if r:IsVisible() and r._scripts.OnClick and r._kind == "Button" then
       lastList = nil
       W.fire(r, "OnClick", "LeftButton")
       if lastList then lastList.onPick(lastList.options[1].value) end
+      W.fire(r, "OnClick", "RightButton")
     end
   end
 end)
-try("new aura via menu", function() P.newAuraMenu(P.list, nil); lastList.onPick("bar") end)
+try("new aura via menu", function() P.newAuraMenu(P.listFrame, nil); lastList.onPick("bar") end)
 try("header group menu", function() X.SetSelected(ids[2]); P.groupMenu(P.header); lastList.onPick(lastList.options[#lastList.options].value) end)
 try("duplicate", function() X.SetSelected(ids[2]); W.fire(P.header.dup, "OnClick") end)
 -- the Suite window: switch to the other (legacy) tab and back, the tool list
