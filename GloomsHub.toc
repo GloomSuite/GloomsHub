@@ -31,6 +31,7 @@ Skin.lua
 Shapes.lua
 Effects.lua
 Shell.lua
+Windows.lua
 SoundsManifest.lua
 Media.lua
 MinimapButton.lua

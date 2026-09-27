@@ -1750,3 +1750,22 @@ pattern, `kitRingSection` in `~/GloomsUnitFrames/GloomsUnitFrames_Tab.lua` and `
 in `~/GloomsBars/Config.lua`
 
 ---
+
+
+---
+
+## 2026-09-25 → 27 · The glass design (third redesign) — built, reviewed, retired
+
+**Built 2026-09-25/26** (LibGloomSkin MINOR 14): one 1060 × 740 Suite window, a top bar, page buttons,
+each page's GLASS baked into its background from the owner's own 2× Figma exports (cut into four
+power-of-two tiles by `tools/gen-glass-art.py bg`), Saira + Michroma, one palette. Verified with the
+harness (`sweep.lua`, `sweep-bars.lua`, `shoot*.lua` — removed 2026-09-27 with the pages they drove).
+**2026-09-26:** the baked glass became SOLID panels (COLOR.panel #0f051d at 90%, 20-unit corners,
+`UI.gPanel`) over one shared background — the per-page textures flickered on every page change and
+every layout change needed a re-export; outlines became one-screen-pixel hairlines (`UI.gHair`);
+Saira one weight lighter than the mocks; the UI Scale's 100% became "the sharp size nearest the rest
+of the UI". **2026-09-27:** the owner replaced the whole big-window design with TWO WINDOWS per tool
+(BACKLOG 16). The glass decisions that were about the big window (page buttons at 30,80, the panels'
+window coordinates, the UI Scale control in the window's corner, Michroma titles, Saira) are void;
+the behavioral ones (groups' menu and drag, the triggers dropdown, Empty Icons Global/Show/Hide,
+Icon Scale, Name Off/On, one palette) carried over.

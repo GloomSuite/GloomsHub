@@ -1719,7 +1719,9 @@ is 2120 x 1480 px"**. The owner: "maybe looks better".
 buttons, switches and dropdowns sat ~1.5 units above centre (≈3 units over, ≈6 under). Saira's own
 metrics centre its capitals to 0.02 em, so it is WoW's placement of a line in a FontString. Every
 boxed text in the glass kit is anchored `UI.G_NUDGE` (1.5) lower; the owner: "the text in the
-buttons for sure looks better positioned". Only one font/size family was checked this way.
+buttons for sure looks better positioned". Only one font/size family was checked this way. **2026-09-27:
+Sansation replaced Saira; the nudge is now 1 unit (Sansation's metrics centre its capitals as
+closely as Saira's) — `SUSPECTED`, not yet seen in game.**
 
 **KILLED:**
 - ~~"Text in a SCALED frame is rasterised small and stretched, so our text is soft"~~ — **KILLED
@@ -1727,9 +1729,40 @@ buttons for sure looks better positioned". Only one font/size family was checked
   unscaled frame at 1.094× the font size, side by side, have **identical** edge energy on every row
   (owner's screenshot, measured). WoW re-rasterises text at the final size. Do not rebuild the kit
   to avoid `SetScale`.
-- ~~"A game UI scale of 71.1% puts Blizzard's UI on exactly 2 px"~~ — **KILLED 2026-09-26**: it
-  assumed the uiScale CVar equals UIParent's effective scale; measured, CVar 0.70 gives an
-  effective ~0.65 at 4K. (And the game's slider takes whole percents only.)
+- ~~"A game UI scale of 71.1% puts Blizzard's UI on exactly 2 px"~~ — **KILLED 2026-09-26** as
+  worded. ★ **CORRECTED 2026-09-27:** the CVar was ignored not because of how WoW converts it but
+  because **EllesmereUI overrides the whole UI scale** (below). EllesmereUI's own UI Scale = 0.7111
+  WOULD put everything on exactly 2 px — untested; optional; nothing of ours needs it.
+- ~~"Mac Default shows everything 1:1, so the Mac is not a factor"~~ — the Mac was on a SCALED mode
+  when that was said (see below). Only Default is 1:1.
+- ~~"The colour-shifting borders are our anti-aliasing at 109%"~~ — **KILLED 2026-09-27**: `/gloom px`
+  (now printing the window's and the hovered control's edges) read every edge on WHOLE pixels, and
+  Figma showed the same shifting.
+- ~~"…the TV is overscanning / Screen Move / sharpening / noise reduction"~~ — **KILLED 2026-09-27**:
+  Aspect Ratio Original (Just Scan greyed = already 1:1), Screen Move off, Sharpness 0/10, NR off —
+  no change.
+- ~~"…4K 120 Hz bandwidth forces thinned colour"~~ — **KILLED 2026-09-27**: 60 Hz, no change.
+
+**★ THE OWNER'S DISPLAY CHAIN — check it FIRST for any "soft", "thick" or "wrong colour" report
+(2026-09-27).** Two of the causes of this finding's symptom were never in WoW:
+1. **The Mac's display mode — `TESTED` 2026-09-27.** On "looks like 2560 × 1440" the Mac draws at
+   5120 × 2880 and shrinks to the 3840 × 2160 TV (`system_profiler SPDisplaysDataType`), and WoW —
+   whose only modes on the Mac are Windowed and Fullscreen (Windowed) — is resampled with it (a
+   CleanShot of WoW came out 5120 × 2880). On **Default ("looks like 1920 × 1080")** the Mac draws at
+   exactly 3840 × 2160: the owner, switching: "the addon is RAZOR sharp now". He keeps Default.
+   Consequence: Figma at 100% and the Suite at its 2-px size are the SAME size only on Default.
+2. **The Mac sends thinned colour (chroma subsampling) to the LG TV — `TESTED` 2026-09-27** with a
+   pixel-exact test page (one-pixel coloured boxes shifted by a pixel, alternating red/blue stripes,
+   red text on blue): the boxes lost colour on alternating sides, the stripes merged to "two red
+   boxes". Same in WoW and Figma, at 120 Hz and 60 Hz, TV in PC mode, HDMI Deep Colour 4K, over a
+   direct HDMI cable from an M1 (macOS lists the TV as "Television: Yes"). **Turning macOS HDR ON
+   fixed it** (stripes resolved, borders full colour); the owner keeps HDR on at 120 Hz (not VRR).
+   BetterDisplay is the fallback if HDR ever has to go.
+3. **EllesmereUI sets UIParent's scale itself — `TESTED` 2026-09-27**: its Global Settings "UI
+   Scale" (saved `ppUIScale` = 0.65, auto off; `UIParent:SetScale` in `EllesmereUI_Startup.lua`)
+   overrides Blizzard's slider and checkbox — `/gloom px` read 1.828 px a unit with the box off AND
+   at 100%. Its gear option "0.5333" is 768/1440 (a 1440p screen's 1 px); on 4K it is 1.5 px. Its
+   scale change fires no `UI_SCALE_CHANGED`, so the Suite would only re-fit on the next `/reload`.
 
 **What is left is not ours:** WoW's font rasteriser is not macOS's, so type in Figma will always
 look a little smoother than type in the game — Blizzard's own panels included.

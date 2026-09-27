@@ -18,9 +18,21 @@ for line in open(sys.argv[1]):
     objs[d["id"]] = d
 out = sys.argv[2]; S = float(sys.argv[3]) if len(sys.argv) > 3 else 1.0
 WIN_W, WIN_H = 1060, 740
+# A two-window Suite window (Windows.lua) is dumped on its own: its own size,
+# with room above for its tab and below for its resize bar.
+PAD_T = PAD_B = 0
+_r = objs.get(root)
+if _r and float(_r.get("w") or 0) and float(_r.get("w")) < 1000:
+    WIN_W, WIN_H = float(_r["w"]), float(_r["h"])
+    PAD_T, PAD_B = 40, 20
 FONTS = {"Saira-Regular": os.path.join(HUB, "Media", "fonts", "Saira-Regular.ttf"),
          "Saira-Bold": os.path.join(HUB, "Media", "fonts", "Saira-Bold.ttf"),
          "Saira-Medium": os.path.join(HUB, "Media", "fonts", "Saira-Medium.ttf"),
+         "Saira-Light": os.path.join(HUB, "Media", "fonts", "Saira-Light.ttf"),
+         "Sansation-Regular": os.path.join(HUB, "Media", "fonts", "Sansation-Regular.ttf"),
+         "Sansation-Bold": os.path.join(HUB, "Media", "fonts", "Sansation-Bold.ttf"),
+         "Sansation-Light": os.path.join(HUB, "Media", "fonts", "Sansation-Light.ttf"),
+         "Saira-SemiBold": os.path.join(HUB, "Media", "fonts", "Saira-SemiBold.ttf"),
          "Michroma-Regular": os.path.join(HUB, "Media", "fonts", "Michroma-Regular.ttf"),
          "Play-Regular": os.path.join(HUB, "Media", "fonts", "Play-Regular.ttf"),
          "Play-Bold": os.path.join(HUB, "Media", "fonts", "Play-Bold.ttf"),
@@ -59,7 +71,7 @@ def textw(o):
 def rect(oid):
     if oid in rects: return rects[oid]
     o = objs.get(oid)
-    if not o or oid == root: return (0.0, 0.0, float(WIN_W), float(WIN_H))
+    if not o or oid == root: return (0.0, float(PAD_T), float(WIN_W), float(PAD_T + WIN_H))
     rects[oid] = None
     par = objs.get(o["parent"])
     # a scroll child sits at its scroll frame's top-left, moved up by the scroll
@@ -132,7 +144,7 @@ def texfile(t):
             if not os.path.splitext(f)[1]: f += ".png" if os.path.exists(f + ".png") else ".tga"
             return f if os.path.exists(f) else None
     return None
-canvas = Image.new("RGBA", (int(WIN_W * S), int(WIN_H * S)), (0, 0, 0, 255))
+canvas = Image.new("RGBA", (int(WIN_W * S), int((WIN_H + PAD_T + PAD_B) * S)), (44, 44, 44, 255) if PAD_T else (0, 0, 0, 255))
 items = [o for o in objs.values() if o["kind"] in ("Texture", "FontString", "EditBox") and visible(o)]
 items.sort(key=lambda o: (frame_level(o), LAYER.get(o.get("layer") or "ARTWORK", 2), float(o.get("sub") or 0), o["id"]))
 _img = {}
@@ -166,15 +178,26 @@ for o in items:
             tc = o.get("tc")
             if tc and len(tc) >= 4:
                 l_, r2, t_, b_ = tc[0], tc[1], tc[2], tc[3]
-                flip = l_ > r2
+                flip, vflip = l_ > r2, t_ > b_
                 if flip: l_, r2 = r2, l_
+                if vflip: t_, b_ = b_, t_
                 src = src.crop((int(l_ * src.width), int(t_ * src.height), max(int(l_ * src.width) + 1, int(r2 * src.width)), max(int(t_ * src.height) + 1, int(b_ * src.height))))
                 if flip: src = src.transpose(Image.FLIP_LEFT_RIGHT)
+                if vflip: src = src.transpose(Image.FLIP_TOP_BOTTOM)
             rot = o.get("rot") or 0
             if abs(rot) > 0.01: src = src.rotate(math.degrees(rot), expand=False)
             im = src.resize((w, h), Image.LANCZOS)
             ch = im.split()
             layer = Image.merge("RGBA", [ch[i].point(lambda v, k=vc[i]: int(v * k)) for i in range(4)])
+            if o.get("grad"):   # a vertex gradient over the art (the windows' rounded corners)
+                g = o["grad"]; c1, c2 = g[1], g[2]
+                px = layer.load()
+                for yy in range(h):
+                    t = (1 - yy / max(1, h - 1)) if g[0] == "VERTICAL" else 0
+                    cc = [c1[i] + (c2[i] - c1[i]) * t for i in range(4)]
+                    for xx in range(w):
+                        p0 = px[xx, yy]
+                        px[xx, yy] = (int(p0[0] * cc[0]), int(p0[1] * cc[1]), int(p0[2] * cc[2]), int(p0[3] * cc[3]))
         elif o.get("tex") is not None:
             layer.paste((110, 110, 120, int(255 * vc[3])), (0, 0, w, h))   # an icon ID: grey stand-in
         else:

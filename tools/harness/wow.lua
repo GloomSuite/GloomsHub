@@ -42,7 +42,15 @@ end
 function R:ClearAllPoints() self._points = {} end
 function R:SetAllPoints() end
 function R:GetParent() return self._parent end
-function R:SetParent(p) self._parent = p end
+function R:SetParent(p)
+  local old = self._parent
+  if old == p then return end
+  if old and rawget(old, "_children") then
+    for i = #old._children, 1, -1 do if old._children[i] == self then table.remove(old._children, i) end end
+  end
+  self._parent = p
+  if p and rawget(p, "_children") then table.insert(p._children, self) end
+end
 function R:GetChildren() return unpack(self._children or {}) end
 function R:GetNumChildren() return #(self._children or {}) end
 local function fire(o, ev, ...)
@@ -262,6 +270,7 @@ for k, v in pairs({
   SetDrawLayer = function(self, l, s) self._layer = l; self._sub = s end,
   SetAllPoints = function(self, rel) self._points = { { "TOPLEFT", rel or self._parent, "TOPLEFT", 0, 0 }, { "BOTTOMRIGHT", rel or self._parent, "BOTTOMRIGHT", 0, 0 } } end,
   SetTextInsets = function(self, l, r) self._insets = { l, r } end,
+  GetTexture = function(self) return self._tex end,
 }) do rec(k, v) end
 local base = getmetatable(__W.new("x"))
 local prev = base.__index
@@ -269,3 +278,6 @@ base.__index = function(t, k) local m = R2[k]; if m then return m end; return pr
 -- remember the layer a region was created on
 local oldCT, oldFS = CreateFrame("Frame").CreateTexture, CreateFrame("Frame").CreateFontString
 local proto = getmetatable(__W.new("x")).__index
+-- (2026-09-27, for the old-style tools' login code)
+function CreateVector2D(x, y) return { x = x, y = y, GetXY = function(s) return s.x, s.y end } end
+function SetPortraitTexture() end

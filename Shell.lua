@@ -17,9 +17,13 @@
 --   the tool's PAGES as a stack of 250 × 24 buttons at (30, 80), 6 apart: the
 --     chosen one violet 50% with a lime ▸, the rest violet 20% with a white 40%
 --     ▸, the name in Saira 12 right-aligned.
---   the page's GLASS: the owner's own export of the page's background with its
---     glass panels composited in (WoW has no backdrop blur, and the panels never
---     move, so baking them is exact). A tool names one per page (`bg`).
+--   ONE shared background behind every glass tool and page (the owner's export,
+--     Media/glass/shared-*.png) and each page's PANELS drawn on it — COLOR.panel
+--     at 90% with 20-unit round corners (UI.gPanel). A tool lists them per page
+--     (`panels`) and for every page (`def.panels`).
+--   ★ 2026-09-26: the panels USED to be baked into one export per page (the
+--     "glass"). Switching pages swapped four big textures — a visible flicker —
+--     and every layout change needed a re-export. The owner made them solid.
 --   UI SCALE at the bottom right, 30% until the mouse is on it.
 -- A tool that registers `pages` is a GLASS tool: its container is the WHOLE
 -- window (1060 × 740 at 0,0), so it places everything at the mocks' own window
@@ -38,9 +42,10 @@ local NAV_X, NAV_Y, NAV_W, NAV_H, NAV_GAP = 30, 80, 250, 24, 6
 -- UI Scale: the mocks' "Group 9" row (y 713), now with the dial's value box, so
 -- the whole control (ticks + box, 164 wide) ends at the panels' right edge, 1030.
 local SCALE_X, SCALE_Y = 866, 714.5
--- A page's glass is the owner's 2120 × 1480 export (2 × the window), NOT
+-- The background is the owner's 2120 × 1480 export (2 × the window), NOT
 -- resampled: cut into four power-of-two tiles (tools/gen-glass-art.py bg) that
 -- lie edge to edge here. { suffix, x, y, w, h (window units), u, v (texcoords) }.
+local SHARED_BG = Hub.MEDIA .. "glass\\shared"
 local GLASS_TILES = {
   { "a", 0,    0,   1024, 512, 1,        1 },
   { "b", 1024, 0,   36,   512, 72 / 128, 1 },
@@ -59,8 +64,10 @@ local TAB_ORDER = { auras = 10, bars = 20, unitframes = 30, portraits = 40, over
 
 local tabs = {}       -- id → def
 local ordered = {}    -- defs sorted by order
+Hub._tabs, Hub._ordered = tabs, ordered   -- Windows.lua (the two-window tools) reads these
 local panel, top, switcher, nav, legacyPlate, scaleHolder
-local glassBg = {}    -- the four tiles of a page's glass
+local glassBg = {}    -- the four tiles of the shared background
+local panelPool = {}  -- UI.gPanel handles, reused page to page
 local current         -- id of the focused tab
 
 -- The suite's addons, in tab order. ★ Gloom's Build Barn is deliberately
@@ -113,7 +120,7 @@ end
 -- straddled two pixels and every texture was resampled. The dial therefore
 -- offers ONLY the window scales at which one unit is a WHOLE number of screen
 -- pixels (1, 2, 3 …), worked out LIVE from this screen and the game's own UI
--- scale (his screen: 1 px = 55% · 2 px = 109%), and the window's position is
+-- scale (his screen: 1 px and 2 px; the dial calls them 50% and 100%, below), and the window's position is
 -- snapped to the pixel grid after every drag and rescale. What is stored is the
 -- PIXELS PER UNIT, not a percentage, so the same choice stays sharp on another
 -- screen or after a UI-scale change. The owner's glass exports are 2x, so at
@@ -154,7 +161,31 @@ local function clampIdx(i)
   return math.max(1, math.min(#SCALES, i))
 end
 
-local function scaleLabel(i) return math.floor(SCALES[clampIdx(i)] * 100 + 0.5) .. "%" end
+-- ★ WHAT THE DIAL'S PERCENT MEANS (the owner, 2026-09-26: "if it's a 1:1 match
+-- with the Figma design, my EXPECTATION would be that it read 100%, not 109%").
+-- It used to be the window's scale against the game's own UI (EllesmereUI keeps
+-- his at 1.83 px a unit, so the exact 2-px size read 109%). Now 100% is the
+-- SHARP size (whole pixels a unit) CLOSEST to the rest of the player's UI — on
+-- his 4K screen the 2-px size, which is also Figma's 100% on his Mac — and
+-- every step is a percent of that. Worked out per screen, so a 1440p player's
+-- 100% is their own sharp size. The window still SAVES pixels per unit, so a
+-- UI-scale change can move the labels but never the window's size.
+local ANCHOR          -- px per unit shown as 100% (nil: no whole-pixel size fits)
+local function anchorFor(base, list)
+  local best
+  for _, n in ipairs(list) do
+    if n > 0 and n == math.floor(n) then
+      if not best or math.abs(n - base) < math.abs(best - base)
+        or (math.abs(n - base) == math.abs(best - base) and n > best) then best = n end
+    end
+  end
+  return best
+end
+local function scaleLabel(i)
+  i = clampIdx(i)
+  if ANCHOR and PXS[i] and PXS[i] > 0 then return math.floor(PXS[i] / ANCHOR * 100 + 0.5) .. "%" end
+  return math.floor(SCALES[i] * 100 + 0.5) .. "%"
+end
 
 -- The step for the SAVED pixels-per-unit (GloomsHubDB.uiPx); a window saved by
 -- the old percentage ladder takes the step nearest its old size.
@@ -185,6 +216,7 @@ local function buildLadder()
   if #SCALES == 0 then   -- a screen smaller than the window at 1 px a unit: the largest size that fits
     SCALES[1] = math.min((pw or 1) / SHELL_W, (ph or 1) / SHELL_H) / base; PXS[1] = 0
   end
+  ANCHOR = anchorFor(base, PXS)
 end
 
 -- Everything the kit floats OUTSIDE the window is a UIParent child and does
@@ -234,6 +266,7 @@ local function applyScale()
   end
   snapPosition()
   scaleDetached(s)
+  if UI.gHairRefresh then UI.gHairRefresh() end   -- every hairline stays one pixel
 end
 
 -- ------------------------------------------------------------
@@ -276,15 +309,25 @@ local function paintNav(def)
   for i = #pages + 1, #navRows do navRows[i]:Hide() end
 end
 
--- The page's glass, or none. `bg` names the tiles' common prefix
--- ("…\\glass\\triggers" → triggers-a.png … -d.png).
+-- The shared background (a glass tool only) and the page's panels: the tool's
+-- own `panels` (on every page) then the page's. Each is { x, y, w, h } in the
+-- window's units, the mocks' own numbers. Nothing is loaded when the page
+-- changes, only shown, hidden and moved — so there is no flicker.
 local function paintGlass(def)
   local pg
   for _, p in ipairs((def and def.pages) or {}) do if p.id == def._page then pg = p end end
-  for i, t in ipairs(glassBg) do
-    if pg and pg.bg then t:SetTexture(pg.bg .. "-" .. GLASS_TILES[i][1] .. ".png"); t:Show()
-    else t:Hide() end
+  for _, t in ipairs(glassBg) do t:SetShown(pg and true or false) end
+  local n = 0
+  local function add(list)
+    for _, r in ipairs(list or {}) do
+      n = n + 1
+      local p = panelPool[n]
+      if not p then p = UI.gPanel(panel, "BACKGROUND", -5); panelPool[n] = p end
+      p:Place(r[1], r[2], r[3], r[4]); p:SetShown(true)
+    end
   end
+  if pg then add(def.panels); add(pg.panels) end
+  for i = n + 1, #panelPool do panelPool[i]:SetShown(false) end
 end
 
 -- ------------------------------------------------------------
@@ -307,7 +350,7 @@ local function BuildPanel()
   for i, g in ipairs(GLASS_TILES) do
     local t = panel:CreateTexture(nil, "BACKGROUND", nil, -7)
     t:SetPoint("TOPLEFT", g[2], -g[3]); t:SetSize(g[4], g[5]); t:SetTexCoord(0, g[6], 0, g[7])
-    t:Hide()
+    t:SetTexture(SHARED_BG .. "-" .. g[1] .. ".png"); t:Hide()
     glassBg[i] = t
   end
 
@@ -326,9 +369,10 @@ local function BuildPanel()
   lf:SetColorTexture(COLOR.violet.r, COLOR.violet.g, COLOR.violet.b, 0.2)
   local rf = top:CreateTexture(nil, "BACKGROUND"); rf:SetPoint("TOPLEFT", SWITCH_W, 0); rf:SetPoint("BOTTOMRIGHT", 0, 0)
   rf:SetColorTexture(0, 0, 0, 0.5)
-  local rule = top:CreateTexture(nil, "BORDER"); rule:SetHeight(1)
+  local rule = top:CreateTexture(nil, "BORDER")   -- the mocks' Line 88: 0.5, i.e. one pixel
   rule:SetPoint("TOPLEFT", 0, -TOP_H); rule:SetPoint("TOPRIGHT", 0, -TOP_H)
   rule:SetColorTexture(COLOR.violet.r, COLOR.violet.g, COLOR.violet.b, 1)
+  UI.gHair(rule, "h")
 
   -- The drag handle: the whole bar, under its controls (★ the owner, 2026-09-24:
   -- "the entire top blank area … should be an area that you can click and drag").
@@ -411,7 +455,7 @@ local function BuildPanel()
     local n = PXS[scaleIndex()] or 0
     local sharp = (n > 0 and n == math.floor(n))
     return (sharp and "A sharp size: every line lands on whole screen pixels."
-      or "Between the sharp sizes: text stays sharp; thin outlines and the glass are a little soft.")
+      or "Between the sharp sizes: outlines stay one pixel and text is drawn at its size; an edge may sit half a pixel off.")
       .. " Pull along the ticks; the window resizes when you let go."
   end)
   -- The release. NOT OnMouseUp: UI.dial also ends a drag from its OnUpdate
@@ -454,7 +498,7 @@ function Hub:RegisterTab(def)
   if type(def) ~= "table" or type(def.id) ~= "string" or def.id == "" then
     error("GloomsHub:RegisterTab — def.id (string) is required")
   end
-  if type(def.build) ~= "function" then
+  if type(def.build) ~= "function" and not def.windows then
     error("GloomsHub:RegisterTab — def.build (function) is required (tab '" .. def.id .. "')")
   end
   if tabs[def.id] then
@@ -496,9 +540,22 @@ local function EnsureProfile(def)
   return st
 end
 
+-- ★ ROUTING (2026-09-27): a tool with `windows` lives in the two-window Suite
+-- (Windows.lua); every other tool still in this big window. Switching between
+-- the two kinds closes one and opens the other.
+local function isV3(def) return def and def.windows and Hub.V3 end
+
 function Hub:FocusTab(id)
   local def = tabs[id]
-  if not def or not panel then return end
+  if not def then return end
+  if isV3(def) then
+    if panel and panel:IsShown() then panel:Hide() end
+    Hub.V3:Open(def)
+    return
+  end
+  if Hub.V3 and Hub.V3:IsOpen() then Hub.V3:Close() end
+  if not panel then BuildPanel() end
+  if not panel:IsShown() then panel:Show() end
   if current and tabs[current] then
     local old = tabs[current]
     if old._container then old._container:Hide() end
@@ -528,6 +585,11 @@ end
 -- `showPage(pageId)`. Focuses the tool first if it is not in front.
 function Hub:ShowPage(id, pageId)
   local def = tabs[id]
+  if isV3(def) then
+    if panel and panel:IsShown() then panel:Hide() end
+    Hub.V3:Open(def, pageId)
+    return
+  end
   if not (def and def.pages and panel) then return end
   local page
   for _, pg in ipairs(def.pages) do if pg.id == pageId then page = pg end end
@@ -548,8 +610,6 @@ function Hub:ShowPage(id, pageId)
 end
 
 function Hub:Open(id)
-  if not panel then BuildPanel() end
-  panel:Show()
   local target = id
   if not (target and tabs[target]) then
     target = GloomsHubDB and GloomsHubDB.lastTab
@@ -557,12 +617,21 @@ function Hub:Open(id)
   if not (target and tabs[target]) then
     target = ordered[1] and ordered[1].id
   end
-  if target then Hub:FocusTab(target) end
+  if not target then return end
+  if not isV3(tabs[target]) then
+    if not panel then BuildPanel() end
+    panel:Show()
+  end
+  Hub:FocusTab(target)
 end
 
 -- Slash toggle semantics (SUITE-PLAN §3.3): while open on that tab (or with
 -- no target tab) the slash closes; while open on a DIFFERENT tab it switches.
 function Hub:ToggleWindow(id)
+  if Hub.V3 and Hub.V3:IsOpen() then
+    if not id or id == Hub.V3:Current() then Hub.V3:Close() else Hub:FocusTab(id) end
+    return
+  end
   if panel and panel:IsShown() then
     if not id or id == current then panel:Hide()
     else Hub:FocusTab(id) end
@@ -596,12 +665,34 @@ local function pixelProbe()
   else
     Hub:Print("Suite window: not built yet — open it once with /gloom, then run /gloom px again.")
   end
-  local fits = {}
-  for n = 1, 4 do
-    local s = n / (unit * ues)             -- the window scale that makes 1 unit = n px
-    if SHELL_W * n <= pw and SHELL_H * n <= ph then fits[#fits + 1] = ("%d px = %d%%"):format(n, math.floor(s * 100 + 0.5)) end
+  -- WHERE THINGS LAND (2026-09-26): the owner photographed a button whose
+  -- outline changed colour edge by edge as the window moved a few pixels. Every
+  -- edge should sit on a whole screen pixel; print where they really are.
+  local function edges(f, name)
+    local l, b, w, h = f:GetRect()
+    if not l then Hub:Print(name .. ": no position yet"); return end
+    local k = f:GetEffectiveScale() * unit
+    local L, B, R, T = l * k, b * k, (l + w) * k, (b + h) * k
+    local function whole(v) return math.abs(v - math.floor(v + 0.5)) < 0.01 end
+    local ok = whole(L) and whole(B) and whole(R) and whole(T)
+    Hub:Print(("%s: left %.2f · right %.2f · bottom %.2f · top %.2f px  %s"):format(
+      name, L, R, B, T, ok and "|cff28d65con whole pixels|r" or "|cffff5555OFF the pixel grid|r"))
   end
-  Hub:Print("Whole-pixel window scales on this screen: " .. (#fits > 0 and table.concat(fits, " · ") or "none"))
+  if panel and panel:IsShown() then edges(panel, "Window") end
+  local foci = GetMouseFoci and GetMouseFoci()
+  local over = (foci and foci[1]) or (GetMouseFocus and GetMouseFocus())
+  if over and over ~= WorldFrame and over.GetRect then
+    edges(over, "Under the mouse (" .. (over:GetObjectType() or "?") .. ")")
+  else
+    Hub:Print("Tip: type /gloom px with the mouse resting on a button to measure that button too.")
+  end
+  local fits, ns = {}, {}
+  for n = 1, 4 do
+    if SHELL_W * n <= pw and SHELL_H * n <= ph then ns[#ns + 1] = n end
+  end
+  local a = anchorFor(unit * ues, ns)
+  for _, n in ipairs(ns) do fits[#fits + 1] = ("%d px = %d%%"):format(n, math.floor(n / a * 100 + 0.5)) end
+  Hub:Print("Sharp window sizes on this screen (as the UI Scale dial shows them): " .. (#fits > 0 and table.concat(fits, " · ") or "none"))
 end
 
 -- /gloom texttest — SCALED vs NATIVE text (2026-09-26). The window reaches whole
@@ -662,10 +753,61 @@ local function textTestToggle()
   Hub:Print(("Text test: LEFT is scaled ×%.3f, RIGHT is unscaled with the font ×%.3f. Click the panel (or /gloom texttest) to close."):format(sA, sA))
 end
 
+-- /gloom fonttest — is the face too heavy in the game? (2026-09-26 for Saira;
+-- 2026-09-27 moved to SANSATION, the two-window design's only face.) The same
+-- words twice, on the panel color, both in a frame scaled like the Suite: LEFT
+-- in the mocks' weights (Regular, Bold names), RIGHT one step lighter (Light,
+-- Regular). Run it again to close it.
+local fontTest
+local function fontTestToggle()
+  if fontTest then fontTest:SetShown(not fontTest:IsShown()); return end
+  local ppu = pxPerUnit()
+  local ue = UIParent:GetEffectiveScale()
+  local kP = ppu * ue                             -- px per unit of an unscaled child of UIParent
+  local sA = panel and panel:GetScale() or 2 / kP   -- the Suite window's own scale (2 px a unit if never opened)
+  local k = kP * sA                               -- px per unit inside the test (the window's)
+  local W, H = 560, 300                           -- the panel, in the WINDOW's units
+  local f = CreateFrame("Frame", nil, UIParent)
+  f:SetFrameStrata("TOOLTIP"); f:SetScale(sA)
+  f:SetSize(W, H)
+  local pw, ph = GetPhysicalScreenSize()
+  f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", math.floor((pw - W * k) / 2) / k, math.floor((ph + H * k) / 2) / k)
+  local bg = UI.gPanel(f); bg:SetColor(COLOR.panel, 1); bg:Place(0, 0, W, H)
+  f:EnableMouse(true); f:SetScript("OnMouseDown", function(self) self:Hide() end)
+  local function column(x, title, reg, med, bold)
+    local y = 20
+    local function line(font, size, text, c1, gap)
+      local fs = f:CreateFontString(nil, "OVERLAY")
+      UI.setFont(fs, font, size)
+      local c = c1 or COLOR.paper
+      fs:SetTextColor(c.r, c.g, c.b)
+      fs:SetPoint("TOPLEFT", f, "TOPLEFT", x, -y)
+      fs:SetText(text)
+      y = y + (gap or math.max(22, size * 1.9))
+    end
+    line(reg, 12, title, COLOR.lime, 30)
+    line(FONT.mark, 18, "Appearance", nil, 34)
+    line(reg, 14, "Haunt Progress Bar")
+    line(reg, 12, "Horizontal Offset   Rotation")
+    line(med, 10, "NEW   COPY   RENAME   CHOOSE", COLOR.lilac)
+    line(reg, 11, "OFF   ON   80px   100%   -265px")
+    line(bold, 12, "Assassination   Aff Warlock")
+    line(reg, 11, "Unstable Affliction Bar")
+  end
+  local D = Hub.MEDIA .. "fonts\\Sansation-"
+  column(20, "MOCKS — Regular / Bold", D .. "Regular.ttf", D .. "Regular.ttf", D .. "Bold.ttf")
+  column(290, "LIGHTER — Light / Regular", D .. "Light.ttf", D .. "Light.ttf", D .. "Regular.ttf")
+  local mid = f:CreateTexture(nil, "ARTWORK"); mid:SetColorTexture(COLOR.violet.r, COLOR.violet.g, COLOR.violet.b, 1)
+  mid:SetPoint("TOPLEFT", f, "TOPLEFT", 275, -20); mid:SetHeight(H - 40); UI.gHair(mid, "w")
+  fontTest = f
+  Hub:Print("Font test: LEFT is the mocks' weights (what the kit draws), RIGHT one lighter. Click the panel (or /gloom fonttest) to close.")
+end
+
 SLASH_GLOOMSUITE1 = "/gloom"
 SlashCmdList["GLOOMSUITE"] = function(msg)
   msg = (msg or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
   if msg == "px" then return pixelProbe() end
   if msg == "texttest" then return textTestToggle() end
+  if msg == "fonttest" then return fontTestToggle() end
   Hub:ToggleWindow()
 end

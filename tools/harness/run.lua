@@ -8,8 +8,10 @@
 -- against the Figma mocks. It catches nil calls, wrong fields and layout slips;
 -- it cannot show real fonts, combat, secret values or the engine's own frames.
 --
---   cd tools/harness && luajit shoot.lua triggers d1   (then render.py)
---   cd tools/harness && luajit sweep.lua               (click/pick everything)
+--   cd tools/harness && luajit shoot-v3.lua auras triggers   (then render.py on each dump)
+--   cd tools/harness && luajit sweep-v3.lua                  (click/pick everything, both tools)
+-- (2026-09-27: the two-window design. The big window's shoot/sweep scripts went
+-- with the glass pages they drove.)
 --
 -- Needs luajit (Lua 5.1, what the client runs). Unknown CamelCase methods are
 -- no-ops, so a MISSING stub fails quietly — when a load step prints an error

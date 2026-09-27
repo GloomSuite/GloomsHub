@@ -6,63 +6,70 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-09-26 (**the THIRD design, "Glass", is built for Auras and Bars** — the
-glass Suite window, `LibGloomSkin` **MINOR 14** (the glass kit), Auras' six pages and Bars' seven,
-each on the owner's own baked glass background; the window made pixel-sharp (whole-pixel UI Scale
-steps, measured). The owner has looked in game and is mid-review. **Next: continue the rework —
-item 16.**)
+**Last updated:** 2026-09-27 (**the FOURTH design, "two windows", is built for Auras and Bars** —
+a SELECTOR window + a SETTINGS window per tool, sections one open at a time, pop-outs, resizable
+heights, Global Settings, Sansation only; `LibGloomSkin` **MINOR 16**, the Hub's new `Windows.lua`.
+Verified outside the game; the owner is testing it in game. **Next: his fixes from that testing,
+then the other modules — item 16.**)
 ---
 
 ## Open items
 
-### 16 · ★ THE SUITE UI — THE GLASS DESIGN (third redesign)
-**Repo:** `~/GloomsHub` (the window + the glass kit) · `~/GloomsAuras` · `~/GloomsBars` · later each tool for its own pages · **Size:** the owner's review of Auras + Bars and small fixes, then the un-mocked pieces, then one session per remaining tool once mocked · **Evidence:** BUILT 2026-09-25/26 and verified OUTSIDE the game (`tools/harness`: `sweep.lua` Auras + `sweep-bars.lua` Bars, every control clicked/picked/dialled — 0 errors; every page rendered and compared with its mock). **Seen in game by the owner 2026-09-26** (sharpness + text centring fixed on his feedback; the full page-by-page review is NOT done).
+### 16 · ★ THE SUITE UI — THE TWO-WINDOW DESIGN (fourth redesign)
+**Repo:** `~/GloomsHub` (`Windows.lua` + the kit) · `~/GloomsAuras` (`Pages.lua`) · `~/GloomsBars` (the end of `Config.lua`) · later each tool · **Size:** in-game fixes from the owner's testing (small), then Unit Frames / Portraits / Overlays / Media once he mocks them (a session each) · **Evidence:** BUILT 2026-09-27 and verified OUTSIDE the game (`tools/harness/sweep-v3.lua`: both tools, every section, ~1,200 clicks / 850 picks / 125 dials / 155 fields / 50 pop-outs — 0 errors; every section, the selector, the preview and a pop-out rendered with `shoot-v3.lua` and compared with its mock). **In game the owner has seen it once**: the overlapping-windows bleed he reported is FIXED (level bands, see the header of `Windows.lua`), not yet re-seen by him.
 
-The mocks are the 13 screens "Glass Auras, …" / "Glass Bars, …" on the Figma page **"GloomSuite UI 2"**
-(ids in the headers of `~/GloomsAuras/Pages.lua` and `~/GloomsBars/Config.lua`). Each page's GLASS
-is the owner's own 2× export (background + glass panels, contents hidden) in `~/Desktop/Glooms BGs`,
-cut into four tiles by `python3 tools/gen-glass-art.py bg` — **re-export one screen after a layout
-change and re-run it**. The second design (sidebar, per-tool accents, pills) is RETIRED.
+The mocks are the Figma page **"GloomSuite UI 3"** (node ids: `tools/figma.py` → `get_metadata` on page `798:2`):
+"gloomAuras, main selector" / "gloomAuras, <section>" and "gloomBars, preview window" / "gloomBars,
+<section>" / "gloomBars, popout panel", plus "Dropdown/Popup Menu" (the kit's list). The glass
+design (item 16's previous brief) is RETIRED: its baked backgrounds and the shared background are
+deleted.
 
 **Next, in order:**
-1. **The owner's review** of every Auras and Bars page (`/reload`; BugSack text first). He had "visual
-   oddities" to list — ask for them page by page. Placed WITHOUT a mock (he was told; confirm or move):
-   the dropdown LIST's look, a group's RIGHT-CLICK menu and its **Load Conditions pop-up** (the Load
-   page's layout on an opaque plate), the Countdown tab's dimmed "WITH THE SWEEP" anchor, the Glows
-   table's "Color"/"Layer" headers put over THEIR columns (the mock has them one column right).
-2. **Asked, not answered:** Bars' Bar Layout panel is at x 326 in the mock (every other panel 320) —
-   built as mocked; a nudge + re-export if unintended.
-3. Once he approves Auras: delete `Config.lua`'s unmounted previous editor (`BuildTab`, the accordion,
-   the `Build*Section`s — ~2,000 lines). **Keep `C.X` and every function it exports.**
-4. **Mocks needed from him:** the texture / sound / font / shape / spell pickers, the colour picker,
-   the name + confirm dialogs, the tooltip, the popover — all still wear the first design's kit.
-5. Unit Frames, Portraits, Overlays, Media: re-mock in glass, then rebuild. Until then they draw their
-   old layout, unscaled, on the light plate under the top bar.
-6. Retire the first and second designs' kits (`UI.button`/`pill`/…) when the last tool moves.
+1. **The owner's in-game testing** (`/reload` now — Sansation already loaded). BugSack text first, then
+   his list. Things only the game can show: sharpness, text sitting centered in its boxes
+   (`UI.G_NUDGE` = 1 for Sansation is UNVERIFIED), the dashed empty-color pill (the harness cannot
+   draw tiled textures), drag / resize feel, the focus band swap, pop-outs reopening where left.
+2. **His choices where the mocks were silent — confirm or change:** right-click an aura's name (tab
+   or list) = Rename · Duplicate · Move to Group · Delete; left-click the tab name = rename; Bars'
+   preset name left-click = the list, right-click = Rename · Duplicate · Delete; **Casts & Channels
+   keeps "Complete Color"** (not in the mock) under the rest; a group's Load Conditions is a window of
+   its own; font weights are the mocks' (Regular/Bold — the Saira one-lighter call was NOT carried
+   over; `/gloom fonttest` compares Sansation Regular vs Light).
+3. **Addon UI Scale above 100%:** the ladder now offers up to 3 px a unit where the windows fit (150%
+   on his 4K). He wanted "a couple larger scales" — confirm the steps are the ones he wants.
+4. Delete Auras `Config.lua`'s unmounted previous editor (`BuildTab`, the accordion, `Build*Section`s
+   — ~2,000 lines) once he approves Auras. **Keep `C.X` and every function it exports.**
+5. **Mocks needed from him:** the texture / sound / font / shape / spell pickers, the color picker,
+   the name + confirm dialogs, the tooltip — all still wear the first design's kit.
+6. **Unit Frames, Portraits, Overlays, Media:** mock in the two-window design, then rebuild. Until
+   then they open in the OLD big window (Shell.lua), which the tool switcher moves to and from.
+7. Retire the old big window's glass-page code (`paintGlass`, the panel pool, page buttons) and the
+   first/second designs' kits when the last tool moves.
 
 **Decisions taken (do not re-ask):**
-- **One palette for every tool** (the owner, 2026-09-25) — violet/lilac/lime; the per-tool accent is
-  GONE; the tool is chosen only from the switcher in the top-left.
-- Window **1060 × 740**; top bar (switcher · profile row · close ✕) — **the close button is back**;
-  seven/six page buttons at 30,80; the page's content at the mocks' own window coordinates.
-- **Square outlined buttons**, 16 tall; destructive ones grey at rest, coral under the mouse.
-- **Glass = baked backgrounds**, one per page, from his exports (WoW has no backdrop blur; the panels
-  never move, so baking is exact). Lists that can run long scroll INSIDE their panel.
-- **Groups:** right-click = Rename · Enable/Disable · Load Conditions… · Delete; **drag to reorder**;
-  a plain click folds. **Triggers:** the state is a dropdown. **Size:** the bracket links W/H (white
-  40% off, lilac on). **Max Stacks** stays in the Stack Text column, 50% unless Stack Count.
-- **Bars:** "Icon Scale" (was Size in %); Name text is OFF/ON (no "use Blizzard's"; an untouched
-  "default" reads ON and becomes Custom when edited); **Empty Icons = Global / Show / Hide** — a real
-  two-way override (Skin.lua `emptyOverride`); Highlight Preset's Bars + the master switch are switches
-  on the layout page; the bottom buttons are Move Bars / Quick Keybind / Reset Positions.
-- **UI Scale** offers only WHOLE-PIXEL sizes plus three in-between (1 · 1.25 · 1.5 · 1.75 · 2 · 3 · 4
-  px a unit, those that fit this screen — his 4K: 55 · 68 · 82 · 96 · 109%), shows its value, and
-  rests at **30%** (hover = full): "persistent but rarely used … distracting" (the owner).
-- Saira **Medium** ships (buttons, dropdowns, lists).
+- **Two windows per tool** (the owner, 2026-09-27): SELECTOR (240) + SETTINGS (400, 20 padding each
+  side except the scrollbar); both closes (or Escape) close the whole tool; a pop-out's close only
+  puts its section back, collapsed. **Height only** is resizable (the lime bar under each window);
+  width is fixed. Move = drag any empty place or the tab. Positions, heights, the open section and
+  what is popped out persist across sessions (`GloomsHubDB.win`).
+- **One section open at a time**; more at once = pop them out. A popped section's header vanishes
+  from the settings window until it comes back.
+- **Global Settings is the Hub's**, identical in every tool: a "<Product> Profile" block per tool with
+  profiles, the tools' own switches (Auras' Hide Blizzard CDM), the Addon UI Scale.
+- **Sansation ONLY** (the owner: "should be used exclusively") — `FONT.sa/saM/saB` point at it.
+- **Dimmed = 30%** (the mocks' opacity; it was 50%). Never hidden.
+- **Close discs float 20 above the window's top-right corner**; the Bars preview starts 20 under its
+  wordmark (both moved by the owner 2026-09-27).
+- **Two-column layout** (170 · 20 · 170), controls stretched to their column; three-column rows are
+  107 · 106 · 107. **"Profiles"** in Global Settings (not "Preset" — Bars' style presets keep that word).
+- Groups: right-click menu, drag to reorder, click folds (unchanged). Everything under "Decisions
+  taken" in the glass brief that is about BEHAVIOR (triggers, Empty Icons override, Icon Scale, Name
+  Off/On, one palette) still stands; see ARCHIVE for the glass-specific ones.
 
-**Read first:** the headers of `~/GloomsHub/Shell.lua`, `~/GloomsAuras/Pages.lua` and the "THE GLASS
-TAB" block of `~/GloomsBars/Config.lua` · CONTRACTS §2 and §4's "GLASS KIT" · FINDINGS §22 (pixel
-sharpness) · the header of `tools/harness/run.lua` · for mocks `tools/figma.py` and LESSONS § "Reading
+**Read first:** the headers of `~/GloomsHub/Windows.lua` and `~/GloomsAuras/Pages.lua`, the "THE
+TWO-WINDOW DESIGN" block at the end of `~/GloomsBars/Config.lua` · CONTRACTS §2 (the two-window
+block) and §4 ("THE TWO-WINDOW KIT") · FINDINGS §22 (sharpness — and the owner's DISPLAY setup,
+before believing any "it looks soft") · the header of `tools/harness/run.lua` · LESSONS § "Reading
 the Figma mocks"
 
 ---
@@ -107,6 +114,14 @@ from him; each is: drop the files in, run the script, paste the rows.
 ## Not open — recorded so nobody re-raises them
 
 > Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
+
+- **The ONE big Suite window for rebuilt tools, and baked "glass" backgrounds** — **RETIRED
+  2026-09-27.** The glass panels went solid (one shared background, drawn panels) on the 26th, then
+  the owner replaced the monolithic window with two windows per tool ("it covers so much of the
+  screen"). The big window survives only for tools not yet rebuilt. Do not rebuild baked panels.
+- **"The game looks soft/thick — rebuild the UI to fix it"** — first check the **display chain**
+  (FINDINGS §22): the Mac's display setting and HDR fixed what no addon change could. Do not
+  re-chase sharpness in code before the owner's setup has been checked.
 
 - **GLASS BUTTONS** (glass on every control) — **REJECTED 2026-09-22**; what the owner adopted on
   2026-09-25 is glass PANELS that never move, baked into each page's background from his own

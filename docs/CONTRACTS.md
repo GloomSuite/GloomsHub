@@ -72,6 +72,35 @@ GloomsHub:ShowPage(id, pageId)   -- a paged tool's page (focuses the tool first 
 GloomsHub:ToggleWindow(id?)      -- slash semantics: open→close if on `id` (or no id), switch if
                                  -- on another tool, else Open(id)
 ```
+- **★★ THE TWO-WINDOW TOOLS (2026-09-27, `Windows.lua`) — how a REBUILT tool registers now:**
+```lua
+GloomsHub:RegisterTab{
+  id, title, wordmark, order, profile,  -- as above; `product` = "GloomAuras" (Global Settings' label)
+  windows  = true,                      -- routes Open / FocusTab / ShowPage / ToggleWindow here
+  selector = { build = function(content, api) end },   -- the SELECTOR window, 240 wide; draw below y 52;
+                                        --   api.window = the window (its height changes: resize with it)
+  tab      = { w = 360, build = function(tab) return { refresh = fn } end },  -- once PER window with a tab
+                                        --   (the settings window and every pop-out); keep them in step
+  sections = { { id, title,
+                 build  = function(parent) return frame end,  -- 360 wide, its own height; built ONCE,
+                                        --   lazily, then MOVED between the settings window and its pop-out;
+                                        --   change its height and the window re-lays out (OnSizeChanged)
+                 footer = function(parent) return frame end,  -- optional: pinned to the window's foot
+                 onShow = fn }, … },
+  globals  = { { label, choices, get, set, tip } },   -- switches for Global Settings (optional)
+  onBuilt(sel, set) · onOpen() · onClose() · refresh()
+}
+GloomsHub:ShowPage(id, sectionId)       -- open that section (or bring its pop-out forward)
+GloomsHub:RefreshWindows(id)            -- after a change the tabs / layout / Global Settings show
+GloomsHub:SuiteWindow(id, "sel"|"set")  -- a tool's window · GloomsHub:SuiteRoot() — their parent
+GloomsHub:SuiteManage(win)              -- a tool's own extra window joins the focus stacking
+```
+  The Hub draws the wordmark + tool switcher, the close discs, the section headers (one open at a
+  time), pop-outs, scrolling, resizing, Global Settings (`"__global"`, last in every list) and the
+  Addon UI Scale (the SAME saved `GloomsHubDB.uiPx` as the old window). Every window lives in its
+  own BAND of frame levels, restacked on any click (`GLOBAL_MOUSE_DOWN`) — never parent a tool's
+  frame to one window and anchor it over another. Positions/heights/open section/pop-outs:
+  `GloomsHubDB.win[id]`. **A tool WITHOUT `windows` still uses everything below (the old window).**
 - **★ THE SHELL IS THE GLASS DESIGN'S (2026-09-25): 1060 × 740, fixed, near-black.** A 50-tall
   TOP BAR — the TOOL SWITCHER at the left ("gloom" + the tool's name in lime; click → the list of
   tools), the tool's PROFILE row (`UI.gProfileBar`, from `profile`), the CLOSE disc at the right; the
@@ -395,7 +424,30 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     (disabled by another setting = 50%, never hidden).
   · `UI.popover` wears the kit since MINOR 12 (night plate, indigo rim, Play Bold 14 white title).
 
-  **★ THE GLASS KIT (MINOR 14, 2026-09-25) — the GLASS design, the one every rebuilt tool uses.**
+  **★★ THE TWO-WINDOW KIT (MINOR 15-16, 2026-09-26/27) — what every rebuilt tool uses NOW.** The
+  glass kit's widgets below, RESTYLED in place (same names, same get/set/refresh/setEnabled
+  behavior) plus the window pieces. Every widget's header comment in `Skin.lua` is its spec.
+  · **Sansation only** (`FONT.sa/saM/saB` → Sansation Regular/Regular/Bold; `FONT.sn/snB/snL`).
+    `COLOR.panel` #0f051d. Outlines are one SCREEN pixel at any scale (`UI.gHair(tex, "w"|"h")`,
+    re-sized by `UI.gHairRefresh()` after a scale change; `UI.gOutline(frame, c, a)`).
+  · A labelled control is 33 tall (Sansation 12 label, 4, the 16-tall control) and **stretches to
+    the width it is given**: `UI.gSwitch(…, {w, h, accent, widths})` (equal segments, or `widths`),
+    `UI.gDrop(parent, w, …)`, `UI.gField(parent, w, …)`, `UI.gDial(parent, {w, label, bare, …})`
+    (21 ticks, the value's tick white, the box fills the rest), `UI.gColor(parent, {w, required, dot})`
+    (checkbox + a color PILL, `UI.gPill`; `dot` keeps the small disc), `UI.gCheck(parent, label, get,
+    set, size)`, `UI.gButton(parent, label, {w, h (15), pad (4), size (9), danger (coral at rest)})`.
+    `UI.gList` = the owner's Dropdown/Popup mock (sentence case; `upper = true` capitalizes).
+  · **Disabled = `UI.G_DIM` (0.3)**, never hidden. Boxed text sits `UI.G_NUDGE` (1) lower.
+  · Windows: `UI.gRounded(host, {radius, color | top/bottom, corners, layer, sub})` → `:Place(x, y,
+    w, h)` · `UI.gWindow({parent, w, h, minH, maxH, tabW, onClose, onMoved, onResized, onFocus})`
+    (body gradient black → panel, `.content`, `.tab`, `.close` floating 20 above the top-right
+    corner, `.grip` = the height bar, `:Focus()`, `:Snap()`) · `UI.gSnap(frame)` (corner onto the
+    pixel grid) · `UI.gSectionHead(parent, title, {popped, onToggle, onPop})` · `UI.gScrollArea(parent)`
+    → `{frame, child, SetContentHeight, ScrollTo, GetScroll, Update}` (fades + bar only while needed)
+    · `UI.gCloseDisc` · `UI.gProfileBlock(parent, api, title, w)` (Global Settings' profile control).
+  · Art: `UI.G_CORNER`, `G_POPOUT`, `G_POPIN`, the pill caps and `g-dash` (`tools/gen-glass-art.py v3`).
+  **★ THE GLASS KIT (MINOR 14, 2026-09-25) — the GLASS design (retired 2026-09-27); its widgets live
+  on restyled above.**
   Every widget's header comment in `Skin.lua` is its spec. One palette, no accent.
   · Tokens: `COLOR.violet` #6c2fe6 (outlines) · `lilac` #a881f8 (words, picked outlines, ticks) ·
     `lime` #28d65c (the tool's name, "+ ADD", a visible eye, the chosen page's ▸) · `slate` #464646
@@ -564,9 +616,9 @@ end
 ### Current requirement
 | Consumer | needs |
 |---|---|
-| `GloomsBars/Config.lua` | MINOR **14** — the glass kit (`UI.gButton / gSwitch / gDrop / gDial / gColor …`), bumped 2026-09-25 in the commit that first called it |
+| `GloomsBars/Config.lua` | MINOR **16** — the two-window kit (stretched controls, `UI.gColor`'s pill, `UI.G_DIM`, `UI.gRounded`, the switch's `widths`), bumped 2026-09-27 in the commit that first called it |
 | `GloomsAuras/Config.lua` | MINOR **6** — calls `UI.colorPicker` directly (its `MakeColor` swatch) |
-| `GloomsAuras/Pages.lua` | MINOR **14** — the glass kit; gates itself (it prints "update Gloom's Hub" and does not register the tab below 14) |
+| `GloomsAuras/Pages.lua` | MINOR **16** — the two-window kit; gates itself (it prints "update Gloom's Hub" and does not register below 16) |
 | `GloomsOverlays/GloomsOverlays_Editor.lua` | MINOR **4** — calls `UI.tabHeader` |
 | `GloomsOverlays/GloomsOverlays_Preview.lua` | MINOR **3** — the drawer needs nothing newer |
 | `GloomsPortraits/GloomsPortraits_Tab.lua` | MINOR **4** — calls `UI.tabHeader` |
@@ -578,7 +630,7 @@ added and the two files that call it were bumped **in the same commit**. GA foll
 same discipline on 2026-07-25 when its layout rework adopted `UI.tabHeader` — gate bumped
 in the commit that first called it, which is the only maintenance this gate ever needs.
 
-Hub currently ships **MINOR 14** (`Skin.lua`, 2026-09-25).
+Hub currently ships **MINOR 16** (`Skin.lua`, 2026-09-27).
 
 ⚠ **This line was stale for three weeks** — it still said MINOR 6 after 7 shipped on 2026-08-15, and
 was only caught on 09-08. It is the line a session reads to decide whether a `SKIN_NEEDS` bump is

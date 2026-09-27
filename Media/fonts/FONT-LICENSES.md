@@ -76,3 +76,16 @@ Licensed under the SIL Open Font License, Version 1.1. Full text in
 Licensed under the SIL Open Font License, Version 1.1. Full text in
 [OFL-Saira.txt](OFL-Saira.txt). Source: <https://github.com/google/fonts/tree/main/ofl/saira> (Medium, 2026-09-25: the project's own static build, <https://github.com/Omnibus-Type/Saira>, the same Version 1.101)
 (static instances, unmodified).
+
+---
+
+## Sansation — SIL Open Font License 1.1
+
+`Sansation-Light.ttf` · `Sansation-Regular.ttf` · `Sansation-Bold.ttf`
+
+> Copyright (c) 2011 by Bernd Montag, with Reserved Font Name 'Sansation'
+
+The two-window design's only typeface (2026-09-27). Licensed under the SIL Open Font License,
+Version 1.1. Full text in [OFL-Sansation.txt](OFL-Sansation.txt). Source:
+<https://github.com/google/fonts/tree/main/ofl/sansation> (static files, Version 1.301, unmodified —
+the Reserved Font Name only binds MODIFIED versions).

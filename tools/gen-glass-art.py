@@ -21,19 +21,20 @@
    glass dial (2026-09-26): it draws each tick as its own 1-unit rectangle, which lands exactly
    on the pixel grid at the window's whole-pixel scales. Kept for reference.
 
-3. THE PAGES' GLASS — only with `bg`:
+3. THE SHARED BACKGROUND — only with `bg`:
 
-     python3 tools/gen-glass-art.py bg ["<folder of exports>"]   (default ~/Desktop/Glooms BGs)
+     python3 tools/gen-glass-art.py bg ["<folder>"]   (default ~/Desktop/Glooms BGs)
 
-   The owner exports each screen from Figma at 2x (2120 x 1480) with only the background and
-   the glass panels showing (the panels' contents at 0% opacity, everything else hidden), named
-   as the screen is. ★ NOT RESAMPLED (2026-09-26): the export's own 2120 x 1480 pixels are cut
-   into four power-of-two tiles, <tool>/Media/glass/<page>-a|b|c|d.png — a 2048 x 1024 (the top
-   left), 72 x 1024 on a 128 canvas (top right), 2048 x 456 on a 512 canvas (bottom left),
-   72 x 456 on 128 x 512 (bottom right) — which the Shell lays edge to edge (GLASS_TILES). At the
-   window's 2-pixels-per-unit scale they land on the screen pixel for pixel. (The first cut
-   squeezed each export to 2048 wide, and the game then stretched it back up: soft.)
-   Re-export ONE screen after a layout change and re-run this.
+   The owner's ONE export of the window's background (shared_bg.png, 2x: 2120 x 1480, nothing
+   but the background showing), cut NOT RESAMPLED into four power-of-two tiles,
+   Media/glass/shared-a|b|c|d.png — a 2048 x 1024 (the top left), 72 x 1024 on a 128 canvas (top
+   right), 2048 x 456 on a 512 canvas (bottom left), 72 x 456 on 128 x 512 (bottom right) — which
+   the Shell lays edge to edge (GLASS_TILES). At 2 pixels a unit they land pixel for pixel.
+   ★ 2026-09-26: this used to cut ONE export PER PAGE with its glass panels baked in. The owner
+   made the panels solid; the tools now list them (`panels`) and the Shell draws them (UI.gPanel).
+
+4. THE PANELS' CORNER — Media/ui/g-corner.png (also `corner` alone): a white quarter disc of
+   radius 20 units, at 4x (80px) on a 128 canvas, anti-aliased. UI.gPanel flips it for all four.
 """
 import math, os, re, subprocess, sys, tempfile
 from PIL import Image, ImageDraw
@@ -49,6 +50,7 @@ def icon(name, w, h, canvas, tmp):
     s = open(os.path.join(SRC, name + ".svg")).read()
     s = re.sub(r'fill="(#[0-9A-Fa-f]{6}|white)"', 'fill="#000000"', s)
     s = re.sub(r' fill-opacity="[^"]*"', "", s)
+    s = re.sub(r'stroke="(#[0-9A-Fa-f]{6}|white)"', 'stroke="#000000"', s)   # line art (the v3 pop-out icons)
     s = re.sub(r'preserveAspectRatio="none" overflow="visible" style="display: block;" ', "", s)
     s = re.sub(r'(width|height)="([0-9.]+)"', lambda m: '%s="%g"' % (m.group(1), float(m.group(2)) * 20), s, count=2)
     p = os.path.join(tmp, name + ".svg"); open(p, "w").write(s)
@@ -102,47 +104,85 @@ def ticks():
             px[i * 5, y] = (255, 255, 255, 255)
     im.save(os.path.join(UI, "g-ticks.png")); print("g-ticks.png  101x10 on 128x16")
 
-SUITE = os.path.dirname(ROOT)
-GLASS = {   # the export's name (Figma's screen name) → (repo, page id)
-    "Glass Auras, Aura Triggers": ("GloomsAuras", "triggers"),
-    "Glass Auras, Appearance, SIze and Position": ("GloomsAuras", "appearance"),
-    "Glass Auras, Bar Fill & Readouts": ("GloomsAuras", "bar"),
-    "Glass Auras, Text": ("GloomsAuras", "text"),
-    "Glass Auras, Effects Motion & Sound": ("GloomsAuras", "effects"),
-    "Glass Auras, Aura Load Conditions": ("GloomsAuras", "load"),
-    "Glass Bars, Icon Size & Shape": ("GloomsBars", "shape"),
-    "Glass Bars, Decoration Layers": ("GloomsBars", "deco"),
-    "Glass Bars, Text": ("GloomsBars", "text"),
-    "Glass Bars, Glows & Animations": ("GloomsBars", "glows"),
-    "Glass Bars, Casts & Channels": ("GloomsBars", "casts"),
-    "Glass Bars, Cooldowns & Availability": ("GloomsBars", "cooldowns"),
-    "Glass Bars, Bar Visibility Layout & Presets": ("GloomsBars", "layout"),
-}
-
 TILES = [("a", 0, 0, 2048, 1024, 2048, 1024), ("b", 2048, 0, 72, 1024, 128, 1024),
          ("c", 0, 1024, 2048, 456, 2048, 512), ("d", 2048, 1024, 72, 456, 128, 512)]   # name, x, y, w, h, canvas w, h
+GLASS_DIR = os.path.join(ROOT, "Media", "glass")
 
 def backgrounds(folder):
-    for name, (repo, page) in GLASS.items():
-        src = os.path.join(folder, name + ".png")
-        if not os.path.exists(src):
-            print("missing:", name); continue
-        im = Image.open(src).convert("RGBA")
-        if im.size != (2120, 1480):
-            print("NOT 2x (2120 x 1480):", name, im.size); continue
-        base = os.path.join(SUITE, repo, "Media", "glass")
-        os.makedirs(base, exist_ok=True)
-        old = os.path.join(base, page + ".png")
-        if os.path.exists(old): os.remove(old)          # the first cut's single squeezed file
-        for t, x, y, w, h, cw, ch in TILES:
-            out = Image.new("RGBA", (cw, ch), (0, 0, 0, 255))
-            out.paste(im.crop((x, y, x + w, y + h)), (0, 0))
-            out.save(os.path.join(base, "%s-%s.png" % (page, t)), optimize=True)
-        print(repo + "/Media/glass/" + page + "-a|b|c|d.png")
+    src = os.path.join(folder, "shared_bg.png")
+    if not os.path.exists(src):
+        print("missing:", src); return
+    im = Image.open(src).convert("RGBA")
+    if im.size != (2120, 1480):
+        print("NOT 2x (2120 x 1480):", im.size); return
+    os.makedirs(GLASS_DIR, exist_ok=True)
+    for t, x, y, w, h, cw, ch in TILES:
+        out = Image.new("RGBA", (cw, ch), (0, 0, 0, 255))
+        out.paste(im.crop((x, y, x + w, y + h)), (0, 0))
+        out.save(os.path.join(GLASS_DIR, "shared-%s.png" % t), optimize=True)
+    print("Media/glass/shared-a|b|c|d.png")
 
+def corner():
+    """The panels' 20-unit rounded corner: a white quarter disc (the TOP-LEFT corner; the Shell
+    flips its texcoords for the other three), drawn at 4x (80px) on a 128 canvas, edge
+    anti-aliased by 8x8 supersampling."""
+    R, SS = 20 * K, 8
+    im = Image.new("RGBA", (128, 128), (255, 255, 255, 0))
+    px = im.load()
+    for y in range(R):
+        for x in range(R):
+            n = 0
+            for sy in range(SS):
+                for sx in range(SS):
+                    dx, dy = R - (x + (sx + .5) / SS), R - (y + (sy + .5) / SS)
+                    if dx * dx + dy * dy <= R * R: n += 1
+            px[x, y] = (255, 255, 255, round(255 * n / (SS * SS)))
+    im.save(os.path.join(UI, "g-corner.png")); print("g-corner.png  80x80 quarter disc on 128x128")
+
+def v3art(tmp):
+    """The two-window design's marks (2026-09-27, the Figma page "GloomSuite UI 3"). All at 4x, white.
+    g-popout.png / g-popin.png: a section's pop-out and pop-in icons (8.5 units, 34px on 64), traced
+    from the mock's own SVGs. g-pill-*.png: a color pill's LEFT end (the pill is 16 units tall, so an
+    end is 8 x 16 = 32 x 64 px): -fill a half disc, -ring its 1-unit outline, -dash that outline
+    dashed; flipped for the right end. g-dash.png: a 1-unit dashed line, 2 on / 2 off, tiled."""
+    icon("popout", 34, 34, 64, tmp)
+    icon("popin", 34, 34, 64, tmp)
+    SS, R = 8, 32
+    def cap(name, ring, dashed):
+        im = Image.new("RGBA", (32, 64), (255, 255, 255, 0)); px = im.load()
+        for y in range(64):
+            for x in range(32):
+                n = 0
+                for sy in range(SS):
+                    for sx in range(SS):
+                        fx, fy = x + (sx + .5) / SS, y + (sy + .5) / SS
+                        dx, dy = R - fx, R - fy
+                        d = math.hypot(dx, dy)
+                        if d > R: continue
+                        if ring and d < R - 4: continue
+                        if dashed:
+                            ang = math.atan2(dy, dx)            # 0 at the far left, +-pi/2 top/bottom
+                            arc = (ang + math.pi / 2) * (R - 2)     # distance along the arc
+                            if (arc // 8) % 2 == 1: continue    # 2 units on, 2 off (8 px each at 4x)
+                        n += 1
+                px[x, y] = (255, 255, 255, round(255 * n / (SS * SS)))
+        im.save(os.path.join(UI, "g-pill-%s.png" % name)); print("g-pill-%s.png  32x64" % name)
+    cap("fill", False, False); cap("ring", True, False); cap("dash", True, True)
+    d = Image.new("RGBA", (16, 4), (255, 255, 255, 0)); dp = d.load()
+    for x in range(8):
+        for y in range(4): dp[x, y] = (255, 255, 255, 255)
+    d.save(os.path.join(UI, "g-dash.png")); print("g-dash.png  16x4 (2 units on, 2 off)")
+
+if len(sys.argv) > 1 and sys.argv[1] == "v3":
+    with tempfile.TemporaryDirectory() as tmp:
+        v3art(tmp)
+    sys.exit(0)
 if len(sys.argv) > 1 and sys.argv[1] == "bg":
     backgrounds(sys.argv[2] if len(sys.argv) > 2 else os.path.expanduser("~/Desktop/Glooms BGs"))
+elif len(sys.argv) > 1 and sys.argv[1] == "corner":
+    corner()
 else:
+    corner()
     with tempfile.TemporaryDirectory() as tmp:
         for n, (w, h, c) in ICONS.items():
             icon(n, w, h, c, tmp)

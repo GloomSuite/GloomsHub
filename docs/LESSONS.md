@@ -422,7 +422,33 @@ GU's `cNum` shows the live-stepping hook.
 - **The uiScale CVar is not UIParent's effective scale** (0.70 → ~0.65 at 4K). Compute from
   `UIParent:GetEffectiveScale()`, never from the CVar.
 
-### Exporting the glass from Figma (2026-09-25)
+### "It looks soft / thick / the colors shift" — check the DISPLAY before the code (2026-09-27)
+- **A session spent hours on addon-side sharpness before finding that the Mac and the TV were doing
+  it.** Ask, or check, in this order (FINDINGS §22): the Mac's display mode (`system_profiler
+  SPDisplaysDataType` — "Resolution" must equal the panel's pixels, i.e. Default on his 4K; a scaled
+  mode resamples WoW too, since WoW on the Mac has no exclusive fullscreen); HDR on (the Mac thins
+  the TV's colour otherwise — test with one-pixel red/blue stripes); EllesmereUI's UI Scale (it, not
+  Blizzard's slider, sets UIParent). **`/gloom px` measures what WoW itself draws** — when it says
+  whole pixels and the screen disagrees, the problem is downstream of WoW.
+- **Say "I don't know" before theorizing about hardware.** Three confident TV explanations were
+  offered and killed in a row (overscan, Screen Move, 120 Hz bandwidth); a pixel-exact test page
+  settled it in one step. Build the discriminating test first.
+
+### Several windows in one strata interleave (2026-09-27)
+- **Frame levels are global within a strata.** Two windows whose pieces sit at level+3, +20, +30,
+  +40 each will MIX where they overlap (the owner saw one window's footer and resize bar through
+  another). Give each window a band of levels and restack the bands on focus — `Windows.lua` does
+  (`relevel`/`restack`, on `GLOBAL_MOUSE_DOWN` so clicks on a window's CONTROLS count too). A
+  window's plain `Raise()` does not fix it.
+
+### The harness's blind spots, again (2026-09-27)
+- `SetAllPoints` records anchors but leaves `GetWidth/GetHeight` at 0 — a frame that SIZES from its
+  parent reads 0 in the stand-in (size from the window you were handed instead). Tiled textures
+  (`SetHorizTile`) and hyperlinks don't render; `GetStringWidth` is approximate, so a header's
+  pop-out icon can look further out than it will be. A section that changes its own height while
+  it is first built re-enters the layout — guard it (`Windows.lua` `building`/`inLayout`).
+
+### Exporting the glass from Figma (2026-09-25) — the glass design is retired; kept for any future export
 - The export recipe: per screen, Shift-click the glass panels, **Enter** (selects their direct
   children), type **0 0** (opacity 0% — NOT hide: hiding collapses an auto-layout panel), hide the
   non-glass layers, export 2×, then undo. **Undo each screen before the next one** — the undo history
