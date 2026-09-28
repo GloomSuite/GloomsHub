@@ -105,7 +105,8 @@ own full bar sat underneath it **in the same colour**.
 - **Ask what is DIFFERENT about the case that works.** "It appears if I nudge a slider" was the whole
   answer in plain sight: the slider fires one extra refresh *after* the code that blanks the bar.
 - **Overlapping widgets need a frame-level story, not a draw-layer one.** A `FontString` can never
-  out-draw a higher frame level whatever its layer — the readouts needed their own frame.
+  out-draw a higher frame level whatever its layer — the readouts needed their own frame. (It bit
+  again 2026-09-27: Gloom's Auras' on-screen text sat on the display frame, UNDER a bar aura's bar.)
 
 ## ★★ A state mirror is not an event bus — judge the transition, not the source
 
@@ -407,8 +408,18 @@ GU's `cNum` shows the live-stepping hook.
   nothing top and bottom** (the inner edge's horizontal radius is one pixel shorter; the vertical
   one is not) — that is the whole look of the second design's buttons. The fill is under the
   border (`background-clip: border-box`).
+- **A label's box height comes from its FONT SIZE (Figma's auto line height), and the mocks' gap is
+  measured from the box.** When the owner took labels 12 → 10 (2026-09-27) the 4 gap stayed 4 but the
+  box went 13 → 11, so every control rose 2 and every row with it (rows 43 → 41). Translate his RULE
+  (box + gap) into the code, not the positions of the moment — and don't propose numbers he "didn't
+  change": to him only the font size moved. Some frames in the page do not reflow (fixed-height
+  text): spot-check one row per frame before trusting a whole page's positions.
 
 ### Pixel sharpness in the game (2026-09-26, FINDINGS §22)
+- **A threshold written in "px" in code is probably in UI UNITS — convert it.** Gloom's Unit Frames
+  chose a shape's small mask "under 192 px" by comparing UI units; on the owner's 4K that is ~384
+  pixels, and a 128 px image went soft ~3× stretched (2026-09-27). Anything that picks art by size
+  must multiply by `physH/768 × effective scale` first.
 - **A UI unit is not a pixel, and the ratio is almost never whole.** On the owner's 4K screen at a
   70% game UI scale, 1 unit was 1.828 pixels, so every 1-unit line and every texture resampled — the
   whole window looked soft next to Figma. **Measure before theorising: `/gloom px`.** A window is

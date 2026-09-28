@@ -9,7 +9,7 @@
 -- change it THERE and every consumer in the same session.
 -- ============================================================
 
-local MAJOR, MINOR = "LibGloomSkin-1.0", 16  -- MINOR 16 (2026-09-27, the TWO-WINDOW design, Figma "GloomSuite UI 3"): Sansation everywhere (FONT.sa/saM/saB → Sansation), every glass widget restyled and STRETCHED to its column (gButton/gSwitch/gDrop/gField/gDial/gCheck/gColor → the pill, gList), UI.gPill, UI.gRounded (gradient + per-corner), UI.gCloseDisc, UI.gSectionHead, UI.gScrollArea (fades + bar), UI.gWindow (tab · body · close · resize grip · drag anywhere), UI.gSnap, UI.gProfileBlock, UI.G_POPOUT/G_POPIN. MINOR 15 (2026-09-26, glass → solid panels): COLOR.panel, UI.G_CORNER, UI.gPanel (the rounded panel), UI.gHair/gHairRefresh (a line ONE SCREEN PIXEL thick at any scale), UI.gOutline,  every glass-kit outline and rule is a hairline; UI.gSwitch's segments abut (Figma's 0.5 strokes, inside). MINOR 14 (2026-09-25, the THIRD redesign, "Glass"): THE GLASS KIT — COLOR.lime/slate/deep/list, FONT.saM, UI.gTitle/gLabel/gButton/gSwitch/gList/gDrop/gField/gDial/gCheck/gColor/gX/gScroll/gProfileBar, UI.dial `glass` + `nobox`, UI.colorDot `dot` + `gap`. MINOR 13 (2026-09-23, the SECOND redesign, "GloomSuite UI 2"): THE DARK KIT — COLOR.void/sky/jade/coral/flame, FONT.sa/saB (Saira), UI.accentOf, UI.pill, UI.pillPick, UI.profileStack, and UI.openList (the kit list, openable from any button), the dark UI.dial, UI.plate/rule/text/box/colorDot/toggle2/pillField/xbtn/scrollPane. MINOR 12 (2026-09-21, redesign stages 2–3): UI.chip (the colour chip), the picker's colour SOURCES (selected, committed by OK), the SHORT and BARE dials, UI.cell, the revised dropdown list, the kit popover. MINOR 11: THE KIT — the redesign's tokens (COLOR.plate/ink/violet/…, FONT.ui/uiB/mark) and widgets (UI.button · segments · toggleBar · check · field · label · pick · sectionHeader · dial · wordmark · profileRow); the old widgets stay for tabs not yet migrated
+local MAJOR, MINOR = "LibGloomSkin-1.0", 17  -- MINOR 17 (2026-09-27): "Use Class Color" in every two-window color control (UI.ClassRGB, UI.CLASS_SOURCE, UI.ClassColorValue, UI.StampClassColors, UI.pickColorWithClass); gList `font` + dividers with space; gLabel 10; label→control 15. MINOR 16 (2026-09-27, the TWO-WINDOW design, Figma "GloomSuite UI 3"): Sansation everywhere (FONT.sa/saM/saB → Sansation), every glass widget restyled and STRETCHED to its column (gButton/gSwitch/gDrop/gField/gDial/gCheck/gColor → the pill, gList), UI.gPill, UI.gRounded (gradient + per-corner), UI.gCloseDisc, UI.gSectionHead, UI.gScrollArea (fades + bar), UI.gWindow (tab · body · close · resize grip · drag anywhere), UI.gSnap, UI.gProfileBlock, UI.G_POPOUT/G_POPIN. MINOR 15 (2026-09-26, glass → solid panels): COLOR.panel, UI.G_CORNER, UI.gPanel (the rounded panel), UI.gHair/gHairRefresh (a line ONE SCREEN PIXEL thick at any scale), UI.gOutline,  every glass-kit outline and rule is a hairline; UI.gSwitch's segments abut (Figma's 0.5 strokes, inside). MINOR 14 (2026-09-25, the THIRD redesign, "Glass"): THE GLASS KIT — COLOR.lime/slate/deep/list, FONT.saM, UI.gTitle/gLabel/gButton/gSwitch/gList/gDrop/gField/gDial/gCheck/gColor/gX/gScroll/gProfileBar, UI.dial `glass` + `nobox`, UI.colorDot `dot` + `gap`. MINOR 13 (2026-09-23, the SECOND redesign, "GloomSuite UI 2"): THE DARK KIT — COLOR.void/sky/jade/coral/flame, FONT.sa/saB (Saira), UI.accentOf, UI.pill, UI.pillPick, UI.profileStack, and UI.openList (the kit list, openable from any button), the dark UI.dial, UI.plate/rule/text/box/colorDot/toggle2/pillField/xbtn/scrollPane. MINOR 12 (2026-09-21, redesign stages 2–3): UI.chip (the colour chip), the picker's colour SOURCES (selected, committed by OK), the SHORT and BARE dials, UI.cell, the revised dropdown list, the kit popover. MINOR 11: THE KIT — the redesign's tokens (COLOR.plate/ink/violet/…, FONT.ui/uiB/mark) and widgets (UI.button · segments · toggleBar · check · field · label · pick · sectionHeader · dial · wordmark · profileRow); the old widgets stay for tabs not yet migrated
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if lib then
@@ -3070,6 +3070,80 @@ function UI.box(parent, label, get, set, accent)
   return b
 end
 
+-- ------------------------------------------------------------
+-- CLASS COLOR (the owner, 2026-09-27). Every two-window color control offers
+-- "Use Class Color" in its picker (a SOURCE, see the picker note): the field
+-- jumps to the class's color and, left there, the color FOLLOWS the class of
+-- whichever character is logged in; moving or editing it disconnects it into a
+-- plain color. Saved as an ordinary color table carrying `class = true` — so
+-- every consumer still reads c[1..3] and needs no change — and re-stamped with
+-- the current class's color by UI.StampClassColors, which each tool runs over
+-- its SavedVariables at PLAYER_LOGIN before it applies anything.
+-- ------------------------------------------------------------
+function UI.ClassRGB()
+  local _, tok = UnitClass("player")
+  local c = tok and ((C_ClassColor and C_ClassColor.GetClassColor and C_ClassColor.GetClassColor(tok))
+    or (RAID_CLASS_COLORS and RAID_CLASS_COLORS[tok]))
+  if c then return c.r, c.g, c.b end
+end
+UI.CLASS_SOURCE = { value = "class", label = "Use Class Color", word = "Class", color = UI.ClassRGB }
+-- A class color value, keeping `prev`'s opacity.
+function UI.ClassColorValue(prev)
+  local r, g, b = UI.ClassRGB(); if not r then return nil end
+  return { r, g, b, prev and prev[4] or nil, class = true }
+end
+local function isClassColor(t)
+  return t.class == true and type(t[1]) == "number" and type(t[2]) == "number" and type(t[3]) == "number"
+end
+-- Re-color every class-marked color anywhere under `root` (a whole SavedVariables
+-- table: every profile, every character) to the logged-in class. Returns the count.
+function UI.StampClassColors(root)
+  local r, g, b = UI.ClassRGB()
+  if not (r and type(root) == "table") then return 0 end
+  local seen, n = {}, 0
+  local function walk(t)
+    if seen[t] then return end
+    seen[t] = true
+    if isClassColor(t) then t[1], t[2], t[3] = r, g, b; n = n + 1; return end
+    for _, v in pairs(t) do if type(v) == "table" then walk(v) end end
+  end
+  walk(root)
+  return n
+end
+-- Open the picker for a color control that offers the class color. `opts` is the
+-- control's { get, set, hasAlpha, title }; `refresh` repaints it. A Cancel puts
+-- back EXACTLY what was saved (the class mark included, or unset).
+-- A tool with sources of its OWN (Unit Frames: the UNIT's class, its power
+-- type, the class resource — resolved live by the tool, not stamped) passes
+-- `opts.sources` = { { value, label, color() } } with `opts.getSource()` (the
+-- value in force, or nil) and `opts.setSource(value)`; `set(color)` then means
+-- a plain color and must clear the tool's source.
+function UI.pickColorWithClass(opts, owner, title, refresh)
+  local orig = opts.get()
+  local custom = opts.sources
+  local origSrc = custom and opts.getSource and opts.getSource() or nil
+  local function take(v)
+    if type(v) == "string" then
+      if custom then opts.setSource(v) else opts.set(UI.ClassColorValue(orig)) end
+    else opts.set(v) end
+    refresh()
+  end
+  UI.colorPicker({
+    color = orig or { 1, 1, 1 },
+    hasAlpha = opts.hasAlpha,
+    title = title,
+    owner = owner,
+    sources = custom or { UI.CLASS_SOURCE },
+    source = custom and origSrc or ((orig and orig.class) and "class" or nil),
+    onChange = take,
+    onSource = take,
+    onCancel = function()
+      if origSrc then opts.setSource(origSrc) else opts.set(orig) end
+      refresh()
+    end,
+  })
+end
+
 -- UI.colorDot(parent, opts) → a colour control, the mocks' "Frame 320": a
 -- checkbox (the colour is ON), an optional label, and a 20px circle of the
 -- colour — a dashed ring when none is set. Click the circle for the suite
@@ -3118,6 +3192,10 @@ function UI.colorDot(parent, opts)
   -- it opened with, and "unset" is not a colour it can hold (GA's MakeColor rule).
   openPicker = function()
     if not enabled then return end
+    if opts.classSource then
+      UI.pickColorWithClass(opts, dot, (opts.title or opts.label or "Color"):upper(), function() f:refresh() end)
+      return
+    end
     local wasUnset = opts.get() == nil
     UI.colorPicker({
       color = opts.get() or { 1, 1, 1 },
@@ -3405,7 +3483,7 @@ local function rgba(t, c, a) t:SetColorTexture(c.r, c.g, c.b, a or 1) end
 -- the two-window mocks' opacity-30; it was 50%). Never hides.
 UI.G_DIM = 0.3
 local DIM = UI.G_DIM
-UI.G_NUDGE = 1   -- 1.5 for Saira (measured, one screenshot); Sansation at 9-10 sits a unit high by the same reasoning — a whole pixel at 2 px a unit. UNVERIFIED in game for Sansation.
+UI.G_NUDGE = 0   -- 1.5 for Saira (measured, one screenshot). Sansation needs NONE: measured on the owner's screenshot 2026-09-27, with the old 1-unit nudge a switch's capitals had 11 px above and 6 below in a 30 px box (~1.3 units low); with 0 they sit within half a pixel of center.
 local NUDGE = UI.G_NUDGE
 
 -- ★ HAIRLINES (2026-09-26). The owner set every line in the mocks to 0.5: at
@@ -3530,9 +3608,10 @@ function UI.gTitle(parent, text, size)
   return fs
 end
 
--- UI.gLabel(parent, text, size?, color?) → Sansation 12 white (a control's label).
+-- UI.gLabel(parent, text, size?, color?) → Sansation 10 white (a control's label;
+-- 12 until the owner took the mocks' labels to 10, 2026-09-27).
 function UI.gLabel(parent, text, size, c)
-  local fs = UI.newText(parent, FONT.sa, size or 12, c or COLOR.paper, "LEFT")
+  local fs = UI.newText(parent, FONT.sa, size or 10, c or COLOR.paper, "LEFT")
   fs:SetText(text or ""); fs:SetWordWrap(false)
   return fs
 end
@@ -3661,14 +3740,16 @@ end
 -- (2026-09-27) — #0f051d, opaque, in a violet hairline, 10 of padding, lines of
 -- Sansation 10 white 14 tall. (Not in the mock, kept from before: the hovered
 -- line violet 20%, the current one violet 30% with a lilac word, a danger line
--- coral, a divider as a violet hairline.) At least as wide as the anchor; past
--- 16 lines it scrolls. Closes on any outside
+-- coral, a divider as a violet hairline with 4 of space either side (the owner,
+-- 2026-09-27: flush against its lines it "looks too compressed").) A line with
+-- `font` is drawn in that face (a font list previews its fonts). At least as
+-- wide as the anchor; past 16 lines it scrolls. Closes on any outside
 -- click, on the anchor hiding, on another list. Words as given (the mocks are
 -- sentence case now); `upper = true` capitalizes.
---   options = { {value, label, disabled?, danger?, divider?} , … }
+--   options = { {value, label, disabled?, danger?, divider?, font?} , … }
 --   opts = { cursor = true (open at the mouse — a context menu), upper, minW }
 -- ------------------------------------------------------------
-local GL_ROWS, GL_ROW_H, GL_PAD = 16, 14, 10
+local GL_ROWS, GL_ROW_H, GL_PAD, GL_DIV = 16, 14, 10, 9   -- GL_DIV: 4 · the hairline · 4
 local gFly
 local function gFlyout()
   if gFly then return gFly end
@@ -3701,14 +3782,15 @@ function UI.gListFrame() return gFlyout() end
 function UI.gList(anchor, options, current, onPick, opts)
   opts = opts or {}
   local fly = gFlyout()
-  local y, widest = 0, 0
+  local y, widest, shownH = 0, 0, 0
   for i, opt in ipairs(options) do
+    if opt.divider and i > 1 then y = y - GL_DIV end
     local row = fly.rows[i]
     if not row then
       row = CreateFrame("Button", nil, fly.child); row:SetHeight(GL_ROW_H)
       row.fill = row:CreateTexture(nil, "BACKGROUND"); row.fill:SetAllPoints()
       row.rule = row:CreateTexture(nil, "BORDER")
-      row.rule:SetPoint("TOPLEFT", 10, 0); row.rule:SetPoint("TOPRIGHT", -10, 0); rgba(row.rule, COLOR.violet, 0.6)
+      row.rule:SetPoint("TOPLEFT", 10, 5); row.rule:SetPoint("TOPRIGHT", -10, 5); rgba(row.rule, COLOR.violet, 0.6)
       UI.gHair(row.rule, "h")
       row.text = UI.newText(row, FONT.sa, 10, COLOR.paper, "LEFT")
       row.text:SetPoint("LEFT", 9.5, 0); row.text:SetPoint("RIGHT", -9.5, 0); row.text:SetWordWrap(false)
@@ -3726,11 +3808,12 @@ function UI.gList(anchor, options, current, onPick, opts)
     row:ClearAllPoints()
     row:SetPoint("TOPLEFT", 0, y); row:SetPoint("TOPRIGHT", 0, y)
     local lbl = tostring(opt.label or opt.value or "")
+    UI.setFont(row.text, opt.font or FONT.sa, 10)
     row.text:SetText(opts.upper and lbl:upper() or lbl)
     widest = math.max(widest, row.text:GetStringWidth())
     row._cur = (current ~= nil and opt.value == current)
     row._off, row._danger, row._hot = opt.disabled and true or false, opt.danger, false
-    row.rule:SetShown(opt.divider and true or false)
+    row.rule:SetShown((opt.divider and i > 1) and true or false)
     row:paintRow()
     row:SetScript("OnClick", function()
       if opt.disabled then return end
@@ -3738,12 +3821,12 @@ function UI.gList(anchor, options, current, onPick, opts)
     end)
     row:Show()
     y = y - GL_ROW_H
+    if i <= GL_ROWS then shownH = -y end
   end
   for i = #options + 1, #fly.rows do fly.rows[i]:Hide() end
-  local shown = math.min(#options, GL_ROWS)
   local w = math.max(math.ceil(widest) + 21, opts.minW or 0, (not opts.cursor and anchor and anchor:GetWidth()) or 0)
-  fly.child:SetSize(w - 2, math.max(10, #options * GL_ROW_H))
-  fly:SetSize(w, shown * GL_ROW_H + 2 * GL_PAD)
+  fly.child:SetSize(w - 2, math.max(10, -y))
+  fly:SetSize(w, shownH + 2 * GL_PAD)
   fly.scroll:SetVerticalScroll(0)
   -- The list lives on UIParent; it wears the anchor's effective scale so it
   -- lines up with a scaled window.
@@ -3828,6 +3911,7 @@ function UI.gField(parent, w, opts)
   if opts.maxLetters then e:SetMaxLetters(opts.maxLetters) end
   e:SetHighlightColor(COLOR.lilac.r, COLOR.lilac.g, COLOR.lilac.b, 0.5)
   local bg = e:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); rgba(bg, COLOR.violet, 0.3)
+  e.bg = bg   -- recolorable (Unit Frames' row being edited is lime 30%)
   if opts.placeholder then
     local ph = UI.newText(e, FONT.sa, 10, COLOR.paper, opts.justify or "LEFT"); ph:SetAlpha(0.4)
     ph:SetPoint("LEFT", 6, -NUDGE); ph:SetPoint("RIGHT", -4, -NUDGE); ph:SetText(opts.placeholder); ph:SetWordWrap(false)
@@ -3850,10 +3934,10 @@ function UI.gField(parent, w, opts)
   return e
 end
 
--- UI.gDial(parent, opts) — the mocks' dial: a Sansation 12 label, and 4 under it
+-- UI.gDial(parent, opts) — the mocks' dial: a Sansation 10 label, and 4 under it
 -- 21 violet ticks, 1 wide and 16 tall at a pitch of 5 — the one nearest the
 -- value WHITE — then, 10 on, the value box (violet 30%, Sansation 10 white)
--- filling the rest of `w` (170, a column). 33 tall; 16 with `bare` (no label).
+-- filling the rest of `w` (170, a column). 31 tall; 16 with `bare` (no label).
 -- Same behavior as every dial in the suite: press on the ticks and pull (keep
 -- going past them), Shift ×10, the wheel steps it, click the number to type.
 --   opts = { get, set, min, max, step, unit, fmt, dragPx, label, bare, w, nobox }
@@ -3874,7 +3958,7 @@ function UI.gDial(parent, opts)
   end
   local bare = opts.bare and true or false
   local W = opts.w or 170
-  local TOP = bare and 0 or 17
+  local TOP = bare and 0 or 15   -- the label's box (11) + 4
   local f = CreateFrame("Frame", nil, parent)
   f:SetSize(W, TOP + 16)
   f.label = UI.gLabel(f, bare and "" or (opts.label or "")); f.label:SetPoint("TOPLEFT", 0, 0)
@@ -3965,7 +4049,7 @@ function UI.gDial(parent, opts)
 end
 
 -- UI.gCheck(parent, label?, get, set, size?) — the checkbox: 16 square, violet
--- 10% inside a violet hairline, a white tick; the label (Sansation 12, or
+-- 10% inside a violet hairline, a white tick; the label (Sansation 10, or
 -- `size`) 8 right of the box. The whole row is the hit area.
 function UI.gCheck(parent, label, get, set, size)
   local b = CreateFrame("Button", nil, parent)
@@ -3977,7 +4061,7 @@ function UI.gCheck(parent, label, get, set, size)
   local tick = b:CreateTexture(nil, "ARTWORK"); tick:SetTexture(UI.G_CHECK); tick:SetPoint("TOPLEFT"); tick:SetSize(16, 16)
   b.tick = tick
   if label and label ~= "" then
-    b.label = UI.gLabel(b, label, size or 12); b.label:SetPoint("LEFT", b, "LEFT", 24, 0)
+    b.label = UI.gLabel(b, label, size); b.label:SetPoint("LEFT", b, "LEFT", 24, 0)
     b:SetWidth(24 + math.ceil(b.label:GetStringWidth()))
   end
   local enabled = true
@@ -3993,11 +4077,10 @@ end
 
 -- UI.gPill(parent, w) — a color PILL (the mocks' swatch): `w` wide, 16 tall,
 -- round ends, the color inside a 1-unit white 40% line; with no color it is
--- just that line, DASHED. :SetColor(c | nil).
+-- just that line, DOTTED. :SetColor(c | nil).
 local PILL_FILL = lib.MEDIA .. "ui\\g-pill-fill.png"
 local PILL_RING = lib.MEDIA .. "ui\\g-pill-ring.png"
 local PILL_DASH = lib.MEDIA .. "ui\\g-pill-dash.png"
-local DASH      = lib.MEDIA .. "ui\\g-dash.png"
 function UI.gPill(parent, w)
   local p = CreateFrame("Button", nil, parent); p:SetSize(w, 16)
   local function piece(layer, file, left)
@@ -4016,15 +4099,26 @@ function UI.gPill(parent, w)
     return t
   end
   p.lt, p.lb = line(true), line(false)
-  p.dt, p.db = line(true), line(false)
-  for _, t in ipairs({ p.dt, p.db }) do
-    t:SetTexture(DASH, "REPEAT", "CLAMP"); t:SetHorizTile(true)
-    t:SetTexCoord(0, math.max(1, (w - 16) / 4), 0, 1)
+  -- The straight runs of the dotted line (the owner, 2026-09-27: 1-unit DOTS,
+  -- were 2-unit dashes): one 1 x 1 square per dot, 3 apart, the first and last
+  -- 3 on from the end caps' last dots (1.5 units before the cap meets the run).
+  -- A tiled texture stretched its marks in game, so nothing here tiles.
+  p.dashes = { p.dl, p.dr }
+  local span = math.max(0, w - 19)                    -- first dot's centre (9.5) to the last's
+  local n = math.floor(span / 3) + 1
+  local x0 = 9 + (span - 3 * (n - 1)) / 2             -- the first dot's left edge
+  for i = 0, n - 1 do
+    for _, top in ipairs({ true, false }) do
+      local t = p:CreateTexture(nil, "BORDER"); t:SetSize(1, 1)
+      t:SetPoint(top and "TOPLEFT" or "BOTTOMLEFT", x0 + 3 * i, 0)
+      t:SetColorTexture(1, 1, 1, 0.4)
+      p.dashes[#p.dashes + 1] = t
+    end
   end
   function p:SetColor(c)
     local has = c ~= nil
     for _, t in ipairs({ self.fl, self.fr, self.fm, self.rl, self.rr, self.lt, self.lb }) do t:SetShown(has) end
-    for _, t in ipairs({ self.dl, self.dr, self.dt, self.db }) do t:SetShown(not has) end
+    for _, t in ipairs(self.dashes) do t:SetShown(not has) end
     if has then
       local r, g, b = c[1] or c.r or 1, c[2] or c.g or 1, c[3] or c.b or 1
       self.fl:SetVertexColor(r, g, b, 1); self.fr:SetVertexColor(r, g, b, 1); self.fm:SetColorTexture(r, g, b, 1)
@@ -4032,7 +4126,6 @@ function UI.gPill(parent, w)
       self.lt:SetColorTexture(1, 1, 1, 0.4); self.lb:SetColorTexture(1, 1, 1, 0.4)
     else
       self.dl:SetVertexColor(1, 1, 1, 0.4); self.dr:SetVertexColor(1, 1, 1, 0.4)
-      self.dt:SetVertexColor(1, 1, 1, 0.4); self.db:SetVertexColor(1, 1, 1, 0.4)
     end
   end
   p:SetColor(nil)
@@ -4047,7 +4140,7 @@ end
 --   opts = { get, set, title, hasAlpha, w, required, dot }
 function UI.gColor(parent, opts)
   if opts.dot then
-    opts.accent, opts.dot, opts.gap = COLOR.violet, 15, 24
+    opts.accent, opts.dot, opts.gap, opts.classSource = COLOR.violet, 15, 24, true
     opts.disc, opts.discNo = UI.G_DISC, UI.G_DISC_NO
     local f = UI.colorDot(parent, opts)
     local se = f.setEnabled
@@ -4082,15 +4175,7 @@ function UI.gColor(parent, opts)
   end
   openPicker = function()
     if not enabled then return end
-    local wasUnset = opts.get() == nil
-    UI.colorPicker({
-      color = opts.get() or { 1, 1, 1 },
-      hasAlpha = opts.hasAlpha,
-      title = (opts.title or "Color"):upper(),
-      owner = pill,
-      onChange = function(c) opts.set(c); f:refresh() end,
-      onCancel = function() if wasUnset then opts.set(nil) end; f:refresh() end,
-    })
+    UI.pickColorWithClass(opts, pill, (opts.title or "Color"):upper(), function() f:refresh() end)
   end
   pill:SetScript("OnClick", openPicker)
   function f:setEnabled(on)
@@ -4293,6 +4378,14 @@ function UI.gSectionHead(parent, title, opts)
     b:SetScript("OnClick", function() if opts.onToggle then opts.onToggle() end end)
   end
   function b:SetOpen(on) if self.tri then self.tri:SetRotation(on and 0 or (math.pi / 2)) end end
+  -- a title that changes (Unit Frames' "Global Player / Target Settings")
+  function b:SetTitle(t)
+    self.title:SetText(t or "")
+    local w2 = math.ceil(self.title:GetStringWidth())
+    pop:ClearAllPoints()
+    if opts.popped then pop:SetPoint("LEFT", -1.75, 0); self:SetWidth(13.5 + w2)
+    else pop:SetPoint("LEFT", 14 + w2 + 6 - 1.75, 0); self:SetWidth(14 + w2) end
+  end
   b:SetOpen(false)
   return b
 end
@@ -4490,13 +4583,13 @@ function UI.gWindow(opts)
 end
 
 -- UI.gProfileBlock(parent, api, title, w) — Global Settings' profile control
--- for one tool (the mocks' Frame 543): "<title>" (Sansation 12), 4 under it the
+-- for one tool (the mocks' Frame 543): "<title>" (Sansation 10), 4 under it the
 -- active profile as a dropdown stretched to `w`, and 10 under that New · Copy ·
 -- Rename · Delete, 6 apart (16 tall, 10 each side). Same api, dialogs and delete
--- gate as every profile control in the suite. 59 tall. Returns { frame, refresh, note }.
+-- gate as every profile control in the suite. 57 tall. Returns { frame, refresh, note }.
 function UI.gProfileBlock(parent, api, title, w)
   local st = {}
-  local f = CreateFrame("Frame", nil, parent); f:SetSize(w, 59)
+  local f = CreateFrame("Frame", nil, parent); f:SetSize(w, 57)
   st.frame = f
   UI.gLabel(f, title):SetPoint("TOPLEFT", 0, 0)
   local note = UI.newText(f, FONT.sa, 10, COLOR.coral, "LEFT")
@@ -4515,12 +4608,12 @@ function UI.gProfileBlock(parent, api, title, w)
     end,
     function() return api.active() end,
     function(val) st:note(""); api.switch(val); if api.onChange then api.onChange() end end)
-  dd:SetPoint("TOPLEFT", 0, -17)
+  dd:SetPoint("TOPLEFT", 0, -15)
   local act = profileActions(api, after)
   local prev
   local function btn(label, handler, danger)
     local b = UI.gButton(f, label, { onClick = handler, danger = danger, h = 16, pad = 10 })
-    if prev then b:SetPoint("LEFT", prev, "RIGHT", 6, 0) else b:SetPoint("TOPLEFT", 0, -43) end
+    if prev then b:SetPoint("LEFT", prev, "RIGHT", 6, 0) else b:SetPoint("TOPLEFT", 0, -41) end
     prev = b
     return b
   end

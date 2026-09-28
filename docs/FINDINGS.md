@@ -1686,6 +1686,19 @@ image instead.
 - A StatusBar itself cannot tile — it STRETCHES its texture over the box, so one square hatch went
   flat on a 200×24 rectangle and huge on a tall pill. Hence the invisible-fill + clip-frame + tiled
   texture construction above.
+- ⚠ **It bit again 2026-09-27** (`TESTED`, the owner's screenshot): the kit's dashed empty-color pill
+  tiled a 16×4 dash file with a `SetTexCoord` repeat count, so the dashes drew at the FILE's size —
+  long and stretched. The harness cannot draw tiled textures, so only the game showed it. Fixed by
+  drawing every dot as its own 1×1 texture (`UI.gPill`). **Do not tile a dash or dot pattern.**
+
+### ▶ `OBSERVED` 2026-09-27 — a shaped bar went SOFT one size below 97
+- The owner: an orb health bar sharp at Size 97, blurry at 96. The code explains the exact boundary:
+  a shape's canvas is its Size × canvas/footprint (orb: × 512/257), and `bar:Configure` took the
+  quarter-size `-base-s` mask (128 px) when the canvas was under **192 UI UNITS** — 191.3 at 96, 193.2
+  at 97. On his 4K a unit is ~2 px, so the 128 px mask was stretched ~3×. **Fixed** to decide in
+  screen PIXELS (`GetPhysicalScreenSize` × effective scale). Not yet re-seen by the owner.
+- A bar's GRADIENT takes only four angles (`SetGradient` is horizontal / vertical; the dial snaps) —
+  `OBSERVED` by the owner; whether any angle is possible on a masked bar is BACKLOG 18.
 
 ### `KILLED` — do not revive these
 - ~~*"Flip a bar's silhouette with texture coordinates on the mask."*~~ **KILLED**, twice.
@@ -1721,7 +1734,10 @@ metrics centre its capitals to 0.02 em, so it is WoW's placement of a line in a 
 boxed text in the glass kit is anchored `UI.G_NUDGE` (1.5) lower; the owner: "the text in the
 buttons for sure looks better positioned". Only one font/size family was checked this way. **2026-09-27:
 Sansation replaced Saira; the nudge is now 1 unit (Sansation's metrics centre its capitals as
-closely as Saira's) — `SUSPECTED`, not yet seen in game.**
+closely as Saira's) — `SUSPECTED`, not yet seen in game.** ▶ **`TESTED` 2026-09-27 and CORRECTED:**
+measured on the owner's screenshot, with the 1-unit nudge a switch's capitals had 11 px above and 6
+below in a 30 px box — about 1.3 units LOW. Sansation needs **no** nudge: `UI.G_NUDGE` = 0, and the
+owner: "that looks better". ~~*"Sansation, like Saira, sits high and wants a 1-unit nudge."*~~ **KILLED.**
 
 **KILLED:**
 - ~~"Text in a SCALED frame is rasterised small and stretched, so our text is soft"~~ — **KILLED

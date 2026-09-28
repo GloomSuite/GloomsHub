@@ -25,9 +25,10 @@
 --
 -- THE CONTRACT (CONTRACTS §2, the two-window block) — a tool registers:
 --   windows  = true,
---   selector = { build = function(content, api) end },        -- 240 wide, content below y 52
+--   selector = { build = function(content, api) end, h = 480 }, -- 240 wide, content below y 52; h = its starting height
 --   tab      = { w = 360, build = function(tab) return { refresh = fn } end },   -- once per window with a tab
---   sections = { { id, title, build = function(parent) return frame end,       -- 360 wide, its own height
+--   sections = { { id, title (a string, or a function), build = function(parent) return frame end,  -- 360 wide, its own height
+--                  hidden = fn (optional; true = not listed), dim = fn (optional; true = its header at 30%),
 --                  footer = function(parent) return frame end (optional; pinned to the window's foot),
 --                  onShow = fn (optional) }, … },
 --   globals  = { { label, choices, get, set, tip } … }   -- switches in Global Settings (optional)
@@ -132,7 +133,7 @@ function V:ApplyScale()
   root:SetScale(s)
   for id, st in pairs(W) do
     local d = db(id)
-    if st.sel and d.sel and d.sel.l then restorePlace(st.sel, d.sel, 0, 0, SEL_H) end
+    if st.sel and d.sel and d.sel.l then restorePlace(st.sel, d.sel, 0, 0, st.selH or SEL_H) end
     if st.set and d.set and d.set.l then restorePlace(st.set, d.set, 0, 0, SET_H) end
     for sid, pw in pairs(st.pops or {}) do
       local rec = d.pops[sid]
@@ -142,6 +143,7 @@ function V:ApplyScale()
   if UI.gHairRefresh then UI.gHairRefresh() end
 end
 
+local hookWorldTooltip   -- defined with the stacking code below
 local function ensureRoot()
   if root then return end
   root = CreateFrame("Frame", "GloomsSuiteWindows", UIParent)
@@ -149,6 +151,7 @@ local function ensureRoot()
   root:SetScript("OnHide", function() V:Closed() end)
   tinsert(UISpecialFrames, "GloomsSuiteWindows")   -- Escape closes every window
   buildLadder()
+  hookWorldTooltip()
   root:SetScale(SCALES[scaleIndex()])
   local ev = CreateFrame("Frame")
   ev:RegisterEvent("UI_SCALE_CHANGED"); ev:RegisterEvent("DISPLAY_SIZE_CHANGED")
@@ -213,6 +216,50 @@ local function watchClicks()
       end
     end
   end)
+end
+
+-- ------------------------------------------------------------
+-- WORLD TOOLTIPS stay off the windows (the owner, 2026-09-27: people walking
+-- under the cursor pop the game's tooltip ON TOP of the settings being
+-- adjusted). The tooltip strata is above every window, so it cannot be put
+-- behind them; instead, while the Suite is open, a WORLD tooltip (owned by
+-- UIParent or WorldFrame: a unit or object under the cursor) that would overlap
+-- any of our windows is hidden. Tooltips on buttons, bags and our own controls
+-- have other owners and are untouched. Our own hook on the shared tooltip; no
+-- other addon is modified, and it runs after whatever positioned the tooltip.
+-- ------------------------------------------------------------
+local function screenRect(fr)
+  local l, b, w, h = fr:GetRect(); if not l then return nil end
+  local s = fr:GetEffectiveScale()
+  return l * s, b * s, (l + w) * s, (b + h) * s
+end
+local function overlaps(a1, b1, c1, d1, a2, b2, c2, d2)
+  return a1 < c2 and a2 < c1 and b1 < d2 and b2 < d1
+end
+local function tipCoversWindow(tip)
+  if not (root and root:IsShown()) then return false end
+  local owner = tip:GetOwner()
+  if owner ~= UIParent and owner ~= WorldFrame then return false end
+  local l, b, r, t = screenRect(tip); if not l then return false end
+  for _, w in ipairs(order) do
+    if w:IsShown() then
+      for _, fr in ipairs({ w, w.tab }) do
+        if fr and fr:IsShown() then
+          local l2, b2, r2, t2 = screenRect(fr)
+          if l2 and overlaps(l, b, r, t, l2, b2, r2, t2) then return true end
+        end
+      end
+    end
+  end
+  return false
+end
+local tipHooked
+hookWorldTooltip = function()
+  if tipHooked or not GameTooltip then return end
+  tipHooked = true
+  local function check(tip) if tipCoversWindow(tip) then tip:Hide() end end
+  GameTooltip:HookScript("OnShow", check)
+  GameTooltip:HookScript("OnUpdate", check)    -- a cursor-anchored tooltip moves after it shows
 end
 
 -- ------------------------------------------------------------
@@ -281,6 +328,8 @@ end
 local function popOut(def, sid) end   -- (forward)
 local function popIn(def, sid) end
 
+-- A section's title may be a function (it changes: "Global Player Settings").
+local function secTitle(sec) if type(sec.title) == "function" then return sec.title() end return sec.title end
 local function layoutSettings(def)
   local st = W[def.id]; local win = st.set
   if not (win and win:IsShown()) then return end
@@ -296,10 +345,12 @@ local function layoutSettings(def)
   for sid, b in pairs(st.built) do if not d.pops[sid] and b.frame:GetParent() == child then b.frame:Hide() end end
   for _, f in pairs(st.footers or {}) do if f:GetParent() == win.content then f:Hide() end end
   for _, sec in ipairs(sectionList(def)) do
-    if not d.pops[sec.id] then
+    local hidden = sec.hidden and sec.hidden()
+    if hidden and d.open == sec.id then d.open = nil end
+    if not d.pops[sec.id] and not hidden then
       local h = st.heads[sec.id]
       if not h then
-        h = UI.gSectionHead(child, sec.title, {
+        h = UI.gSectionHead(child, secTitle(sec), {
           onToggle = function()
             d.open = (d.open ~= sec.id) and sec.id or nil
             layoutSettings(def)
@@ -312,6 +363,8 @@ local function layoutSettings(def)
         st.heads[sec.id] = h
       end
       h:ClearAllPoints(); h:SetPoint("TOPLEFT", child, "TOPLEFT", 20, -y); h:Show()
+      if type(sec.title) == "function" then h:SetTitle(secTitle(sec)) end
+      h:SetAlpha((sec.dim and sec.dim()) and UI.G_DIM or 1)
       local open = (d.open == sec.id)
       h:SetOpen(open)
       local b = open and builtSection(def, sec, child)
@@ -364,7 +417,7 @@ popOut = function(def, sid)
       onMoved = function() if d.pops[sid] then savePlace(pw, d.pops[sid]) end end,
       onResized = function() if d.pops[sid] then savePlace(pw, d.pops[sid]) end end })
     if pw.tab then makeTab(def, pw) end
-    local head = UI.gSectionHead(pw.content, sec.title, { popped = true, onPop = function() popIn(def, sid) end })
+    local head = UI.gSectionHead(pw.content, secTitle(sec), { popped = true, onPop = function() popIn(def, sid) end })
     head:SetPoint("TOPLEFT", pw.content, "TOPLEFT", 20, -POP_HEAD_Y)
     head:SetFrameLevel(pw.content:GetFrameLevel() + 25)
     local sa = UI.gScrollArea(pw.content)
@@ -440,7 +493,7 @@ local function buildGlobal(parent)
     local blk = UI.gProfileBlock(f, d.profile, productName(d) .. " Profile", CONTENT_W)
     blk.frame:SetPoint("TOPLEFT", 0, -y)
     f.blocks[#f.blocks + 1] = blk
-    y = y + 59 + 30
+    y = y + 57 + 30
   end
   -- the tools' own global switches, then the Addon UI Scale, two to a row
   local cells = {}
@@ -454,11 +507,11 @@ local function buildGlobal(parent)
     local x = (col == 0) and 0 or 190
     UI.gLabel(f, g.label):SetPoint("TOPLEFT", x, -y)
     local sw = UI.gSwitch(f, g.choices, g.get, g.set, { w = 170 })
-    sw:SetPoint("TOPLEFT", x, -(y + 17))
+    sw:SetPoint("TOPLEFT", x, -(y + 15))
     if g.tip then UI.attachTip(sw, g.label, g.tip) end
     f.switches[#f.switches + 1] = sw
     col = col + 1
-    if col == 2 then col = 0; y = y + 33 + 10 end
+    if col == 2 then col = 0; y = y + 31 + 10 end
   end
   local x = (col == 0) and 0 or 190
   local dial
@@ -485,7 +538,7 @@ local function buildGlobal(parent)
       .. " Pull along the ticks; the windows resize when you let go."
   end)
   f.dial = dial
-  y = y + 33
+  y = y + 31
   f:SetHeight(y)
   function f:refresh()
     for _, b in ipairs(self.blocks) do b:refresh() end
@@ -507,7 +560,9 @@ local function buildTool(def)
   local function closeAll() root:Hide() end
 
   -- THE SELECTOR
-  local sel = UI.gWindow({ parent = root, w = SEL_W, h = SEL_H, minH = 200, onFocus = front,
+  local selH = (def.selector and def.selector.h) or SEL_H
+  st.selH = selH
+  local sel = UI.gWindow({ parent = root, w = SEL_W, h = selH, minH = math.min(200, selH), onFocus = front,
     onClose = closeAll,
     onMoved = function() d.sel = d.sel or {}; savePlace(st.sel, d.sel) end,
     onResized = function() d.sel = d.sel or {}; savePlace(st.sel, d.sel) end })
@@ -549,7 +604,7 @@ local function placeDefaults(def)
   local total = (SEL_W + 20 + SET_W) * k
   local l = math.floor(((pw or 1920) - total) / 2)
   local t = math.floor(((ph or 1080) + SET_H * k) / 2)
-  restorePlace(st.sel, d.sel or {}, l, t, SEL_H)
+  restorePlace(st.sel, d.sel or {}, l, t, st.selH or SEL_H)
   restorePlace(st.set, d.set or {}, l + (SEL_W + 20) * k, t, SET_H)
 end
 

@@ -173,6 +173,35 @@ function UnitInVehicle() return false end
 function UnitPower() return 3 end
 function UnitPowerType() return 3 end
 function UnitAffectingCombat() return false end
+-- the unit numbers Gloom's Unit Frames reads (plain values here; secret in game)
+function UnitHealth() return 80000 end
+function UnitHealthMax() return 100000 end
+function UnitPowerMax() return 5 end
+function UnitHealthPercent() return 0.8 end
+function UnitPowerPercent() return 0.6 end
+function UnitGetTotalAbsorbs() return 0 end
+function UnitGetIncomingHeals() return 0 end
+function UnitIsPlayer() return true end
+function UnitIsConnected() return true end
+function UnitIsTapDenied() return false end
+function UnitReaction() return 4 end
+function UnitLevel() return 90 end
+function UnitClassification() return "normal" end
+function UnitRace() return "Orc", "Orc" end
+function UnitCreatureType() return "Humanoid" end
+function UnitIsAFK() return false end
+function UnitIsDND() return false end
+function UnitIsDead() return false end
+function UnitIsGhost() return false end
+function IsResting() return false end
+function UnitIsPVP() return false end
+function UnitIsGroupLeader() return false end
+function GetRaidTargetIndex() return nil end
+function UnitDetailedThreatSituation() return nil end
+function GetRuneCooldown() return 0, 0, true end
+PowerBarColor = setmetatable({}, { __index = function() return { r = 1, g = 0.9, b = 0.3 } end })
+RAID_CLASS_COLORS = RAID_CLASS_COLORS or setmetatable({}, { __index = function() return { r = 1, g = 0.96, b = 0.41, colorStr = "fffff569" } end })
+FACTION_BAR_COLORS = FACTION_BAR_COLORS or setmetatable({}, { __index = function() return { r = 1, g = 1, b = 0 } end })
 function IsMounted() return false end
 function IsInInstance() return false end
 function IsEncounterInProgress() return false end
@@ -281,3 +310,4 @@ local proto = getmetatable(__W.new("x")).__index
 -- (2026-09-27, for the old-style tools' login code)
 function CreateVector2D(x, y) return { x = x, y = y, GetXY = function(s) return s.x, s.y end } end
 function SetPortraitTexture() end
+dofile("wow-uf.lua")

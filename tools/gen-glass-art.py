@@ -173,6 +173,33 @@ def v3art(tmp):
         for y in range(4): dp[x, y] = (255, 255, 255, 255)
     d.save(os.path.join(UI, "g-dash.png")); print("g-dash.png  16x4 (2 units on, 2 off)")
 
+def dots():
+    """The EMPTY-color marks as DOTS (the owner, 2026-09-27: "they WERE 2px dashes,
+    now they're just 1px dots"): one-unit dots, three units apart (1 on, 2 off).
+    g-pill-dash.png: a pill's LEFT end (8 x 16 units at 4x = 32 x 64), the dots
+    spread evenly round its half circle on the stroke's centre line (the straight
+    runs are drawn by UI.gPill itself). g-disc-dash.png: the 15-unit round swatch
+    (128px), its ring as 15 dots."""
+    SS = 8
+    def disc_dots(size, cx, cy, r, d, angles):
+        n = size[0] * SS, size[1] * SS
+        im = Image.new("L", n, 0); dr = ImageDraw.Draw(im)
+        for a in angles:
+            x, y = (cx + r * math.cos(a)) * SS, (cy - r * math.sin(a)) * SS
+            dr.ellipse([x - d * SS / 2, y - d * SS / 2, x + d * SS / 2, y + d * SS / 2], fill=255)
+        out = Image.new("RGBA", size, (255, 255, 255, 0)); out.putalpha(im.resize(size, Image.LANCZOS))
+        return out
+    # pill end: centre (32, 32), stroke centre 30 px out (R 32 - half a unit), dot 4 px
+    arc = math.pi * 7.5                               # units along the half circle
+    n = max(1, round(arc / 3))
+    angs = [math.pi / 2 + (k + 0.5) / n * math.pi for k in range(n)]
+    disc_dots((32, 64), 32, 32, 30, 4, angs).save(os.path.join(UI, "g-pill-dash.png")); print("g-pill-dash.png  32x64 (%d dots)" % n)
+    # round swatch: 128 px for 15 units, stroke centre at 7 units, dot 1 unit
+    u = 128 / 15.0
+    disc_dots((128, 128), 64, 64, 7 * u, u, [k / 15 * 2 * math.pi for k in range(15)]).save(os.path.join(UI, "g-disc-dash.png")); print("g-disc-dash.png  128x128 (15 dots)")
+
+if len(sys.argv) > 1 and sys.argv[1] == "dots":
+    dots(); sys.exit(0)
 if len(sys.argv) > 1 and sys.argv[1] == "v3":
     with tempfile.TemporaryDirectory() as tmp:
         v3art(tmp)

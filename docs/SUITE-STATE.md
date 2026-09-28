@@ -9,10 +9,10 @@
 > **Keep this file short enough to re-read.** If it passes ~180 lines, move the settled history to
 > [ARCHIVE.md](ARCHIVE.md). A document nobody re-reads is a document nobody corrects.
 
-**Last updated:** 2026-09-27 (**the FOURTH Suite design, "two windows", is on master for Auras
-and Bars**: a selector + a settings window per tool, sections with pop-outs, Global Settings, Sansation
-only — `LibGloomSkin` **MINOR 16**, the Hub's `Windows.lua`. Unit Frames, Overlays, Portraits and Media
-still open in the old big window. The owner is testing in game; BACKLOG 16 holds the brief.)
+**Last updated:** 2026-09-27 (**the FOURTH Suite design, "two windows", is on master for Auras,
+Bars and Unit Frames**: a selector + a settings window per tool, sections with pop-outs, Global
+Settings, Sansation only — `LibGloomSkin` **MINOR 17**, the Hub's `Windows.lua`. Overlays, Portraits and
+Media still open in the old big window. BACKLOG 16 holds the brief and its decisions.)
 
 ---
 
@@ -61,7 +61,10 @@ of it.
   height-only resizing, drag-anywhere moving, all remembered; Global Settings (every tool's profile,
   the tools' own switches, the Addon UI Scale) is the Hub's and the same everywhere. **Sansation only;
   ONE palette** (violet · lilac · lime); **every control at its mock's own x/y inside its section**; a
-  control that cannot apply DIMS to 30%, never hides; one-screen-pixel outlines; the UI Scale offers
+  control that cannot apply DIMS to 30%, never hides; labels Sansation 10 with the control 15 under,
+  rows 41 apart, blocks 30; **"Use Class Color" in every color picker** (a color that follows the
+  logged-in class, re-colored at login — CONTRACTS §4); world tooltips hidden where they would cover
+  a window; one-screen-pixel outlines; the UI Scale offers
   whole-pixel sizes (+ in-between), 100% = the sharp size nearest the rest of the player's UI.
   CONTRACTS §2/§4 hold the API and the kit; FINDINGS §22 the sharpness evidence (check the owner's
   DISPLAY first). **Do not tidy or restyle an un-rebuilt tool on its own** — each is rebuilt from its
@@ -159,7 +162,8 @@ the revised dropdown list**, **and THE DARK KIT (MINOR 13, 2026-09-23 — the se
 stretched `UI.gButton / gSwitch / gDrop / gField / gDial / gCheck / gColor` (the color PILL), `UI.gList`
 (the owner's Dropdown/Popup mock), `UI.gHair` (one-pixel lines), `UI.gRounded`, `UI.gWindow` (tab ·
 body · floating close · resize grip), `UI.gSectionHead`, `UI.gScrollArea` (fades + bar),
-`UI.gProfileBlock`, `UI.G_DIM` (30%), `UI.G_NUDGE` (1)** — the older widgets kept, drawing on the light plate for the tabs
+`UI.gProfileBlock`, `UI.G_DIM` (30%), `UI.G_NUDGE` (0, measured), and (MINOR 17) the class-color
+source + `UI.StampClassColors`** — the older widgets kept, drawing on the light plate for the tabs
 not yet rebuilt; `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are aliases) · **`Shapes.lua`** (the suite's silhouette catalog — 21 shapes,
 `GloomsHub:ShapeAsset/ShapeInfo/GrowAnchor` — **the ONE grow-anchor; GB's `hgAnchor` delegates
 to it since 2026-09-20**) · **`Effects.lua`** (the eight shaped animation
@@ -237,16 +241,12 @@ cast/kick logic — a target's secret cast drawn from the duration object's perc
 the **TEXT pieces** (`GloomsUnitFrames_Text.lua`: shortcode templates → one `SetFormattedText`),
 the **AURA groups** (`GloomsUnitFrames_Auras.lua`: Buffs / Debuffs `AuraContainer` groups with
 class filters and Hub shapes — FINDINGS §20; the sample-icon PREVIEW while the tab's Auras section
-is open) and the **Unit Frames** tab (`GloomsUnitFrames_Tab.lua`, `SKIN_NEEDS = 12`: **built on the FIRST
-design's kit (2026-09-21) — since 2026-09-23 drawn scaled inside the new window, its profile row in
-the sidebar, until its rebuild** — Player / Target as
-the two Michroma buttons with Copy-from / Reset at the row's right, and every section built from
-its mock: **Global** (Visibility incl. Never · the unit's default text font · X / Y dials · Layer ·
-Level), the four rings as ONE `kitRingSection` with an ARC face (the Power mock) and a BAR face
-(the Health mock) and the ring's own extras (absorb / shield tint, the resource breakpoint and
-gap, the cast's interrupt-colour rows), **Texts** (rows with the template inline + the shortcode
-list on the panel) and **Auras** (named group rows, the Filters button opening the kit popover —
-class tri-states + Only Timed; the spell-ID lists are gone). The engine's BAR renderer
+is open) and the **Unit Frames windows** (`GloomsUnitFrames_Pages.lua`, `SKIN_NEEDS = 17`, **a
+TWO-WINDOW tool since 2026-09-27**: the selector is Player | Target, the tab "gloomUNITS: <unit>", seven
+sections from the owner's mocks — Global <Unit> Settings (with Copy Settings from the other unit and
+Reset to Defaults), Texts (rows + the Shortcodes popup), Auras (rows + the Filters popup), and the four
+rings from one row-flow builder with an ARC and a BAR face; `GloomsUnitFrames_Tab.lua`, the first
+design's tab, is out of the TOC and waits to be deleted). The engine's BAR renderer
 (`NewBar`, FINDINGS §21) sits beside the arc renderer; `/gu bar <ring> …` drives it from chat.
 `/gu` → `ToggleWindow("unitframes")`. Art in `Media/art/` is GENERATED (Python/PIL, the
 scripts were throwaway): `disc.png` + its ramp companion and `disc-ramp-10…90.png` (the ramp at

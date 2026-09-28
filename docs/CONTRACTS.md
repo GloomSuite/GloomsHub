@@ -77,11 +77,13 @@ GloomsHub:ToggleWindow(id?)      -- slash semantics: open→close if on `id` (or
 GloomsHub:RegisterTab{
   id, title, wordmark, order, profile,  -- as above; `product` = "GloomAuras" (Global Settings' label)
   windows  = true,                      -- routes Open / FocusTab / ShowPage / ToggleWindow here
-  selector = { build = function(content, api) end },   -- the SELECTOR window, 240 wide; draw below y 52;
+  selector = { build = function(content, api) end, h = 480 },   -- the SELECTOR window, 240 wide; draw
+                                        --   below y 52; `h` = its starting height (Unit Frames: 105);
                                         --   api.window = the window (its height changes: resize with it)
   tab      = { w = 360, build = function(tab) return { refresh = fn } end },  -- once PER window with a tab
                                         --   (the settings window and every pop-out); keep them in step
-  sections = { { id, title,
+  sections = { { id, title,                      -- title: a string, or a function (re-read at each layout)
+                 hidden = fn, dim = fn,         -- optional: true = not listed / its header at 30%
                  build  = function(parent) return frame end,  -- 360 wide, its own height; built ONCE,
                                         --   lazily, then MOVED between the settings window and its pop-out;
                                         --   change its height and the window re-lays out (OnSizeChanged)
@@ -424,20 +426,31 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     (disabled by another setting = 50%, never hidden).
   · `UI.popover` wears the kit since MINOR 12 (night plate, indigo rim, Play Bold 14 white title).
 
-  **★★ THE TWO-WINDOW KIT (MINOR 15-16, 2026-09-26/27) — what every rebuilt tool uses NOW.** The
+  **★★ THE TWO-WINDOW KIT (MINOR 15-17, 2026-09-26/27) — what every rebuilt tool uses NOW.** The
   glass kit's widgets below, RESTYLED in place (same names, same get/set/refresh/setEnabled
   behavior) plus the window pieces. Every widget's header comment in `Skin.lua` is its spec.
   · **Sansation only** (`FONT.sa/saM/saB` → Sansation Regular/Regular/Bold; `FONT.sn/snB/snL`).
     `COLOR.panel` #0f051d. Outlines are one SCREEN pixel at any scale (`UI.gHair(tex, "w"|"h")`,
     re-sized by `UI.gHairRefresh()` after a scale change; `UI.gOutline(frame, c, a)`).
-  · A labelled control is 33 tall (Sansation 12 label, 4, the 16-tall control) and **stretches to
+  · A labelled control is 31 tall (Sansation 10 label — its box 11 — then 4, then the 16-tall
+    control; rows 41 apart, blocks 30) and **stretches to
     the width it is given**: `UI.gSwitch(…, {w, h, accent, widths})` (equal segments, or `widths`),
     `UI.gDrop(parent, w, …)`, `UI.gField(parent, w, …)`, `UI.gDial(parent, {w, label, bare, …})`
     (21 ticks, the value's tick white, the box fills the rest), `UI.gColor(parent, {w, required, dot})`
     (checkbox + a color PILL, `UI.gPill`; `dot` keeps the small disc), `UI.gCheck(parent, label, get,
     set, size)`, `UI.gButton(parent, label, {w, h (15), pad (4), size (9), danger (coral at rest)})`.
-    `UI.gList` = the owner's Dropdown/Popup mock (sentence case; `upper = true` capitalizes).
-  · **Disabled = `UI.G_DIM` (0.3)**, never hidden. Boxed text sits `UI.G_NUDGE` (1) lower.
+    `UI.gList` = the owner's Dropdown/Popup mock (sentence case; `upper = true` capitalizes); an
+    option's `font` draws its line in that face; a `divider` gets 4 of space each side. `UI.gField`
+    exposes `.bg`. `UI.gSectionHead` has `:SetTitle(t)`.
+  · **Disabled = `UI.G_DIM` (0.3)**, never hidden. Boxed text is NOT nudged (`UI.G_NUDGE` = 0).
+  · **CLASS COLOR (MINOR 17).** `UI.gColor` (pill and `dot`) offers "Use Class Color" in its picker:
+    chosen, the value saved is an ordinary color table with `class = true` (so consumers read c[1..3]
+    unchanged); an edit makes it plain. **Each tool calls `UI.StampClassColors(itsSavedVariables)`
+    first thing at PLAYER_LOGIN** (Auras, Bars and Unit Frames do), which re-colors every marked table
+    to the logged-in class. A tool with sources of its OWN passes `sources = { {value, label, color()} }`,
+    `getSource()`, `setSource(v)` to `UI.gColor`; then `set(color)` means plain and must clear its source
+    (Unit Frames' fill / font colors: the UNIT's class, power, resource). `UI.ClassRGB()`, `UI.CLASS_SOURCE`,
+    `UI.ClassColorValue(prev)`, `UI.pickColorWithClass(opts, owner, title, refresh)`.
   · Windows: `UI.gRounded(host, {radius, color | top/bottom, corners, layer, sub})` → `:Place(x, y,
     w, h)` · `UI.gWindow({parent, w, h, minH, maxH, tabW, onClose, onMoved, onResized, onFocus})`
     (body gradient black → panel, `.content`, `.tab`, `.close` floating 20 above the top-right
@@ -445,7 +458,9 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     pixel grid) · `UI.gSectionHead(parent, title, {popped, onToggle, onPop})` · `UI.gScrollArea(parent)`
     → `{frame, child, SetContentHeight, ScrollTo, GetScroll, Update}` (fades + bar only while needed)
     · `UI.gCloseDisc` · `UI.gProfileBlock(parent, api, title, w)` (Global Settings' profile control).
-  · Art: `UI.G_CORNER`, `G_POPOUT`, `G_POPIN`, the pill caps and `g-dash` (`tools/gen-glass-art.py v3`).
+  · Art: `UI.G_CORNER`, `G_POPOUT`, `G_POPIN`, the pill caps (`tools/gen-glass-art.py v3`); the
+    empty-color dots on the pill ends and the round swatch (`gen-glass-art.py dots`). The pill's
+    straight dotted runs are 1×1 textures — never a tiled file (FINDINGS §21).
   **★ THE GLASS KIT (MINOR 14, 2026-09-25) — the GLASS design (retired 2026-09-27); its widgets live
   on restyled above.**
   Every widget's header comment in `Skin.lua` is its spec. One palette, no accent.

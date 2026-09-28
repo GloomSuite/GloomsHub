@@ -6,7 +6,7 @@
 -- in, resize and scroll the windows, open the right-click menus. Prints counts
 -- and the distinct errors.
 --   cd tools/harness && luajit sweep-v3.lua
-ADDONS = { "GloomsHub", "GloomsAuras", "GloomsBars" }
+ADDONS = { "GloomsHub", "GloomsAuras", "GloomsBars", "GloomsUnitFrames" }
 dofile("run.lua")
 local W = __W
 local errs, seen, counts = {}, {}, {}
@@ -65,6 +65,7 @@ end
 local SECTIONS = {
   auras = { "triggers", "appearance", "bar", "text", "effects", "load", "__global" },
   bars  = { "shape", "deco", "text", "glows", "casts", "cooldowns", "layout", "__global" },
+  unitframes = { "global", "texts", "auras", "health", "power", "resource", "cast", "__global" },
 }
 local function sweepTool(tool)
   try("open " .. tool, function() GloomsHub:Open(tool) end)
@@ -95,6 +96,12 @@ local function sweepTool(tool)
       try("popout resize", function() W.fire(w.grip, "OnMouseDown"); W.fire(w.grip, "OnUpdate"); W.fire(w.grip, "OnMouseUp") end)
       try("popout close", function() W.fire(w.close, "OnClick") end)
       bump("popin")
+    end
+  end
+  -- a tool's own popups (Unit Frames: Shortcodes, Filters) that the clicks opened
+  for _, w in ipairs(descendants(root)) do
+    if rawget(w, "close") and rawget(w, "openBeside") and w:IsShown() then
+      SKIP[w.close] = true; drive(tool, w, tool .. "/popup"); bump("popup"); w:Hide()
     end
   end
   -- resize, move and scroll the two main windows
@@ -164,6 +171,11 @@ try("aura menu", function()
 end)
 -- BARS
 sweepTool("bars")
+-- UNIT FRAMES: the sweep ends on the selector, whose last button is Target, so
+-- the second pass is the target frame; the popups (Shortcodes, Filters) are
+-- opened by their links and driven like pop-outs.
+sweepTool("unitframes")
+sweepTool("unitframes")
 -- switching: to an old-style tool (if loaded) and back, Escape, reopen
 try("switch", function() GloomsHub:FocusTab("auras"); GloomsHub:FocusTab("bars") end)
 try("escape", function() GloomsHub:SuiteRoot():Hide(); GloomsHub:ToggleWindow("bars"); GloomsHub:ToggleWindow("bars") end)

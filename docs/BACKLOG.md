@@ -6,71 +6,89 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-09-27 (**the FOURTH design, "two windows", is built for Auras and Bars** —
-a SELECTOR window + a SETTINGS window per tool, sections one open at a time, pop-outs, resizable
-heights, Global Settings, Sansation only; `LibGloomSkin` **MINOR 16**, the Hub's new `Windows.lua`.
-Verified outside the game; the owner is testing it in game. **Next: his fixes from that testing,
-then the other modules — item 16.**)
+**Last updated:** 2026-09-27, late (**Unit Frames is rebuilt in the two-window design** and waits on the
+owner's in-game look; Auras and Bars took his first round of in-game fixes. **The next session starts
+with item 18** — the owner's call.)
 ---
 
 ## Open items
 
-### 16 · ★ THE SUITE UI — THE TWO-WINDOW DESIGN (fourth redesign)
-**Repo:** `~/GloomsHub` (`Windows.lua` + the kit) · `~/GloomsAuras` (`Pages.lua`) · `~/GloomsBars` (the end of `Config.lua`) · later each tool · **Size:** in-game fixes from the owner's testing (small), then Unit Frames / Portraits / Overlays / Media once he mocks them (a session each) · **Evidence:** BUILT 2026-09-27 and verified OUTSIDE the game (`tools/harness/sweep-v3.lua`: both tools, every section, ~1,200 clicks / 850 picks / 125 dials / 155 fields / 50 pop-outs — 0 errors; every section, the selector, the preview and a pop-out rendered with `shoot-v3.lua` and compared with its mock). **In game the owner has seen it once**: the overlapping-windows bleed he reported is FIXED (level bands, see the header of `Windows.lua`), not yet re-seen by him.
+### 18 · ★ START HERE — a BAR's gradient at ANY angle (Unit Frames)
+**Repo:** `~/GloomsUnitFrames` (the bar renderer, `NewBar` in `GloomsUnitFrames.lua`) · **Size:** an
+investigation, about a session; it may end "not possible" · **Evidence:** `OBSERVED` by the owner
+2026-09-27 (an orb health bar: the Gradient Angle dial gives only four looks). The cause is known from
+the code: bar mode lays its gradient with `SetGradient` (HORIZONTAL / VERTICAL only) plus the ramp
+images `ramp.png` / `ramp-v.png`, and snaps the angle to the nearest of four. **Arcs take any angle.**
 
-The mocks are the Figma page **"GloomSuite UI 3"** (node ids: `tools/figma.py` → `get_metadata` on page `798:2`):
-"gloomAuras, main selector" / "gloomAuras, <section>" and "gloomBars, preview window" / "gloomBars,
-<section>" / "gloomBars, popout panel", plus "Dropdown/Popup Menu" (the kit's list). The glass
-design (item 16's previous brief) is RETIRED: its baked backgrounds and the shared background are
-deleted.
+The owner chose to INVESTIGATE rather than just make the dial step by 90° on bars (that is the
+fallback if no route works — his "option 1"). Ideas, all `SUSPECTED`: a gradient image on a texture
+that is NOT the fill, rotated with `SetRotation`, masked by the shape and clipped to the filled part
+the way the absorb overlay is (an invisible StatusBar sizing a `SetClipsChildren` frame). Walls already
+measured (FINDINGS §21): no `SetTexCoord` on a mask, no `SetRotatesTexture` on a masked fill, a tiled
+texture's scale is its file size. Test in game one step at a time; say what he should SEE.
+
+**Read first:** `~/GloomsUnitFrames/CLAUDE.md` (the BAR MODE block) · FINDINGS §21 · `NewBar`,
+`bar:SetGradient` and the absorb overlay in `~/GloomsUnitFrames/GloomsUnitFrames.lua`
+
+---
+
+### 16 · THE SUITE UI — THE TWO-WINDOW DESIGN (fourth redesign)
+**Repo:** `~/GloomsHub` (`Windows.lua` + the kit) · `~/GloomsAuras` (`Pages.lua`) · `~/GloomsBars` (the
+end of `Config.lua`) · `~/GloomsUnitFrames` (`GloomsUnitFrames_Pages.lua`) · later each tool ·
+**Size:** his fixes as they come (small), then Portraits / Overlays / Media once he mocks them (a
+session each) · **Evidence:** Auras + Bars `TESTED` in game by the owner 2026-09-27 (his fixes below
+landed and he confirmed them). **Unit Frames BUILT 2026-09-27, verified OUTSIDE the game only**
+(`tools/harness/sweep-v3.lua` drives all three tools, both units — 0 errors; every Unit Frames label
+matched to its mock within a unit by the same comparison); the owner has only seen the Shortcodes
+popup (its close disc was dead — fixed).
+
+The mocks: Figma page **"GloomSuite UI 3"** (`tools/figma.py` → `get_metadata` on page `798:2`):
+"gloomAuras, …", "gloomBars, …", "gloomUnits, <section>" + "Shortcodes Popup" (the Unit Frames
+selector is the frame still NAMED "gloomBars, preview window" at y 1002), "Dropdown/Popup Menu".
 
 **Next, in order:**
-1. **The owner's in-game testing** (`/reload` now — Sansation already loaded). BugSack text first, then
-   his list. Things only the game can show: sharpness, text sitting centered in its boxes
-   (`UI.G_NUDGE` = 1 for Sansation is UNVERIFIED), the dashed empty-color pill (the harness cannot
-   draw tiled textures), drag / resize feel, the focus band swap, pop-outs reopening where left.
-2. **His choices where the mocks were silent — confirm or change:** right-click an aura's name (tab
-   or list) = Rename · Duplicate · Move to Group · Delete; left-click the tab name = rename; Bars'
-   preset name left-click = the list, right-click = Rename · Duplicate · Delete; **Casts & Channels
-   keeps "Complete Color"** (not in the mock) under the rest; a group's Load Conditions is a window of
-   its own; font weights are the mocks' (Regular/Bold — the Saira one-lighter call was NOT carried
-   over; `/gloom fonttest` compares Sansation Regular vs Light).
-3. **Addon UI Scale above 100%:** the ladder now offers up to 3 px a unit where the windows fit (150%
-   on his 4K). He wanted "a couple larger scales" — confirm the steps are the ones he wants.
-4. Delete Auras `Config.lua`'s unmounted previous editor (`BuildTab`, the accordion, `Build*Section`s
-   — ~2,000 lines) once he approves Auras. **Keep `C.X` and every function it exports.**
-5. **Mocks needed from him:** the texture / sound / font / shape / spell pickers, the color picker,
+1. **The owner's look at Unit Frames in game** — BugSack text first. Choices of mine to confirm: a
+   Rectangle bar shows Width, then Height, then Rotation (not mocked); Rounded Fill dims on a bar (it
+   is arc-only in the engine; his Cast mock shows it live); the Filters popup is the sections' rows
+   (Never | Any | Only, two columns); the shortcode line for `[level]` says "level" (his said "item level").
+2. **Mocks needed from him:** the texture / sound / font / shape / spell pickers, the color picker,
    the name + confirm dialogs, the tooltip — all still wear the first design's kit.
-6. **Unit Frames, Portraits, Overlays, Media:** mock in the two-window design, then rebuild. Until
-   then they open in the OLD big window (Shell.lua), which the tool switcher moves to and from.
-7. Retire the old big window's glass-page code (`paintGlass`, the panel pool, page buttons) and the
-   first/second designs' kits when the last tool moves.
+3. **Portraits, Overlays, Media:** mock, then rebuild. Until then they open in the OLD big window
+   (Shell.lua), which the tool switcher moves to and from.
+4. Delete the unmounted previous editors once he approves: Auras `Config.lua`'s (`BuildTab`, the
+   accordion, `Build*Section`s, ~2,000 lines — **keep `C.X` and all it exports**) and Unit Frames'
+   `GloomsUnitFrames_Tab.lua` (out of the TOC already).
+5. Retire the old big window's code and the first/second designs' kits when the last tool moves.
 
 **Decisions taken (do not re-ask):**
-- **Two windows per tool** (the owner, 2026-09-27): SELECTOR (240) + SETTINGS (400, 20 padding each
-  side except the scrollbar); both closes (or Escape) close the whole tool; a pop-out's close only
-  puts its section back, collapsed. **Height only** is resizable (the lime bar under each window);
-  width is fixed. Move = drag any empty place or the tab. Positions, heights, the open section and
-  what is popped out persist across sessions (`GloomsHubDB.win`).
-- **One section open at a time**; more at once = pop them out. A popped section's header vanishes
-  from the settings window until it comes back.
-- **Global Settings is the Hub's**, identical in every tool: a "<Product> Profile" block per tool with
-  profiles, the tools' own switches (Auras' Hide Blizzard CDM), the Addon UI Scale.
-- **Sansation ONLY** (the owner: "should be used exclusively") — `FONT.sa/saM/saB` point at it.
-- **Dimmed = 30%** (the mocks' opacity; it was 50%). Never hidden.
-- **Close discs float 20 above the window's top-right corner**; the Bars preview starts 20 under its
-  wordmark (both moved by the owner 2026-09-27).
-- **Two-column layout** (170 · 20 · 170), controls stretched to their column; three-column rows are
-  107 · 106 · 107. **"Profiles"** in Global Settings (not "Preset" — Bars' style presets keep that word).
-- Groups: right-click menu, drag to reorder, click folds (unchanged). Everything under "Decisions
-  taken" in the glass brief that is about BEHAVIOR (triggers, Empty Icons override, Icon Scale, Name
-  Off/On, one palette) still stands; see ARCHIVE for the glass-specific ones.
+- **Two windows per tool:** SELECTOR (240; its starting height is the tool's, `selector.h` — Unit
+  Frames' is 105) + SETTINGS (400). Both closes / Escape close the tool; a pop-out's close only puts
+  its section back. Height-only resize. Positions, heights, open section and pop-outs persist.
+- **One section open at a time**; pop out for more. **Global Settings is the Hub's**, same in every tool.
+- **Sansation only · dimmed = 30%, never hidden · close discs 20 above the top-right corner.**
+- **Layout:** a control's LABEL is Sansation **10** (the owner, 2026-09-27); the control sits **15**
+  under it (the label's 11 + his 4 gap), rows **41** apart, blocks **30**. Columns 170 · 20 · 170;
+  three-column 107 · 106 · 107. Text inside boxes is NOT nudged (`UI.G_NUDGE` = 0, measured).
+- **Lists** (`UI.gList`): a divider has 4 of space each side; a font list draws each name in its own face.
+- **An empty color** is a dotted outline: 1-unit dots, 3 apart (he changed it from 2-unit dashes).
+- **"Use Class Color" is in every two-window color picker** (the owner, 2026-09-27): it jumps to the
+  class color; left there, the color FOLLOWS the logged-in character's class; any edit disconnects it.
+  Saved as a normal color + `class = true`, re-colored at login (CONTRACTS §4). Unit Frames' fill /
+  font colors keep their own Class / Power / Resource sources, which follow the UNIT.
+- **World tooltips never cover our windows:** one that would is hidden (his option 1 of 3).
+- **Auras:** left-click the tab's aura name = the list of auras to switch to (NOT rename); right-click
+  = Rename · Duplicate · Move to Group · Delete. Show Charge Count REPLACES the Displayed Text, so the
+  text field dims while it is on. An aura's text draws ABOVE a bar (its own frame).
+- **Bars:** the preset menus as built; Casts & Channels keeps its extra color, labelled **"Cast
+  Complete Color"**. Addon UI Scale's steps up to 150% on his 4K are right.
+- **Unit Frames:** Copy Settings from TARGET/PLAYER + Reset to Defaults sit at the foot of Global
+  <Unit> Settings. "View Shortcodes" (a lime link) opens the Shortcodes popup; a code clicked goes into
+  the text being edited, at its cursor. Filters opens a popup in the new design.
 
-**Read first:** the headers of `~/GloomsHub/Windows.lua` and `~/GloomsAuras/Pages.lua`, the "THE
-TWO-WINDOW DESIGN" block at the end of `~/GloomsBars/Config.lua` · CONTRACTS §2 (the two-window
-block) and §4 ("THE TWO-WINDOW KIT") · FINDINGS §22 (sharpness — and the owner's DISPLAY setup,
-before believing any "it looks soft") · the header of `tools/harness/run.lua` · LESSONS § "Reading
-the Figma mocks"
+**Read first:** the headers of `~/GloomsHub/Windows.lua`, `~/GloomsAuras/Pages.lua` and
+`~/GloomsUnitFrames/GloomsUnitFrames_Pages.lua`, the "THE TWO-WINDOW DESIGN" block at the end of
+`~/GloomsBars/Config.lua` · CONTRACTS §2 and §4 · FINDINGS §22 (the owner's DISPLAY setup before any
+"it looks soft") · the header of `tools/harness/run.lua` · LESSONS § "Reading the Figma mocks"
 
 ---
 
@@ -91,7 +109,7 @@ widths · the bar's own offset, separate from the arc's · `/gu bar <ring> …` 
 5. **Flips for non-symmetric bar shapes** — a mirrored file per shape + a "Mirror" choice; only
    matters for the crescent set. Masks refuse flipped texcoords (§21).
 6. **The Gu mark** — still the Hub's logo. Art.
-⚠ The tab's LOOK is item 16's; do not tidy it separately.
+⚠ The tab's LOOK is item 16's (rebuilt 2026-09-27); do not tidy it separately.
 
 **Read first:** `~/GloomsUnitFrames/CLAUDE.md` · [FINDINGS.md](FINDINGS.md) §18–§21
 
