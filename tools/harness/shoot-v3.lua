@@ -1,7 +1,7 @@
 -- Open a two-window tool on one section and dump its windows (Windows.lua):
 --   luajit shoot-v3.lua <tool> <section> [popout]
 --   → dump-v3-<tool>-sel.jsonl, dump-v3-<tool>-<section>.jsonl (then render.py)
-ADDONS = { "GloomsHub", "GloomsAuras", "GloomsBars", "GloomsUnitFrames" }
+ADDONS = { "GloomsHub", "GloomsAuras", "GloomsBars", "GloomsUnitFrames", "GloomsPortraits", "GloomsOverlays" }
 dofile("run.lua"); dofile("dump.lua")
 local tool, sec = arg[1] or "auras", arg[2] or "triggers"
 GloomsHub:Open(tool)

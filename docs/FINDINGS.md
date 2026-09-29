@@ -1697,8 +1697,30 @@ image instead.
   quarter-size `-base-s` mask (128 px) when the canvas was under **192 UI UNITS** — 191.3 at 96, 193.2
   at 97. On his 4K a unit is ~2 px, so the 128 px mask was stretched ~3×. **Fixed** to decide in
   screen PIXELS (`GetPhysicalScreenSize` × effective scale). Not yet re-seen by the owner.
-- A bar's GRADIENT takes only four angles (`SetGradient` is horizontal / vertical; the dial snaps) —
-  `OBSERVED` by the owner; whether any angle is possible on a masked bar is BACKLOG 18.
+- ~~A bar's GRADIENT takes only four angles~~ — **SOLVED 2026-09-27, `TESTED` by the owner in game**
+  ("it does seem to work"): the grad StatusBar only sizes a `SetClipsChildren` frame; inside it a SQUARE
+  ramp texture over the box, aimed with the 8-corner `SetTexCoord`, CLAMP-wrapped. Any angle, and it
+  still drains with the fill. (ARCHIVE: item 18.)
+
+### ▶ `TESTED` 2026-09-29 — a MaskTexture honours the CLAMP wrap
+- `/gu capprobe` (a throwaway, to delete): a 300 × 40 StatusBar whose right end is masked by a
+  half-disc `cap-r.png` (20 × 40) with `SetTexture(file, "CLAMP", "CLAMP")`. The owner, on screen: a
+  plain bar with only its right end round, the fill sweeping into the round end "smooth, no seam,
+  fills to the end". So a mask's solid EDGE extends past its rectangle — a small cap mask shapes one
+  end of a bar of ANY length, with a radius that never stretches. Two such masks AND together (both
+  ends). This is Unit Frames' **Rounded Ends** (Rectangle bars).
+- ⚠ A faint dark rim remains on the rounded end's edge pixels (`OBSERVED` by the owner): stacked
+  layers are each cut by their own mask, so on part-covered pixels the bottom layer's colour (a
+  gradient's dark base) bleeds through; Figma cuts the finished stack once. ~~Growing the upper
+  layers' masks by one screen pixel~~ **KILLED 2026-09-29** — it put points where the curve begins
+  and flattened the end's middle; reverted. The owner lives with the rim.
+
+### ▶ `TESTED` 2026-09-27 — a FontString showing a secret makes its GEOMETRY secret
+- BugSack, 82×: dragging a Unit Frames text (per-piece dragging) read `fs:GetPoint(1)` and did
+  arithmetic on it — the offsets came back SECRET numbers ("attempt to perform arithmetic … a secret
+  number value"). A text whose content is a secret value has secret position readouts too. **Rule:
+  never read a piece's position back from the game; move it from the saved offset** (`st.place` in
+  `GU:SetDragPiece`). The same rule now covers the unit's box (it reads `r.px` / `r.py`, kept when laid out).
 
 ### `KILLED` — do not revive these
 - ~~*"Flip a bar's silhouette with texture coordinates on the mask."*~~ **KILLED**, twice.

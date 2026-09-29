@@ -6,59 +6,66 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-09-27, late (**Unit Frames is rebuilt in the two-window design** and waits on the
-owner's in-game look; Auras and Bars took his first round of in-game fixes. **The next session starts
-with item 18** — the owner's call.)
+**Last updated:** 2026-09-29 (**every tool is now in the two-window design** — Portraits, Overlays and
+Media were built from the other tools' pages without mocks, at the owner's request; he is testing
+through use over the coming days. Item 18 closed. **The next session starts with item 19** — the
+owner's call.)
 ---
 
 ## Open items
 
-### 18 · ★ START HERE — a BAR's gradient at ANY angle (Unit Frames)
-**Repo:** `~/GloomsUnitFrames` (the bar renderer, `NewBar` in `GloomsUnitFrames.lua`) · **Size:** an
-investigation, about a session; it may end "not possible" · **Evidence:** `OBSERVED` by the owner
-2026-09-27 (an orb health bar: the Gradient Angle dial gives only four looks). The cause is known from
-the code: bar mode lays its gradient with `SetGradient` (HORIZONTAL / VERTICAL only) plus the ramp
-images `ramp.png` / `ramp-v.png`, and snaps the angle to the nearest of four. **Arcs take any angle.**
+### 19 · ★ START HERE — "Gloom's UI": Overlays + Portraits as one module, and GROUPS that move as one
+**Repo:** `~/GloomsOverlays` + `~/GloomsPortraits` (and the Hub if the module becomes a new tool) ·
+**Size:** a design DISCUSSION first — no code until the owner has chosen · **Evidence:** the owner's
+request, 2026-09-29.
 
-The owner chose to INVESTIGATE rather than just make the dial step by 90° on bars (that is the
-fallback if no route works — his "option 1"). Ideas, all `SUSPECTED`: a gradient image on a texture
-that is NOT the fill, rotated with `SetRotation`, masked by the shape and clipped to the filled part
-the way the absorb overlay is (an invisible StatusBar sizing a `SetClipsChildren` frame). Walls already
-measured (FINDINGS §21): no `SetTexCoord` on a mask, no `SetRotatesTexture` on a masked fill, a tiled
-texture's scale is its file size. Test in game one step at a time; say what he should SEE.
+Two things he wants to talk through:
+1. **Combining Gloom's Overlays and Gloom's Portraits into one "Gloom's UI" module.** Both are "put a
+   graphic on screen, place it, give it a layer and a show condition". Questions to put to him, not
+   answer for him: one addon or two sharing a window; what happens to `/go` and `/gp`; one profile
+   system (Overlays has profiles, Portraits has none); and the migration.
+   ⚠ **Overlays' SavedVariables globals are `VibeOverlayDB` / `VibeOverlayDBChar` and must not be
+   renamed without a real migration** (its CLAUDE.md, "THE ONE THING…"). ⚠ Portraits keeps its
+   predecessor's migration shim (its CLAUDE.md, the privacy rule) — a merge must not surface the old name.
+2. **Grouping elements and moving a group as one unit** — overlays with a portrait, or several
+   overlays. Prior art in the suite: Unit Frames' per-piece drag handles on top of a unit anchor
+   (`GU:SetDragPiece`, 2026-09-27) and its rings-hugging unit box; Auras' groups (a container with its
+   own load rule). Offer the shapes (a group = a shared anchor with member offsets, like a unit frame)
+   and let him pick.
 
-**Read first:** `~/GloomsUnitFrames/CLAUDE.md` (the BAR MODE block) · FINDINGS §21 · `NewBar`,
-`bar:SetGradient` and the absorb overlay in `~/GloomsUnitFrames/GloomsUnitFrames.lua`
+**Read first:** `~/GloomsOverlays/CLAUDE.md` · `~/GloomsPortraits/CLAUDE.md` · the headers of
+`~/GloomsOverlays/GloomsOverlays_Pages.lua` and `~/GloomsPortraits/GloomsPortraits_Pages.lua` · the
+PER-PIECE DRAGGING block in `~/GloomsUnitFrames/GloomsUnitFrames.lua` (search `SetDragPiece`)
 
 ---
 
 ### 16 · THE SUITE UI — THE TWO-WINDOW DESIGN (fourth redesign)
 **Repo:** `~/GloomsHub` (`Windows.lua` + the kit) · `~/GloomsAuras` (`Pages.lua`) · `~/GloomsBars` (the
 end of `Config.lua`) · `~/GloomsUnitFrames` (`GloomsUnitFrames_Pages.lua`) · later each tool ·
-**Size:** his fixes as they come (small), then Portraits / Overlays / Media once he mocks them (a
-session each) · **Evidence:** Auras + Bars `TESTED` in game by the owner 2026-09-27 (his fixes below
-landed and he confirmed them). **Unit Frames BUILT 2026-09-27, verified OUTSIDE the game only**
-(`tools/harness/sweep-v3.lua` drives all three tools, both units — 0 errors; every Unit Frames label
-matched to its mock within a unit by the same comparison); the owner has only seen the Shortcodes
-popup (its close disc was dead — fixed).
+**Size:** his fixes as they come (small) · **Evidence:** Auras, Bars and Unit Frames `TESTED` in game
+by the owner through 2026-09-29 (heavy Unit Frames use). **Portraits, Overlays and Media BUILT
+2026-09-27 without mocks** (the owner: "there's already a lot of source material") from the Unit
+Frames / Auras pages; he confirmed the Overlays eye rules and the new dialogs in game and is testing
+the rest through use. `tools/harness/sweep-v3.lua` drives all six tools — 0 errors.
 
 The mocks: Figma page **"GloomSuite UI 3"** (`tools/figma.py` → `get_metadata` on page `798:2`):
 "gloomAuras, …", "gloomBars, …", "gloomUnits, <section>" + "Shortcodes Popup" (the Unit Frames
 selector is the frame still NAMED "gloomBars, preview window" at y 1002), "Dropdown/Popup Menu".
 
 **Next, in order:**
-1. **The owner's look at Unit Frames in game** — BugSack text first. Choices of mine to confirm: a
-   Rectangle bar shows Width, then Height, then Rotation (not mocked); Rounded Fill dims on a bar (it
-   is arc-only in the engine; his Cast mock shows it live); the Filters popup is the sections' rows
-   (Never | Any | Only, two columns); the shortcode line for `[level]` says "level" (his said "item level").
+1. **His fixes from use** of Portraits, Overlays and Media — BugSack text first. My unmocked choices
+   to confirm if he raises them: Overlays' Class Color is one Off | Player | Target switch, Flip one
+   None | Horiz | Vert | Both switch, an empty Tint = white; Portraits has no nudge arrows (the dials'
+   arrow keys); Media's selector lists the five catalogs with counts.
 2. **Mocks needed from him:** the texture / sound / font / shape / spell pickers, the color picker,
-   the name + confirm dialogs, the tooltip — all still wear the first design's kit.
-3. **Portraits, Overlays, Media:** mock, then rebuild. Until then they open in the OLD big window
-   (Shell.lua), which the tool switcher moves to and from.
-4. Delete the unmounted previous editors once he approves: Auras `Config.lua`'s (`BuildTab`, the
-   accordion, `Build*Section`s, ~2,000 lines — **keep `C.X` and all it exports**) and Unit Frames'
-   `GloomsUnitFrames_Tab.lua` (out of the TOC already).
-5. Retire the old big window's code and the first/second designs' kits when the last tool moves.
+   Overlays' asset browser, the tooltip — all still wear the first design's kit. (The confirm and
+   name dialogs moved to the new kit 2026-09-27 at his request.)
+3. Delete the unmounted previous editors once he approves: Auras `Config.lua`'s (`BuildTab`, the
+   accordion, `Build*Section`s, ~2,000 lines — **keep `C.X` and all it exports**), Unit Frames'
+   `GloomsUnitFrames_Tab.lua`, Portraits' `GloomsPortraits_Tab.lua`, Overlays' `GloomsOverlays_Editor.lua`
+   (all out of their TOCs).
+4. **Every tool has moved**, so the old big window's code (`Shell.lua`'s panel) and the first/second
+   designs' kits can now be retired — check nothing still calls them first.
 
 **Decisions taken (do not re-ask):**
 - **Two windows per tool:** SELECTOR (240; its starting height is the tool's, `selector.h` — Unit
@@ -81,6 +88,17 @@ selector is the frame still NAMED "gloomBars, preview window" at y 1002), "Dropd
   text field dims while it is on. An aura's text draws ABOVE a bar (its own frame).
 - **Bars:** the preset menus as built; Casts & Channels keeps its extra color, labelled **"Cast
   Complete Color"**. Addon UI Scale's steps up to 150% on his 4K are right.
+- **No mouse wheel on a dial** (the owner, 2026-09-27): the wheel only ever scrolls; the number box
+  steps with ↑/↓ (Shift ×10). **Tooltips wait 1 second** (`UI.TIP_DELAY`), everywhere.
+- **Auras: Icon, Texture and Bar are real TYPES** (the owner, 2026-09-27 — he rejected merging Icon
+  and Texture): an Icon starts with no art (its trigger's icon, the red question mark until then), a
+  Texture on the white sphere; the tab says which. **Right-click → Duplicate As… / Change Type…**
+  switch types; each type's settings are kept, and each side remembers its size. Settings that do
+  nothing for the type DIM (the audit); **Bar Fill & Readouts is LOCKED shut** on a non-bar (the
+  Hub's section `locked`). Every Auras setting has a tooltip.
+- **The EYE (Auras and Overlays):** each item's saved eye is its state while NOT selected; selecting
+  shows it regardless, the eye on the selected item toggles only for now, and deselecting returns it
+  to its saved eye. In Overlays the eye is this preview — ON/OFF is the Visibility section's switch.
 - **Unit Frames:** Copy Settings from TARGET/PLAYER + Reset to Defaults sit at the foot of Global
   <Unit> Settings. "View Shortcodes" (a lime link) opens the Shortcodes popup; a code clicked goes into
   the text being edited, at its cursor. Filters opens a popup in the new design.
@@ -95,6 +113,11 @@ selector is the frame still NAMED "gloomBars, preview window" at y 1002), "Dropd
 ### 12 · Gloom's Unit Frames — what is left
 **Repo:** `~/GloomsUnitFrames` · **Size:** watching, then small pieces · **Evidence:** bar mode owner-QA'd 2026-09-21 (FINDINGS §21)
 
+**Done 2026-09-27/29:** a bar's gradient at ANY angle (item 18) · a shape's WIDTH and HEIGHT apart
+(it stretches; a lime bracket links them) · **no outline on bars** (the owner: no use for it; arcs keep
+theirs) · offsets out to ±1500 · **per-piece dragging** (a lime handle on the open section's piece) ·
+**Rounded Ends** on Rectangle bars (a CLAMP-wrapped cap mask, FINDINGS §21) · **Gloss** (his Figma
+inner shadow, rendered by `tools/gen-gloss.py`).
 **Done 2026-09-21:** BAR MODE on health / power / cast / resource (shape · size · rotation · fill
 direction · track · gradient · shift · absorb overlay · outline) · per-display strata + level
 (level = the display's lowest piece; a bar spans +6, an arc +15) · outline in either mode, three
@@ -109,9 +132,24 @@ widths · the bar's own offset, separate from the arc's · `/gu bar <ring> …` 
 5. **Flips for non-symmetric bar shapes** — a mirrored file per shape + a "Mirror" choice; only
    matters for the crescent set. Masks refuse flipped texcoords (§21).
 6. **The Gu mark** — still the Hub's logo. Art.
+7. **Delete the `/gu capprobe` probe** — its answer is in FINDINGS §21 (a mask honours CLAMP).
 ⚠ The tab's LOOK is item 16's (rebuilt 2026-09-27); do not tidy it separately.
 
 **Read first:** `~/GloomsUnitFrames/CLAUDE.md` · [FINDINGS.md](FINDINGS.md) §18–§21
+
+---
+
+### 20 · Gloom's Auras — two leftovers from the settings audit
+**Repo:** `~/GloomsAuras` · **Size:** small each · **Evidence:** the audit of 2026-09-27 (every
+control traced to its read site in `Displays.lua` / `CDM.lua`).
+1. **A note under Bar Type when the first trigger's spell is the wrong kind** (a Cooldown bar on an
+   aura, an Aura Duration bar on a cooldown): today that bar never moves and only Bar Type's tooltip
+   says why. `SUSPECTED` approach: the CDM already knows a spell's family.
+2. **Opacity may not fade a duration bar's moving fill** — `SUSPECTED` from the code (the engine's
+   drain lives on a frame parented to UIParent, `AuraDuration.lua` ~190); the backdrop and text do
+   fade. Needs one in-game look before any fix.
+
+**Read first:** `~/GloomsAuras/docs/HANDOFF.md` · `BuildBar` in `~/GloomsAuras/Pages.lua`
 
 ---
 
@@ -132,6 +170,16 @@ from him; each is: drop the files in, run the script, paste the rows.
 ## Not open — recorded so nobody re-raises them
 
 > Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
+
+- **Merging Auras' Icon and Texture types** — **REJECTED by the owner 2026-09-27**: they are different
+  to a user; they were made real instead (item 16's decisions).
+- **An outline on Unit Frames BARS** — **REMOVED by the owner 2026-09-27** ("I still can't think of a
+  use for it"); a stretched shape would have thickened its baked rim anyway. Arcs keep theirs.
+- **Growing the upper layers' masks to hide the faint dark rim at a rounded bar end** — **TRIED and
+  REVERTED 2026-09-29** (points where the curve begins, a flattened middle). The owner: *"I just live
+  with it."* FINDINGS §21. Do not re-offer.
+- **"Overlay and unit-frame sizes don't match"** — they DO: both are UI units on UIParent, measured
+  equal with `/go debug` 2026-09-29 (the case was a health orb at 80, not 123). Check the numbers first.
 
 - **The ONE big Suite window for rebuilt tools, and baked "glass" backgrounds** — **RETIRED
   2026-09-27.** The glass panels went solid (one shared background, drawn panels) on the 26th, then
@@ -252,79 +300,8 @@ from him; each is: drop the files in, run the script, paste the rows.
   **GONE with stage 2** (2026-09-19). The suite has ONE launcher; `/gp` opens the tab; the tab's
   open/close IS the lock. Reset lives in the tab's rail.
 
-- **"GB's per-character profiles don't work / my alt looks wrong"** — **FIXED 2026-08-15**, FINDINGS
-  §11. Login never loaded the bound profile. ⚠ The old bug already overwrote some saved presets;
-  a character may look wrong ONCE after the fix, then stay stable. That is not a new bug.
-- **GB profile New vs Copy** — **SETTLED 2026-08-15.** New = the factory look; Copy = a full
-  duplicate of the active profile. GA and Overlays already worked this way; GB was the outlier and
-  now matches. Do not "restore" New to snapshotting the current look.
-- **GB's PRESET block being orange and at the bottom of the rail** — **the owner asked for it**
-  (2026-08-15) so the two blocks stop reading as one control. Not a mistake, not a token drift.
-- **GA duration bars on 12.1** — **BUILT and owner-QA'd 2026-08-12** via `AuraContainer`. Mechanism
-  and traps in FINDINGS §1 and `~/GloomsAuras/docs/HANDOFF.md`. Do not redesign it.
-- **The Tracked-Bar mirror** (`BarMirrorValues`, `StartMirror`/`StopMirror`) — **DELETED 2026-08-12.**
-  It worked but needed a per-aura Blizzard config step. **Do not rebuild it**; FINDINGS §1.
-- **A display not returning after a mid-combat `/reload`** — **CLOSED, not fixable through the
-  presence mirror.** `TESTED` over 52 passes: the CDM never binds an already-applied aura to its
-  item frame after a reload. Three fixes were attempted and all three failed. FINDINGS §1.
-- **`GetValidAlertTypes` as a general "can this trigger fire?" oracle** — **NO.** It reports Agony
-  as unable to do apply/remove, which is false. Only its *pandemic* column matches observation.
-  FINDINGS §10.
-- **How ArcUI does DoT timers** — **SOLVED**, FINDINGS §1. Do not reverse-engineer it again.
-- **Combat-log / self-timed duration bars** — **do not build.** FINDINGS §1, option 2.
-- **"GA is broken in combat on 12.1" / "the Warlock profile is broken"** — **FALSE**, FINDINGS §1.
-- **`GetPlayerAuraBySpellID` as the deciding test** — **tested, returns `nil`**; player-only.
-- **The damage-meter Lua error storm** — **NOT OUR BUG** (FINDINGS §9). Do not re-diagnose.
-- **Quick Keybind Mode "blocked by GB's skin"** — **CLOSED, not a GB bug** (FINDINGS §8).
-- **GB's per-action icon overrides (`GB.Icons`)** — **SHIPPED and owner-QA'd.** No config UI wanted.
-  **Do not build tooling to find icon art.** ⚠ `IconsHD/` is git-ignored and `IconsManifest.lua`
-  ships EMPTY — the mechanism ships, the owner's art does not. **Never commit a populated manifest.**
-- **GB's icon zoom applying to every preset** — **FIXED and owner-QA'd 2026-07-26.**
-- **GA telling GB to glow a real action button** — **RULED OUT by the owner, 2026-08-25.** It was
-  offered twice as the exact fix for "make the Cataclysm button glow" (perfect shape, perfect
-  alignment, follows the bars automatically). He declined both times: *"I don't really want an aura
-  telling GB what to do — that's a level of complexity that I suspect would introduce more problems
-  than it solved."* **He is content aligning an aura over a button by hand.** Do not re-offer it.
-- **"GA's shape/animation does nothing"** — check WHICH shape and WHICH texture before believing it.
-  Measured against the icon rect, `roundsq1` crops **1.2%**, `roundsq2` 4.7%, `circle` 21.4%,
-  `diamond` 50.1%. A rounded square over soft-edged art is a legitimately invisible change.
-  Animations additionally need a Shape set — with none they are skipped by design. FINDINGS §14.
-- **Distribution to friends/guild** — not ready; the owner will say when.
-- **The user's own media shipping in the addon** — FIXED and purged. **Never re-track them.**
-- **The colour picker** — **FULLY owner-QA'd.** IN USE holds the USER's colours; it is not modal.
-- **GB's empty-button collapse hiding the CONTAINER** — **MOVED to the alpha path 2026-08-24**,
-  FINDINGS §13. Blizzard re-shows containers and GB is combat-gagged, so the hide could never hold.
-  **Do not reinstate `cont:SetShown(false)` for empties**; comments at both ends say so.
-- **"Gloom's Hub says my fonts did not load, but they work"** — **FIXED 2026-09-08**, FINDINGS §5.
-  The probe read its own first cold draw as the verdict, so it accused every drop-in catalog font on
-  every cold client start and never on `/reload`. It now re-checks ~2s later and reports only what
-  fails twice. ⚠ **The warning is still worth having** — a real typo or a deleted `.ttf` fails both
-  passes. **Do not gate font REGISTRATION on it**; that reasoning is unchanged and is what kept the
-  owner's fonts working throughout.
-- **"Buttons past the bar's count reappear in combat"** — **FIXED 2026-09-05**, FINDINGS §13 (see
-  the AMENDED block). Same mechanism as the empty-slot case, in the count path that was left behind.
-  Out-of-grid containers are now alpha-0 AND parked off-screen. ⚠ **The trigger is HOVERING the bars
-  in combat** — without that it will not reproduce, which is not the same as being fixed. **Do not
-  "simplify" the parking away**: alpha alone leaves an invisible button clickable on top of live
-  ones.
-- **`C_Spell.IsSpellUsable` being simply banned** — **QUALIFIED 2026-08-24**, FINDINGS §12. Still
-  invalid ALONE; valid ANDed with the cooldown mirror, and it is the only signal that sees a proc.
-  GA's `CASTABLE` trigger state is built on that pairing.
-- **Sourcing the "comes off cooldown" sound from events only** — **TRIED and WRONG**, FINDINGS §12.
-  `CooldownFrame_Clear` is not reliably fired; the polled reconciler is sometimes the only witness.
-  Judge the transition's DURATION, not which writer noticed. Do not re-split by source.
-- **A settle/debounce timer on the ready sound** — **REMOVED**, it swallowed real sounds.
-  `CDM:PlaySound`'s 1s per-display throttle already handles duplicates.
-- **"The owner has stale Hunter auras"** — **FALSE.** Those live in OTHER CHARACTERS' profiles.
-  ⚠ `GloomsAurasDB`/`GloomsBarsDB` hold one profile per character and display IDs restart in each
-  (`d18` exists several times). **Any script reading them must be profile-aware** — grabbing the
-  first regex match produced two confidently wrong diagnoses on 2026-08-24.
-- **Reporting EllesmereUI's font-cache bugs upstream** — **DECLINED by the owner, 2026-09-19.**
-  FINDINGS §16 names both bugs; the Hub-side fix makes them moot for us. Do not draft the report.
-- **"Make the bar FILL change colour in the pandemic window"** — **NOT BUILT, by design** (2026-09-19).
-  The fill is the engine's Blizzard button and cannot be restyled in combat (FINDINGS §1, §15); the
-  owner chose the BACKDROP and it shipped. Do not re-offer the fill.
-- **Immolate's pandemic sound firing every ~21s** — **NOT A BUG** (measured 2026-08-24: ~7 in 4.5
-  minutes). A Destruction rotation refreshes into the pandemic window constantly and the alert fires
-  each time; the spurious falloff one is separately suppressed (FINDINGS §12). Raised with the owner;
-  **he did not ask for anything.** Do not build a rate limit unprompted.
+- **Older "not open" records (settled July–August 2026)** — GB profiles and presets, GA's 12.1
+  duration bars and the deleted Tracked-Bar mirror, the damage-meter and Quick Keybind non-bugs, icon
+  overrides, the colour picker, empty-button collapse, the font-load warning, the ready-sound rules,
+  the Hunter-aura and EllesmereUI calls, the pandemic fill — moved to ARCHIVE.md ("NOT-OPEN RECORDS
+  moved out of the BACKLOG", 2026-09-29). **Read them there before re-raising any of those.**

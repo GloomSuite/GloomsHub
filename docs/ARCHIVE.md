@@ -19,6 +19,96 @@
 
 ---
 
+
+# BACKLOG item 18 — a BAR's gradient at ANY angle (Unit Frames) — CLOSED 2026-09-27, owner-QA'd
+The dial snapped a bar's gradient to four angles (`SetGradient` is horizontal/vertical only). Fixed
+with the absorb overlay's construction: the grad StatusBar's fill is invisible and only sizes a
+`SetClipsChildren` frame; inside it the ramp image (`ramp.png`, CLAMP-wrapped) is a SQUARE texture
+covering the box, aimed with the 8-corner `SetTexCoord` so a rotation stays a rotation, spanning the
+box's extent along the angle. The owner: "The gradient angle thing … does seem to work." `NewBar` in
+`GloomsUnitFrames.lua` (`bar:SetGradient` / `AimGradient`).
+
+# NOT-OPEN RECORDS moved out of the BACKLOG — 2026-09-29
+The backlog's "Not open" list had passed 300 lines. These entries, all settled July–August 2026, were
+moved here unchanged. **They are still decisions: do not re-raise any of them without new evidence.**
+
+- **"GB's per-character profiles don't work / my alt looks wrong"** — **FIXED 2026-08-15**, FINDINGS
+  §11. Login never loaded the bound profile. ⚠ The old bug already overwrote some saved presets;
+  a character may look wrong ONCE after the fix, then stay stable. That is not a new bug.
+- **GB profile New vs Copy** — **SETTLED 2026-08-15.** New = the factory look; Copy = a full
+  duplicate of the active profile. GA and Overlays already worked this way; GB was the outlier and
+  now matches. Do not "restore" New to snapshotting the current look.
+- **GB's PRESET block being orange and at the bottom of the rail** — **the owner asked for it**
+  (2026-08-15) so the two blocks stop reading as one control. Not a mistake, not a token drift.
+- **GA duration bars on 12.1** — **BUILT and owner-QA'd 2026-08-12** via `AuraContainer`. Mechanism
+  and traps in FINDINGS §1 and `~/GloomsAuras/docs/HANDOFF.md`. Do not redesign it.
+- **The Tracked-Bar mirror** (`BarMirrorValues`, `StartMirror`/`StopMirror`) — **DELETED 2026-08-12.**
+  It worked but needed a per-aura Blizzard config step. **Do not rebuild it**; FINDINGS §1.
+- **A display not returning after a mid-combat `/reload`** — **CLOSED, not fixable through the
+  presence mirror.** `TESTED` over 52 passes: the CDM never binds an already-applied aura to its
+  item frame after a reload. Three fixes were attempted and all three failed. FINDINGS §1.
+- **`GetValidAlertTypes` as a general "can this trigger fire?" oracle** — **NO.** It reports Agony
+  as unable to do apply/remove, which is false. Only its *pandemic* column matches observation.
+  FINDINGS §10.
+- **How ArcUI does DoT timers** — **SOLVED**, FINDINGS §1. Do not reverse-engineer it again.
+- **Combat-log / self-timed duration bars** — **do not build.** FINDINGS §1, option 2.
+- **"GA is broken in combat on 12.1" / "the Warlock profile is broken"** — **FALSE**, FINDINGS §1.
+- **`GetPlayerAuraBySpellID` as the deciding test** — **tested, returns `nil`**; player-only.
+- **The damage-meter Lua error storm** — **NOT OUR BUG** (FINDINGS §9). Do not re-diagnose.
+- **Quick Keybind Mode "blocked by GB's skin"** — **CLOSED, not a GB bug** (FINDINGS §8).
+- **GB's per-action icon overrides (`GB.Icons`)** — **SHIPPED and owner-QA'd.** No config UI wanted.
+  **Do not build tooling to find icon art.** ⚠ `IconsHD/` is git-ignored and `IconsManifest.lua`
+  ships EMPTY — the mechanism ships, the owner's art does not. **Never commit a populated manifest.**
+- **GB's icon zoom applying to every preset** — **FIXED and owner-QA'd 2026-07-26.**
+- **GA telling GB to glow a real action button** — **RULED OUT by the owner, 2026-08-25.** It was
+  offered twice as the exact fix for "make the Cataclysm button glow" (perfect shape, perfect
+  alignment, follows the bars automatically). He declined both times: *"I don't really want an aura
+  telling GB what to do — that's a level of complexity that I suspect would introduce more problems
+  than it solved."* **He is content aligning an aura over a button by hand.** Do not re-offer it.
+- **"GA's shape/animation does nothing"** — check WHICH shape and WHICH texture before believing it.
+  Measured against the icon rect, `roundsq1` crops **1.2%**, `roundsq2` 4.7%, `circle` 21.4%,
+  `diamond` 50.1%. A rounded square over soft-edged art is a legitimately invisible change.
+  Animations additionally need a Shape set — with none they are skipped by design. FINDINGS §14.
+- **Distribution to friends/guild** — not ready; the owner will say when.
+- **The user's own media shipping in the addon** — FIXED and purged. **Never re-track them.**
+- **The colour picker** — **FULLY owner-QA'd.** IN USE holds the USER's colours; it is not modal.
+- **GB's empty-button collapse hiding the CONTAINER** — **MOVED to the alpha path 2026-08-24**,
+  FINDINGS §13. Blizzard re-shows containers and GB is combat-gagged, so the hide could never hold.
+  **Do not reinstate `cont:SetShown(false)` for empties**; comments at both ends say so.
+- **"Gloom's Hub says my fonts did not load, but they work"** — **FIXED 2026-09-08**, FINDINGS §5.
+  The probe read its own first cold draw as the verdict, so it accused every drop-in catalog font on
+  every cold client start and never on `/reload`. It now re-checks ~2s later and reports only what
+  fails twice. ⚠ **The warning is still worth having** — a real typo or a deleted `.ttf` fails both
+  passes. **Do not gate font REGISTRATION on it**; that reasoning is unchanged and is what kept the
+  owner's fonts working throughout.
+- **"Buttons past the bar's count reappear in combat"** — **FIXED 2026-09-05**, FINDINGS §13 (see
+  the AMENDED block). Same mechanism as the empty-slot case, in the count path that was left behind.
+  Out-of-grid containers are now alpha-0 AND parked off-screen. ⚠ **The trigger is HOVERING the bars
+  in combat** — without that it will not reproduce, which is not the same as being fixed. **Do not
+  "simplify" the parking away**: alpha alone leaves an invisible button clickable on top of live
+  ones.
+- **`C_Spell.IsSpellUsable` being simply banned** — **QUALIFIED 2026-08-24**, FINDINGS §12. Still
+  invalid ALONE; valid ANDed with the cooldown mirror, and it is the only signal that sees a proc.
+  GA's `CASTABLE` trigger state is built on that pairing.
+- **Sourcing the "comes off cooldown" sound from events only** — **TRIED and WRONG**, FINDINGS §12.
+  `CooldownFrame_Clear` is not reliably fired; the polled reconciler is sometimes the only witness.
+  Judge the transition's DURATION, not which writer noticed. Do not re-split by source.
+- **A settle/debounce timer on the ready sound** — **REMOVED**, it swallowed real sounds.
+  `CDM:PlaySound`'s 1s per-display throttle already handles duplicates.
+- **"The owner has stale Hunter auras"** — **FALSE.** Those live in OTHER CHARACTERS' profiles.
+  ⚠ `GloomsAurasDB`/`GloomsBarsDB` hold one profile per character and display IDs restart in each
+  (`d18` exists several times). **Any script reading them must be profile-aware** — grabbing the
+  first regex match produced two confidently wrong diagnoses on 2026-08-24.
+- **Reporting EllesmereUI's font-cache bugs upstream** — **DECLINED by the owner, 2026-09-19.**
+  FINDINGS §16 names both bugs; the Hub-side fix makes them moot for us. Do not draft the report.
+- **"Make the bar FILL change colour in the pandemic window"** — **NOT BUILT, by design** (2026-09-19).
+  The fill is the engine's Blizzard button and cannot be restyled in combat (FINDINGS §1, §15); the
+  owner chose the BACKDROP and it shipped. Do not re-offer the fill.
+- **Immolate's pandemic sound firing every ~21s** — **NOT A BUG** (measured 2026-08-24: ~7 in 4.5
+  minutes). A Destruction rotation refreshes into the pandemic window constantly and the alert fires
+  each time; the spurious falloff one is separately suppressed (FINDINGS §12). Raised with the owner;
+  **he did not ask for anything.** Do not build a rate limit unprompted.
+
 # THE SECOND DESIGN, SUPERSEDED BY "GLASS" — 2026-09-25/26
 
 The second design (2026-09-23: the 250-wide SIDEBAR window, per-tool ACCENTS — Auras green, the

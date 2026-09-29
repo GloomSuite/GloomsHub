@@ -84,6 +84,9 @@ GloomsHub:RegisterTab{
                                         --   (the settings window and every pop-out); keep them in step
   sections = { { id, title,                      -- title: a string, or a function (re-read at each layout)
                  hidden = fn, dim = fn,         -- optional: true = not listed / its header at 30%
+                 locked = fn,                   -- optional (2026-09-27): true = header at 30% AND shut —
+                                        --   it can't be opened or popped out, and closes / goes back
+                                        --   in if it was (Auras' Bar Fill on a non-bar aura)
                  build  = function(parent) return frame end,  -- 360 wide, its own height; built ONCE,
                                         --   lazily, then MOVED between the settings window and its pop-out;
                                         --   change its height and the window re-lays out (OnSizeChanged)
@@ -296,7 +299,10 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     `onChange` does NOT fire on open — seeding the widgets is not an edit.
   - `UI.dirRow(parent, yTop, label, get, set)` → `{ refresh, setEnabled }` — "up"|"down"|"left"|"right"
   - `UI.makeScrollbar(parent, scrollFrame, place)` → thin orange-thumb bar with `:Sync()`
-  - `UI.attachTip(frame, title, body)` — the family hover tooltip (HookScript, coexists)
+  - `UI.attachTip(frame, title, body)` — the family hover tooltip (HookScript, coexists). **MINOR 18:**
+    it waits `UI.TIP_DELAY` (1 s) of hovering, and on the kit's composite controls it hooks the
+    parts that take the mouse — a switch's segments, a dial's strip and box, a color's pill and
+    checkbox — so a tip on the outer frame works (before, a tip on a `gSwitch` never showed).
   - `UI.dropdown(parent, w, getLabel, getOptions, getCurrent, onPick)` → the family's
     "pick from a list" (MINOR 3): a flat button + orange caret opening a flyout behind a
     full-screen click-catcher; `getOptions()` → `{ {value=,label=}, … }`; scrolls past 12
@@ -443,6 +449,12 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     option's `font` draws its line in that face; a `divider` gets 4 of space each side. `UI.gField`
     exposes `.bg`. `UI.gSectionHead` has `:SetTitle(t)`.
   · **Disabled = `UI.G_DIM` (0.3)**, never hidden. Boxed text is NOT nudged (`UI.G_NUDGE` = 0).
+  · **DIALS (MINOR 18):** `UI.dial` / `UI.gDial` take NO mouse wheel (the wheel only scrolls the
+    window); their number box steps with ↑/↓, Shift ×10, from the number typed if there is one.
+  · **DIALOGS (MINOR 18):** `UI.confirm` and `UI.nameDialog` wear the two-window kit — the list's plate
+    in a violet hairline, Sansation, `UI.gButton`s, the Suite windows' scale. The accept button is
+    coral only for Delete / Remove / Clear; **a confirm that does anything else must pass its own
+    `acceptLabel`** ("Copy", "Reset") — the default is "Delete".
   · **CLASS COLOR (MINOR 17).** `UI.gColor` (pill and `dot`) offers "Use Class Color" in its picker:
     chosen, the value saved is an ordinary color table with `class = true` (so consumers read c[1..3]
     unchanged); an edit makes it plain. **Each tool calls `UI.StampClassColors(itsSavedVariables)`

@@ -9,10 +9,11 @@
 > **Keep this file short enough to re-read.** If it passes ~180 lines, move the settled history to
 > [ARCHIVE.md](ARCHIVE.md). A document nobody re-reads is a document nobody corrects.
 
-**Last updated:** 2026-09-27 (**the FOURTH Suite design, "two windows", is on master for Auras,
-Bars and Unit Frames**: a selector + a settings window per tool, sections with pop-outs, Global
-Settings, Sansation only — `LibGloomSkin` **MINOR 17**, the Hub's `Windows.lua`. Overlays, Portraits and
-Media still open in the old big window. BACKLOG 16 holds the brief and its decisions.)
+**Last updated:** 2026-09-29 (**the FOURTH Suite design, "two windows", is on master for ALL SIX
+tools**: a selector + a settings window per tool, sections with pop-outs, Global Settings, Sansation
+only — `LibGloomSkin` **MINOR 18**, the Hub's `Windows.lua`. Portraits, Overlays and Media joined on
+2026-09-27, built without mocks; nothing opens in the old big window any more. BACKLOG 16 holds the
+brief and its decisions.)
 
 ---
 
@@ -218,13 +219,16 @@ animation), the **eight animations** with a settings popup built from each modul
 **Effects only** (draws no artwork — for overlaying a live action button), and **rotation** as both a
 fixed angle and a continuous spin.
 
-**`~/GloomsOverlays`** — `master`. Hard-deps the Hub; mounts the **Overlays** tab; frame pooling and
-in-place layout apply; all nine stratas plus a numeric Level.
+**`~/GloomsOverlays`** — `master`. Hard-deps the Hub; its windows are `GloomsOverlays_Pages.lua`
+(`SKIN_NEEDS = 17`; `GloomsOverlays_Editor.lua` is out of the TOC, to delete once approved); frame
+pooling and in-place layout apply; all nine stratas plus a numeric Level; the eye is a while-editing
+preview (`ov.preview`, `GloomsOverlays_SetPreview` / `SetPick`); `/go debug` prints real sizes.
 
 **`~/GloomsPortraits`** — `master`. Hard-deps the Hub; two files — the ENGINE (`GloomsPortraits.lua`:
 frames, `GloomsPortraitsDB`, the secret-identity handling of FINDINGS §17, a small API on the
-`GloomsPortraits` namespace) and the **Portraits** tab (`GloomsPortraits_Tab.lua`, `SKIN_NEEDS = 4`,
-order 40). `/gp` → `ToggleWindow("portraits")`. No profile block (two fixed units, one account-wide
+`GloomsPortraits` namespace) and its **windows** (`GloomsPortraits_Pages.lua`, `SKIN_NEEDS = 17`,
+order 40; the old `GloomsPortraits_Tab.lua` is out of the TOC). A **Level** within the strata since
+2026-09-29 (per mode, 0 = Auto). `/gp` → `ToggleWindow("portraits")`. No profile block (two fixed units, one account-wide
 config), no minimap button, no floating panel. Each mode keeps its own size/position/layer
 (`cfg.layouts[mode]`); the in-combat 2D stand-in wears the 2D set; a unit's visibility can be
 **Off** (`showCondition = "never"`, 2026-09-21). The Gp mark is

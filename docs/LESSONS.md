@@ -378,6 +378,15 @@ GU's `cNum` shows the live-stepping hook.
   passed `SetVertexColor(0, nil, nil)` and the Power panel would not open. Write the `if` out.
   **It bit again 2026-09-23** in `local Skin, minor = LibStub and LibStub(MAJOR, true)` — the version
   gate then read nil and refused to load a page set that was fine. Caught in review, not in game.
+  **And again 2026-09-27** in Unit Frames' drag handle (`self.AuraPreviewBox and self:AuraPreviewBox(…)`
+  → the size came back nil). The harness sweep caught it.
+- **`x and nil or false` is ALWAYS `false`** — `and nil` makes the whole left side nil, so `or false`
+  wins both ways. A toggle written `t.flag = (not on) and nil or false` can switch off and never back
+  on (Unit Frames' proportions bracket, 2026-09-27, the owner: "I can't REactivate it"). Write the `if`.
+- **A frame BUILT while it is being opened gets no `OnShow`** — a new frame is already shown, so the
+  first `Show()` is no transition. A section that must react to being opened (Unit Frames' drag
+  handle, Auras' dimming sync) needs the Hub's per-section `onShow` (it fires however the section
+  opens) or its own call at build time; an `OnShow` hook alone misses the FIRST open.
 - **A FontString anchored `TOP` + `LEFT` + `RIGHT` is over-constrained** and WoW resolves it
   unpredictably (the Bars preview caption drifted 10px left). Anchor two corners on the same edge
   (`TOPLEFT` + `TOPRIGHT`) and give y through those.
@@ -458,6 +467,11 @@ GU's `cNum` shows the live-stepping hook.
   (`SetHorizTile`) and hyperlinks don't render; `GetStringWidth` is approximate, so a header's
   pop-out icon can look further out than it will be. A section that changes its own height while
   it is first built re-enters the layout — guard it (`Windows.lua` `building`/`inLayout`).
+- (2026-09-29) `C_Timer.After/NewTimer` are no-ops in the stand-in — a deferred call never runs, so
+  do not rely on one for correctness (it hid the first-open drag handle). It has **no secret values**:
+  a text's secret geometry (FINDINGS §21) could only be caught in game. And it reads the LIVE
+  SavedVariables — a one-off error while the owner is playing can be the game writing a file mid-read;
+  rerun before chasing it.
 
 ### Exporting the glass from Figma (2026-09-25) — the glass design is retired; kept for any future export
 - The export recipe: per screen, Shift-click the glass panels, **Enter** (selects their direct

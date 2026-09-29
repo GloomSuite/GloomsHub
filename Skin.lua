@@ -9,7 +9,7 @@
 -- change it THERE and every consumer in the same session.
 -- ============================================================
 
-local MAJOR, MINOR = "LibGloomSkin-1.0", 17  -- MINOR 17 (2026-09-27): "Use Class Color" in every two-window color control (UI.ClassRGB, UI.CLASS_SOURCE, UI.ClassColorValue, UI.StampClassColors, UI.pickColorWithClass); gList `font` + dividers with space; gLabel 10; label→control 15. MINOR 16 (2026-09-27, the TWO-WINDOW design, Figma "GloomSuite UI 3"): Sansation everywhere (FONT.sa/saM/saB → Sansation), every glass widget restyled and STRETCHED to its column (gButton/gSwitch/gDrop/gField/gDial/gCheck/gColor → the pill, gList), UI.gPill, UI.gRounded (gradient + per-corner), UI.gCloseDisc, UI.gSectionHead, UI.gScrollArea (fades + bar), UI.gWindow (tab · body · close · resize grip · drag anywhere), UI.gSnap, UI.gProfileBlock, UI.G_POPOUT/G_POPIN. MINOR 15 (2026-09-26, glass → solid panels): COLOR.panel, UI.G_CORNER, UI.gPanel (the rounded panel), UI.gHair/gHairRefresh (a line ONE SCREEN PIXEL thick at any scale), UI.gOutline,  every glass-kit outline and rule is a hairline; UI.gSwitch's segments abut (Figma's 0.5 strokes, inside). MINOR 14 (2026-09-25, the THIRD redesign, "Glass"): THE GLASS KIT — COLOR.lime/slate/deep/list, FONT.saM, UI.gTitle/gLabel/gButton/gSwitch/gList/gDrop/gField/gDial/gCheck/gColor/gX/gScroll/gProfileBar, UI.dial `glass` + `nobox`, UI.colorDot `dot` + `gap`. MINOR 13 (2026-09-23, the SECOND redesign, "GloomSuite UI 2"): THE DARK KIT — COLOR.void/sky/jade/coral/flame, FONT.sa/saB (Saira), UI.accentOf, UI.pill, UI.pillPick, UI.profileStack, and UI.openList (the kit list, openable from any button), the dark UI.dial, UI.plate/rule/text/box/colorDot/toggle2/pillField/xbtn/scrollPane. MINOR 12 (2026-09-21, redesign stages 2–3): UI.chip (the colour chip), the picker's colour SOURCES (selected, committed by OK), the SHORT and BARE dials, UI.cell, the revised dropdown list, the kit popover. MINOR 11: THE KIT — the redesign's tokens (COLOR.plate/ink/violet/…, FONT.ui/uiB/mark) and widgets (UI.button · segments · toggleBar · check · field · label · pick · sectionHeader · dial · wordmark · profileRow); the old widgets stay for tabs not yet migrated
+local MAJOR, MINOR = "LibGloomSkin-1.0", 18  -- MINOR 18 (2026-09-27): no mouse wheel on UI.dial / UI.gDial (it only scrolls the window now); their number box steps with ↑/↓, Shift ×10; tooltips wait 1 s (UI.TIP_DELAY) and reach inside switches, dials and colors; UI.confirm and UI.nameDialog in the two-window design (the list plate, Sansation, the kit buttons; coral only for a destroying accept). MINOR 17 (2026-09-27): "Use Class Color" in every two-window color control (UI.ClassRGB, UI.CLASS_SOURCE, UI.ClassColorValue, UI.StampClassColors, UI.pickColorWithClass); gList `font` + dividers with space; gLabel 10; label→control 15. MINOR 16 (2026-09-27, the TWO-WINDOW design, Figma "GloomSuite UI 3"): Sansation everywhere (FONT.sa/saM/saB → Sansation), every glass widget restyled and STRETCHED to its column (gButton/gSwitch/gDrop/gField/gDial/gCheck/gColor → the pill, gList), UI.gPill, UI.gRounded (gradient + per-corner), UI.gCloseDisc, UI.gSectionHead, UI.gScrollArea (fades + bar), UI.gWindow (tab · body · close · resize grip · drag anywhere), UI.gSnap, UI.gProfileBlock, UI.G_POPOUT/G_POPIN. MINOR 15 (2026-09-26, glass → solid panels): COLOR.panel, UI.G_CORNER, UI.gPanel (the rounded panel), UI.gHair/gHairRefresh (a line ONE SCREEN PIXEL thick at any scale), UI.gOutline,  every glass-kit outline and rule is a hairline; UI.gSwitch's segments abut (Figma's 0.5 strokes, inside). MINOR 14 (2026-09-25, the THIRD redesign, "Glass"): THE GLASS KIT — COLOR.lime/slate/deep/list, FONT.saM, UI.gTitle/gLabel/gButton/gSwitch/gList/gDrop/gField/gDial/gCheck/gColor/gX/gScroll/gProfileBar, UI.dial `glass` + `nobox`, UI.colorDot `dot` + `gap`. MINOR 13 (2026-09-23, the SECOND redesign, "GloomSuite UI 2"): THE DARK KIT — COLOR.void/sky/jade/coral/flame, FONT.sa/saB (Saira), UI.accentOf, UI.pill, UI.pillPick, UI.profileStack, and UI.openList (the kit list, openable from any button), the dark UI.dial, UI.plate/rule/text/box/colorDot/toggle2/pillField/xbtn/scrollPane. MINOR 12 (2026-09-21, redesign stages 2–3): UI.chip (the colour chip), the picker's colour SOURCES (selected, committed by OK), the SHORT and BARE dials, UI.cell, the revised dropdown list, the kit popover. MINOR 11: THE KIT — the redesign's tokens (COLOR.plate/ink/violet/…, FONT.ui/uiB/mark) and widgets (UI.button · segments · toggleBar · check · field · label · pick · sectionHeader · dial · wordmark · profileRow); the old widgets stay for tabs not yet migrated
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if lib then
@@ -665,29 +665,53 @@ local function scrimHide()
   scrim:Hide()
 end
 
--- ★ Both dialogs wear the KIT since MINOR 11 (2026-09-21): the mocks draw no
--- dialog, so they are DERIVED from the colour picker — the night plate with
--- the indigo rim, a Play Bold 14 white title at the picker's 30/20 inset, a
--- Play 11 white body, the white field, and the kit's button row (dark OK and
--- Cancel; the confirm's accept is AMBER, because it destroys).
+-- The first redesign's dialog plate (MINOR 11): the night plate with the
+-- indigo rim. Still worn by the color picker and the other pickers until the
+-- owner mocks them; the name and confirm dialogs moved to the plate below.
 local function kitDialogPlate(f)
   local plate = f:CreateTexture(nil, "BACKGROUND"); plate:SetAllPoints()
   plate:SetColorTexture(COLOR.night.r, COLOR.night.g, COLOR.night.b, 1)
   UI.addEdges(f, COLOR.indigo, 1)
 end
 
+-- ★ The two-window design's DIALOG (MINOR 18, 2026-09-27 — the owner: "not
+-- the correct font or button style"): the kit's list plate (#0f051d, opaque,
+-- in a violet hairline — the "Dropdown/Popup Menu" mock), a Sansation 14
+-- white title 20 in, a Sansation 10 body or the kit's field 26 under it, and
+-- the kit's buttons (16 tall, Sansation 10) 20 from the bottom-left. The
+-- accept button is CORAL only when it destroys (Delete / Remove / Clear);
+-- Copy, Reset and OK are the plain violet button. It wears the Suite windows'
+-- scale (the Addon UI Scale), like the lists. Built on first use: the kit's
+-- pieces (UI.gTitle, UI.gButton, UI.gField, UI.gOutline) are defined further
+-- down this file.
+local DLG_W = 340
+local function gDialogFrame(name)
+  local f = CreateFrame("Frame", name, UIParent)
+  f:SetSize(DLG_W, 120); f:SetPoint("CENTER"); f:SetFrameStrata("FULLSCREEN_DIALOG"); f:EnableMouse(true)
+  local plate = f:CreateTexture(nil, "BACKGROUND"); plate:SetAllPoints()
+  plate:SetColorTexture(COLOR.panel.r, COLOR.panel.g, COLOR.panel.b, 1)
+  UI.gOutline(f, COLOR.violet)
+  f.title = UI.gTitle(f, "", 14); f.title:SetPoint("TOPLEFT", 20, -20)
+  return f
+end
+local function gDialogScale(f)
+  local root = _G.GloomsSuiteWindows
+  local es = (root and root:IsShown()) and root:GetEffectiveScale() or UIParent:GetEffectiveScale()
+  f:SetScale(es / UIParent:GetEffectiveScale())
+  if UI.gHairRefresh then UI.gHairRefresh() end
+end
+local function gDialogButton(f, label)
+  return UI.gButton(f, label, { h = 16, pad = 10, size = 10 })
+end
+
 -- Text entry. onAccept(name) fires on OK / Enter; Cancel and ESC drop it.
 function UI.nameDialog(titleText, initial, onAccept)
   if not nameDlg then
-    local W, H = 340, 128
-    local f = CreateFrame("Frame", "GloomSkinNameDialog", UIParent)
-    f:SetSize(W, H); f:SetPoint("CENTER"); f:SetFrameStrata("FULLSCREEN_DIALOG"); f:EnableMouse(true)
-    kitDialogPlate(f)
-    f.title = UI.newText(f, FONT.uiB, 14, COLOR.paper, "LEFT")
-    f.title:SetPoint("TOPLEFT", 30, -20)
-    f.box = UI.field(f, W - 60); f.box:SetPoint("TOPLEFT", 30, -54)
-    local okB = UI.button(f, "OK", { kind = "action" }); okB:SetPoint("BOTTOMLEFT", 30, 20)
-    local noB = UI.button(f, "Cancel", { kind = "action" }); noB:SetPoint("LEFT", okB, "RIGHT", 6, 0)
+    local f = gDialogFrame("GloomSkinNameDialog")
+    f.box = UI.gField(f, DLG_W - 40); f.box:SetPoint("TOPLEFT", 20, -46)
+    local okB = gDialogButton(f, "OK"); okB:SetPoint("BOTTOMLEFT", 20, 20)
+    local noB = gDialogButton(f, "Cancel"); noB:SetPoint("LEFT", okB, "RIGHT", 6, 0)
+    f:SetHeight(46 + 16 + 20 + 16 + 20)
     local function accept()
       -- Trimmed here, once, for every caller: a stray leading/trailing space made
       -- a second profile that LOOKED identical to the first in the dropdown.
@@ -701,6 +725,7 @@ function UI.nameDialog(titleText, initial, onAccept)
     noB:SetScript("OnClick", cancel)
     f.box:SetScript("OnEnterPressed", accept)
     f.box:SetScript("OnEscapePressed", cancel)
+    f.box:SetScript("OnEditFocusLost", nil)   -- the kit field commits on focus loss; a dialog does not
     tinsert(UISpecialFrames, "GloomSkinNameDialog")   -- ESC closes it
     f:HookScript("OnHide", scrimHide)
     f:Hide()
@@ -709,6 +734,7 @@ function UI.nameDialog(titleText, initial, onAccept)
   nameDlg.onAccept = onAccept
   nameDlg.title:SetText(titleText or "Name")
   nameDlg.box:SetText(initial or ""); nameDlg.box:SetCursorPosition(0)
+  gDialogScale(nameDlg)
   nameDlg:Show(); nameDlg:Raise(); scrimShow(nameDlg)
   nameDlg.box:SetFocus(); nameDlg.box:HighlightText()
   return nameDlg
@@ -716,19 +742,18 @@ end
 
 -- Yes/no confirm for destructive actions. ALWAYS used for deletes: a
 -- self-arming "click twice" button has no way to back out once armed
--- (the owner 2026-07-24) — this does, via Cancel or ESC.
+-- (the owner 2026-07-24) — this does, via Cancel or ESC. `acceptLabel`
+-- defaults to "Delete": ★ a confirm that does anything else MUST name its
+-- button ("Copy", "Reset") — an unnamed one asked to Delete a copy (2026-09-27).
+local DANGER = { Delete = true, Remove = true, Clear = true, ["Clear All"] = true }
 function UI.confirm(bodyText, onYes, acceptLabel, titleText)
   if not confirmDlg then
-    local W, H = 380, 140
-    local f = CreateFrame("Frame", "GloomSkinConfirm", UIParent)
-    f:SetSize(W, H); f:SetPoint("CENTER"); f:SetFrameStrata("FULLSCREEN_DIALOG"); f:EnableMouse(true)
-    kitDialogPlate(f)
-    f.title = UI.newText(f, FONT.uiB, 14, COLOR.paper, "LEFT")
-    f.title:SetPoint("TOPLEFT", 30, -20)
-    f.body = UI.newText(f, FONT.ui, 11, COLOR.paper, "LEFT")
-    f.body:SetPoint("TOPLEFT", 30, -48); f.body:SetWidth(W - 60); f.body:SetJustifyH("LEFT")
-    f.yes = UI.button(f, "Delete", { kind = "warn" }); f.yes:SetPoint("BOTTOMLEFT", 30, 20)
-    local noB = UI.button(f, "Cancel", { kind = "action" }); noB:SetPoint("LEFT", f.yes, "RIGHT", 6, 0)
+    local f = gDialogFrame("GloomSkinConfirm")
+    f.body = UI.newText(f, FONT.sa, 10, COLOR.paper, "LEFT")
+    f.body:SetPoint("TOPLEFT", 20, -46); f.body:SetWidth(DLG_W - 40); f.body:SetJustifyH("LEFT")
+    f.body:SetWordWrap(true)
+    f.yes = gDialogButton(f, "Delete"); f.yes:SetPoint("BOTTOMLEFT", 20, 20)
+    local noB = gDialogButton(f, "Cancel"); noB:SetPoint("LEFT", f.yes, "RIGHT", 6, 0)
     f.yes:SetScript("OnClick", function()
       local cb = f.onYes; f.onYes = nil; f:Hide(); if cb then cb() end
     end)
@@ -742,9 +767,13 @@ function UI.confirm(bodyText, onYes, acceptLabel, titleText)
   confirmDlg.title:SetText(titleText or "Are you sure?")
   confirmDlg.body:SetText(bodyText or "")
   -- The plate grows with its body (a profile delete may list the characters
-  -- using it): 48 above the text, 20 under it, the 17px buttons, 20 below.
-  confirmDlg:SetHeight(math.max(140, 48 + confirmDlg.body:GetStringHeight() + 20 + 17 + 20))
-  confirmDlg.yes:SetLabel(acceptLabel or "Delete")
+  -- using it): 46 above the text, 20 under it, the 16 buttons, 20 below.
+  confirmDlg:SetHeight(46 + math.ceil(confirmDlg.body:GetStringHeight()) + 20 + 16 + 20)
+  local label = acceptLabel or "Delete"
+  confirmDlg.yes._danger = DANGER[label] or nil
+  confirmDlg.yes:SetLabel(label)
+  confirmDlg.yes:paint()
+  gDialogScale(confirmDlg)
   confirmDlg:Show(); confirmDlg:Raise(); scrimShow(confirmDlg)
   return confirmDlg
 end
@@ -1778,12 +1807,39 @@ end
 -- title/body may be FUNCTIONS, resolved at hover time — for a widget whose
 -- content changes under a tip that can only be hooked once (colorPicker's
 -- palette pool). Plain strings behave exactly as before.
+-- ★ MINOR 18 (2026-09-27, the owner): a tooltip waits UI.TIP_DELAY (1 s) of
+-- hovering before it shows, so tips on every setting never get in the way.
+-- And it reaches INSIDE the kit's composite controls — a switch's segments, a
+-- dial's ticks and box, a color's pill and checkbox — which take the mouse
+-- themselves: a tip hooked on their outer frame never fired.
+UI.TIP_DELAY = 1
+local tipTimer
 function UI.attachTip(f, title, body)
-  f:HookScript("OnEnter", function()
-    showTip(f, type(title) == "function" and title() or title,
-               type(body)  == "function" and body()  or body)
-  end)
-  f:HookScript("OnLeave", function() if tipFrame then tipFrame:Hide() end end)
+  if not f then return end
+  local parts = {}
+  if rawget(f, "segs") then for _, sg in ipairs(f.segs) do parts[#parts + 1] = sg end end
+  if rawget(f, "strip") then parts[#parts + 1] = f.strip end
+  if rawget(f, "box") and f.box.HookScript then parts[#parts + 1] = f.box end
+  if rawget(f, "pill") then parts[#parts + 1] = f.pill end
+  if rawget(f, "check") and f.check.HookScript then parts[#parts + 1] = f.check end
+  if #parts == 0 then parts[1] = f end
+  for _, part in ipairs(parts) do
+    part:HookScript("OnEnter", function()
+      if tipTimer then tipTimer:Cancel(); tipTimer = nil end
+      local function show()
+        tipTimer = nil
+        if not part:IsVisible() or (part.IsMouseOver and not part:IsMouseOver()) then return end
+        showTip(part, type(title) == "function" and title() or title,
+                      type(body)  == "function" and body()  or body)
+      end
+      if C_Timer and C_Timer.NewTimer and (UI.TIP_DELAY or 0) > 0 then tipTimer = C_Timer.NewTimer(UI.TIP_DELAY, show)
+      else show() end
+    end)
+    part:HookScript("OnLeave", function()
+      if tipTimer then tipTimer:Cancel(); tipTimer = nil end
+      if tipFrame then tipFrame:Hide() end
+    end)
+  end
 end
 
 -- ------------------------------------------------------------
@@ -2437,7 +2493,7 @@ function UI.dial(parent, opts)
   local TICKS = dark and 21 or (short and 26 or 47)     -- positions the mark can take: post, the ticks, post
   local strip = CreateFrame("Frame", nil, f)
   strip:SetPoint("TOPLEFT", 0, -TOP); strip:SetSize(WIN_W, glass and 18 or (dark and 21 or 17))
-  strip:EnableMouse(true); strip:EnableMouseWheel(true)
+  strip:EnableMouse(true)
   local ticks = strip:CreateTexture(nil, "ARTWORK")
   local mark = strip:CreateTexture(nil, "OVERLAY")
   if glass then
@@ -2549,14 +2605,19 @@ function UI.dial(parent, opts)
     local units = (x - d.x) * ((maxV - minV) / dragPx) * (IsShiftKeyDown() and 10 or 1)
     apply(d.v + units)
   end)
-  local function wheel(_, delta)
-    if not enabled then return end
-    dropBoxFocus()
-    apply(cur + delta * step * (IsShiftKeyDown() and 10 or 1))
-  end
-  strip:SetScript("OnMouseWheel", wheel)
-  box:EnableMouseWheel(true); box:SetScript("OnMouseWheel", wheel)
-  UI.attachTip(strip, opts.label or "", "Press anywhere on the ticks and pull — keep going past them if you like; the full range is a long drag, Shift is ×10. The wheel steps it. Click the number to type one.")
+  -- ★ NO mouse wheel on a dial (the owner, 2026-09-27): scrolling the window
+  -- past one changed its value by accident. The wheel only ever scrolls; with
+  -- it off here, it falls through to the scroll area underneath. Stepping is
+  -- the arrow keys in the number box (Shift ×10).
+  strip:EnableMouseWheel(false); box:EnableMouseWheel(false)
+  -- ↑ / ↓ in the number box: from the number TYPED, if there is one
+  box:SetScript("OnArrowPressed", function(self, key)
+    if not enabled or (key ~= "UP" and key ~= "DOWN") then return end
+    local typed = tonumber((self:GetText() or ""):match("[-%d%.]+"))
+    apply((typed or cur) + (key == "UP" and 1 or -1) * step * (IsShiftKeyDown() and 10 or 1))
+    self:SetText(fmt(cur)); self:HighlightText()
+  end)
+  UI.attachTip(strip, opts.label or "", "Press anywhere on the ticks and pull — keep going past them if you like; the full range is a long drag, Shift is ×10. Click the number to type one; the arrow keys step it there (Shift ×10).")
 
   -- The box: click to type. Enter or leaving commits; Escape puts it back.
   box:SetScript("OnEditFocusGained", function(self) editing = true; self:SetText(fmt(cur)); self:HighlightText() end)
@@ -2568,7 +2629,6 @@ function UI.dial(parent, opts)
   end)
   box:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
   box:SetScript("OnEscapePressed", function(self) self:SetText(fmt(cur)); self:ClearFocus() end)
-  box.stepper = function(self, delta) apply(cur + delta * step); self:SetText(fmt(cur)); self:HighlightText() end
 
   function f:refresh() cur = snap(opts.get() or minV); paint() end
   function f:setEnabled(on)
@@ -3939,7 +3999,7 @@ end
 -- value WHITE — then, 10 on, the value box (violet 30%, Sansation 10 white)
 -- filling the rest of `w` (170, a column). 31 tall; 16 with `bare` (no label).
 -- Same behavior as every dial in the suite: press on the ticks and pull (keep
--- going past them), Shift ×10, the wheel steps it, click the number to type.
+-- going past them), Shift ×10, click the number to type (↑/↓ step it there).
 --   opts = { get, set, min, max, step, unit, fmt, dragPx, label, bare, w, nobox }
 function UI.gDial(parent, opts)
   local minV, maxV, step = opts.min or 0, opts.max or 100, opts.step or 1
@@ -3964,7 +4024,7 @@ function UI.gDial(parent, opts)
   f.label = UI.gLabel(f, bare and "" or (opts.label or "")); f.label:SetPoint("TOPLEFT", 0, 0)
   local strip = CreateFrame("Frame", nil, f)
   strip:SetPoint("TOPLEFT", 0, -TOP); strip:SetSize(101, 16)
-  strip:EnableMouse(true); strip:EnableMouseWheel(true)
+  strip:EnableMouse(true)
   local ticks = {}
   for i = 0, 20 do
     local t = strip:CreateTexture(nil, "ARTWORK")
@@ -4020,14 +4080,19 @@ function UI.gDial(parent, opts)
     local units = (x - d.x) * ((maxV - minV) / dragPx) * (IsShiftKeyDown() and 10 or 1)
     apply(d.v + units)
   end)
-  local function wheel(_, delta)
-    if not enabled then return end
-    dropBoxFocus()
-    apply(cur + delta * step * (IsShiftKeyDown() and 10 or 1))
-  end
-  strip:SetScript("OnMouseWheel", wheel)
-  box:EnableMouseWheel(true); box:SetScript("OnMouseWheel", wheel)
-  UI.attachTip(strip, opts.label or "", "Press anywhere on the ticks and pull — keep going past them if you like; the full range is a long drag, Shift is ×10. The wheel steps it. Click the number to type one.")
+  -- ★ NO mouse wheel on a dial (the owner, 2026-09-27): scrolling the window
+  -- past one changed its value by accident. The wheel only ever scrolls; with
+  -- it off here, it falls through to the scroll area underneath. Stepping is
+  -- the arrow keys in the number box (Shift ×10).
+  strip:EnableMouseWheel(false); box:EnableMouseWheel(false)
+  -- ↑ / ↓ in the number box: from the number TYPED, if there is one
+  box:SetScript("OnArrowPressed", function(self, key)
+    if not enabled or (key ~= "UP" and key ~= "DOWN") then return end
+    local typed = tonumber((self:GetText() or ""):match("[-%d%.]+"))
+    apply((typed or cur) + (key == "UP" and 1 or -1) * step * (IsShiftKeyDown() and 10 or 1))
+    self:SetText(fmt(cur)); self:HighlightText()
+  end)
+  UI.attachTip(strip, opts.label or "", "Press anywhere on the ticks and pull — keep going past them if you like; the full range is a long drag, Shift is ×10. Click the number to type one; the arrow keys step it there (Shift ×10).")
   box:SetScript("OnEditFocusGained", function(self) editing = true; self:SetText(fmt(cur)); self:HighlightText() end)
   box:SetScript("OnEditFocusLost", function(self)
     editing = false

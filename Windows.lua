@@ -29,6 +29,9 @@
 --   tab      = { w = 360, build = function(tab) return { refresh = fn } end },   -- once per window with a tab
 --   sections = { { id, title (a string, or a function), build = function(parent) return frame end,  -- 360 wide, its own height
 --                  hidden = fn (optional; true = not listed), dim = fn (optional; true = its header at 30%),
+--                  locked = fn (optional; true = header at 30% AND shut: it can't be opened or
+--                    popped out, and closes / goes back in if it was — Auras' Bar Fill on a
+--                    non-bar aura, the owner 2026-09-27),
 --                  footer = function(parent) return frame end (optional; pinned to the window's foot),
 --                  onShow = fn (optional) }, … },
 --   globals  = { { label, choices, get, set, tip } … }   -- switches in Global Settings (optional)
@@ -335,6 +338,7 @@ local function layoutSettings(def)
   if not (win and win:IsShown()) then return end
   if st.inLayout then st.again = true; return end
   st.inLayout = true
+  local putBack = {}   -- popped-out sections that just locked: put back after the layout
   local ok, err = pcall(function()
   local d = db(def.id)
   local sa = st.scroll
@@ -347,6 +351,9 @@ local function layoutSettings(def)
   for _, sec in ipairs(sectionList(def)) do
     local hidden = sec.hidden and sec.hidden()
     if hidden and d.open == sec.id then d.open = nil end
+    local locked = sec.locked and sec.locked()
+    if locked and d.open == sec.id then d.open = nil end
+    if locked and d.pops[sec.id] then putBack[#putBack + 1] = sec.id end
     if not d.pops[sec.id] and not hidden then
       local h = st.heads[sec.id]
       if not h then
@@ -364,7 +371,8 @@ local function layoutSettings(def)
       end
       h:ClearAllPoints(); h:SetPoint("TOPLEFT", child, "TOPLEFT", 20, -y); h:Show()
       if type(sec.title) == "function" then h:SetTitle(secTitle(sec)) end
-      h:SetAlpha((sec.dim and sec.dim()) and UI.G_DIM or 1)
+      h:SetAlpha((locked or (sec.dim and sec.dim())) and UI.G_DIM or 1)
+      h:EnableMouse(not locked); h.pop:EnableMouse(not locked)
       local open = (d.open == sec.id)
       h:SetOpen(open)
       local b = open and builtSection(def, sec, child)
@@ -389,6 +397,7 @@ local function layoutSettings(def)
   if not ok then geterrorhandler()(err) end
   restack()   -- pieces built during the layout take their place in the window's band
   if st.again then st.again = false; layoutSettings(def) end
+  for _, sid in ipairs(putBack) do popIn(def, sid) end   -- a popped-out section that just locked
 end
 
 -- ------------------------------------------------------------
@@ -406,6 +415,7 @@ end
 popOut = function(def, sid)
   local st = W[def.id]; local d = db(def.id)
   local sec = findSection(def, sid); if not sec then return end
+  if sec.locked and sec.locked() then return end
   d.pops[sid] = d.pops[sid] or (d.popPlaces and d.popPlaces[sid]) or {}
   d.pops[sid].shown = true
   if d.open == sid then d.open = nil end

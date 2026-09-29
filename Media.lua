@@ -538,276 +538,186 @@ function Media:SoundKits()
 end
 
 -- ============================================================
--- The Media tab — the reskinned Fonts/Textures/Graphics manager
--- over the API above (functional port of StoneTweaks_UI's three
--- media pages, rebuilt in the Gloom language: one-open accordion,
--- flat inputs/buttons, orange scrollbar). Registered into the
--- shell; build(container) runs lazily on first show.
+-- The MEDIA windows — ★ THE TWO-WINDOW DESIGN (2026-09-27). Media was never
+-- mocked: it is built from the other tools' pages (the owner, 2026-09-27:
+-- "there's already a lot of source material"), over the API above. The Hub's
+-- Windows.lua owns the windows; this draws:
+--   the SELECTOR — the five catalogs as a list with their counts (a click
+--     opens that section), the one open violet 30%;
+--   the TAB — "gloomMEDIA:" and what the catalog is;
+--   five SECTIONS — Fonts · Textures · Graphics · Sounds (each: Display Name
+--     | File Name, Add, what the catalog is for, then its entries with a
+--     preview and a remove X) · Game Sounds (search, click to hear).
+-- The numbers are the family's: a labelled control is 31 tall, rows 41
+-- apart, columns 170 at 0 / 190.
 -- ============================================================
 
 local UI, COLOR, FONTS = GloomsHub.UI, GloomsHub.COLOR, GloomsHub.FONT
+local LIME, LILAC, VIOLET, CORAL = COLOR.lime, COLOR.lilac, COLOR.violet, COLOR.coral
+local DIM = UI.G_DIM or 0.3
+local MP = { secs = {} }
 
-local SECTION_HDR_H = 36
-local ROW_H = 38
-
-local sections, refreshers = {}, {}
-local scrollFrame, scrollChild, scrollbar, statusText
-
-local function setStatus(msg, ok)
-    if not statusText then return end
-    local c = (ok == nil and COLOR.mute) or (ok and COLOR.green) or COLOR.red
-    statusText:SetTextColor(c.r, c.g, c.b)
-    statusText:SetText(msg or "")
+local function refreshAll()
+    for _, s in ipairs(MP.secs) do if s.refresh then s.refresh() end end
+    if MP.renderSelector then MP.renderSelector() end
 end
 
-local function relayout()
-    local y = 0
-    for _, s in ipairs(sections) do
-        s.header:ClearAllPoints()
-        s.header:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, -y)
-        s.header:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", 0, -y)
-        y = y + SECTION_HDR_H
-        s.caret:SetRotation(s.open and UI.CARET_DOWN or 0)
-        if s.open then
-            s.body:ClearAllPoints()
-            s.body:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, -y)
-            s.body:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", 0, -y)
-            s.body:Show()
-            y = y + s.body:GetHeight()
-        else
-            s.body:Hide()
+local function note(parent, text, w, size)
+    local n = UI.newText(parent, FONTS.sa, size or 10, LILAC, "LEFT")
+    n:SetWidth(w or 360); n:SetJustifyH("LEFT"); n:SetWordWrap(true); n:SetText(text or "")
+    return n
+end
+-- A status line: lime for done, coral for a problem, lilac for news.
+local function status(fs, msg, ok)
+    local c = (ok == nil and LILAC) or (ok and LIME) or CORAL
+    fs:SetTextColor(c.r, c.g, c.b); fs:SetText(msg or "")
+end
+
+-- ------------------------------------------------------------
+-- A CATALOG section (Fonts / Textures / Graphics / Sounds): Display Name |
+-- File Name, the Add button and its status, the note, then one row per entry
+-- (the name, the file under it in lilac, the preview at 190, the X), 30 apart.
+-- ------------------------------------------------------------
+local ROW_H = 30
+local function buildCatalog(parent, spec)
+    local f = CreateFrame("Frame", nil, parent); f:SetSize(360, 200)
+    local s = { frame = f }
+    MP.secs[#MP.secs + 1] = s
+    local nameL = UI.gLabel(f, "Display Name"); nameL:SetPoint("TOPLEFT", 0, 0)
+    local nameBox = UI.gField(f, 170, { placeholder = spec.namePh })
+    nameBox:SetPoint("TOPLEFT", 0, -15)
+    local fileL = UI.gLabel(f, spec.fileLabel or "File Name"); fileL:SetPoint("TOPLEFT", 190, 0)
+    local fileBox = UI.gField(f, 170, { placeholder = spec.filePh })
+    fileBox:SetPoint("TOPLEFT", 190, -15)
+    UI.attachTip(fileBox, spec.fileLabel or "File name", spec.hint)
+    local add = UI.gButton(f, spec.addLabel, { h = 16, pad = 10 })
+    add:SetPoint("TOPLEFT", 0, -41)
+    local lastBtn = add
+    if spec.stop then
+        local stop = UI.gButton(f, "Stop", { h = 16, pad = 10, onClick = function() Media:Stop() end })
+        stop:SetPoint("LEFT", add, "RIGHT", 6, 0)
+        UI.attachTip(stop, "Stop", "Stops the sound that is playing.")
+        lastBtn = stop
+    end
+    local st = UI.newText(f, FONTS.sa, 10, LILAC, "LEFT")
+    st:SetPoint("LEFT", lastBtn, "RIGHT", 10, 0); st:SetPoint("RIGHT", f, "RIGHT", 0, 0)
+    st:SetWordWrap(false)
+    s.status = st
+    local nt = note(f, spec.note)
+    nt:SetPoint("TOPLEFT", 0, -69)
+    local empty = note(f, spec.empty)
+    local pool = {}
+
+    local function submit()
+        local ok, msg = spec.add(nameBox:GetText() or "", fileBox:GetText() or "")
+        status(st, msg, ok)
+        if ok then
+            nameBox:SetText(""); fileBox:SetText(""); nameBox:ClearFocus(); fileBox:ClearFocus()
+            refreshAll()
         end
     end
-    scrollChild:SetHeight(math.max(1, y))
-    if scrollbar then scrollbar.Sync() end
-    -- Counts live here because relayout() is the single path every mutation
-    -- funnels through: initial build, add, remove, and the tab's refresh hook.
-    for _, s in ipairs(sections) do
-        if s.updateCount then s.updateCount() end
-    end
-end
+    add:SetScript("OnClick", submit)
+    nameBox:SetScript("OnEnterPressed", function() fileBox:SetFocus() end)
+    fileBox:SetScript("OnEnterPressed", submit)
 
--- One-open accordion (the family convention; all start closed).
-local function toggleSection(target)
-    for _, s in ipairs(sections) do
-        s.open = (s == target) and (not s.open) or false
-    end
-    relayout()
-end
-
--- countFn (optional) → a number shown right-aligned on the header. The owner,
--- 2026-07-25: "would be nice to show how many assets are in each of those
--- categories without having to expand the section." Kept on the HEADER so it
--- reads while the accordion is CLOSED, which is the whole point.
-local function makeSection(title, buildBody, countFn)
-    local s = { open = false }
-    local header = CreateFrame("Button", nil, scrollChild)
-    header:SetHeight(SECTION_HDR_H)
-    local hover = header:CreateTexture(nil, "BACKGROUND"); hover:SetAllPoints(); hover:SetColorTexture(1, 1, 1, 0.05); hover:Hide()
-    header:SetScript("OnEnter", function() hover:Show() end)
-    header:SetScript("OnLeave", function() hover:Hide() end)
-    local caret = header:CreateTexture(nil, "ARTWORK"); caret:SetTexture(UI.CARET)
-    caret:SetVertexColor(COLOR.orange.r, COLOR.orange.g, COLOR.orange.b)
-    caret:SetSize(9, 9); caret:SetPoint("LEFT", 18, 0)
-    local h = UI.newText(header, FONTS.head, 16, COLOR.purple, "LEFT")
-    h:SetPoint("LEFT", caret, "RIGHT", 11, -1); h:SetText(title:upper())
-    if countFn then
-        local cnt = UI.newText(header, FONTS.body, 12, COLOR.mute, "RIGHT")
-        cnt:SetPoint("RIGHT", -18, -1)      -- -1 matches the title's optical baseline
-        s.updateCount = function() cnt:SetText(tostring(countFn() or 0)) end
-        s.updateCount()
-    end
-    local div = UI.hLine(header)
-    div:SetPoint("BOTTOMLEFT", 0, 0); div:SetPoint("BOTTOMRIGHT", 0, 0)
-
-    local body = CreateFrame("Frame", nil, scrollChild)
-    body:SetHeight(10); body:Hide()
-
-    s.header, s.caret, s.body = header, caret, body
-    header:SetScript("OnClick", function() toggleSection(s) end)
-    buildBody(body, s)
-    sections[#sections + 1] = s
-    return s
-end
-
--- One catalog section (Fonts / Textures / Graphics): add form + note + row list.
-local function buildCatalogSection(body, spec)
-    local nameLbl = UI.newText(body, FONTS.body, 12, COLOR.text, "LEFT")
-    nameLbl:SetPoint("TOPLEFT", 18, -14); nameLbl:SetText("Display name")
-    local nameBox = UI.flatEditBox(body, 300, 22)
-    nameBox:SetPoint("TOPLEFT", 150, -10)
-    local fileLbl = UI.newText(body, FONTS.body, 12, COLOR.text, "LEFT")
-    fileLbl:SetPoint("TOPLEFT", 18, -44); fileLbl:SetText("Filename")
-    local fileBox = UI.flatEditBox(body, 300, 22)
-    fileBox:SetPoint("TOPLEFT", 150, -40)
-    local hint = UI.newText(body, FONTS.body, 10.5, COLOR.mute, "LEFT")
-    hint:SetPoint("TOPLEFT", 150, -68); hint:SetText(spec.hint)
-    local addBtn = UI.flatButton(body, 110, 24, COLOR.purple, spec.addLabel, 12)
-    addBtn:SetBase(1)
-    addBtn:SetPoint("TOPRIGHT", -18, -24)
-    -- Optional per-section control tucked under Add (Sounds uses it for Stop).
-    if spec.extraControl then spec.extraControl(body, addBtn) end
-
-    local note = UI.newText(body, FONTS.body, 10.5, COLOR.mute, "LEFT")
-    note:SetPoint("TOPLEFT", 18, -88); note:SetPoint("TOPRIGHT", -18, -88)
-    note:SetText(spec.note)
-
-    local LIST_TOP = 124   -- room for the note to wrap to two lines
-    local pool = {}
-    local emptyText = UI.newText(body, FONTS.body, 11, COLOR.mute, "LEFT")
-    emptyText:SetPoint("TOPLEFT", 18, -(LIST_TOP + 12)); emptyText:SetText(spec.empty)
-
-    local function refresh()
-        local entries = spec.getEntries()
-        local y = LIST_TOP
+    s.refresh = function()
+        local entries = spec.getEntries() or {}
+        local y = 69 + math.ceil(nt:GetStringHeight()) + 20
         for i, entry in ipairs(entries) do
             local row = pool[i]
             if not row then
-                row = CreateFrame("Frame", nil, body)
-                row:SetHeight(ROW_H)
-                local bg = row:CreateTexture(nil, "BACKGROUND")
-                bg:SetAllPoints(); bg:SetColorTexture(1, 1, 1, i % 2 == 0 and 0.04 or 0)
-                row.nameText = UI.newText(row, FONTS.bodyM, 12, COLOR.text, "LEFT")
-                row.nameText:SetPoint("TOPLEFT", 18, -6); row.nameText:SetWidth(260)
-                row.fileText = UI.newText(row, FONTS.body, 10.5, COLOR.mute, "LEFT")
-                row.fileText:SetPoint("TOPLEFT", 18, -22); row.fileText:SetWidth(260)
+                row = CreateFrame("Frame", nil, f); row:SetSize(360, ROW_H - 4)
+                row.name = UI.newText(row, FONTS.sa, 10, COLOR.paper, "LEFT")
+                row.name:SetPoint("TOPLEFT", 0, -1); row.name:SetWidth(180); row.name:SetWordWrap(false)
+                row.file = UI.newText(row, FONTS.sa, 9, LILAC, "LEFT")
+                row.file:SetPoint("TOPLEFT", 0, -14); row.file:SetWidth(180); row.file:SetWordWrap(false)
                 row.preview = spec.buildPreview(row)
-                row.removeBtn = UI.flatButton(row, 72, 20, COLOR.heroic, "Remove", 11)
-                row.removeBtn:SetPoint("RIGHT", -18, 0)
+                row.x = UI.gX(row); row.x:SetPoint("RIGHT", 6, 0)
                 pool[i] = row
             end
-            row:ClearAllPoints()
-            row:SetPoint("TOPLEFT", 0, -y); row:SetPoint("TOPRIGHT", 0, -y)
-            row:Show()
-            row.nameText:SetText(entry.name)
-            row.fileText:SetText(spec.fileLabel and spec.fileLabel(entry) or entry.file)
+            row:ClearAllPoints(); row:SetPoint("TOPLEFT", 0, -y); row:Show()
+            row.name:SetText(entry.name)
+            row.file:SetText(spec.fileText and spec.fileText(entry) or entry.file)
             if row.preview then row.preview(row, entry) end
-            row.removeBtn:SetScript("OnClick", function()
-                local ok, msg = spec.remove(i)
-                setStatus(msg, ok)
-                refresh(); relayout()
+            row.x:SetScript("OnClick", function()
+                UI.confirm(("Remove \"%s\" from the catalog? The file itself stays where it is."):format(entry.name), function()
+                    local ok, msg = spec.remove(i)
+                    status(st, msg, ok)
+                    refreshAll()
+                end, "Remove")
             end)
+            UI.attachTip(row.x, "Remove", "Takes this entry out of the catalog. The file stays in its folder. Asks first.")
             y = y + ROW_H
         end
         for i = #entries + 1, #pool do pool[i]:Hide() end
-        emptyText:SetShown(#entries == 0)
-        if #entries == 0 then y = y + 36 end
-        body:SetHeight(y + 10)
+        empty:ClearAllPoints(); empty:SetPoint("TOPLEFT", 0, -y); empty:SetShown(#entries == 0)
+        if #entries == 0 then y = y + math.ceil(empty:GetStringHeight()) + 4 else y = y - 4 end
+        if math.abs((f:GetHeight() or 0) - y) > 0.5 then f:SetHeight(y) end
     end
-
-    local function submit()
-        local ok, msg = spec.add(nameBox:GetText(), fileBox:GetText())
-        setStatus(msg, ok)
-        if ok then
-            nameBox:SetText(""); fileBox:SetText(""); nameBox:ClearFocus(); fileBox:ClearFocus()
-            refresh(); relayout()
-        end
-    end
-    addBtn:SetScript("OnClick", submit)
-    nameBox:SetScript("OnEnterPressed", function() fileBox:SetFocus() end)
-    fileBox:SetScript("OnEnterPressed", submit)
-    nameBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
-    fileBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
-
-    refreshers[#refreshers + 1] = refresh
-    refresh()
+    f:HookScript("OnShow", s.refresh)
+    s.refresh()
+    return f
 end
 
--- One catalog section (Fonts / Textures / Graphics / Sounds) is above. The
--- SOUND BROWSER below is a different shape and deliberately does not reuse it:
--- it is read-only, it is 865 rows long, and it is the one place in the suite
--- that plays SoundKitIDs rather than FileDataIDs.
---
--- ★ WHY THERE IS NO "ADD" BUTTON HERE. SOUNDKIT ids cannot go into
--- LibSharedMedia — see the RegisterSound comment. This section exists to let
--- the owner HEAR the game's sounds without leaving the client; getting one
--- into GA's picker still means finding its FileDataID on wago.tools and
--- pasting that into Sounds above. Do not "fix" this by registering item.id.
-local BROWSE_ROWS  = 12
-local BROWSE_ROW_H = 22
-
-local function buildBrowserSection(body)
-    local searchBox = UI.flatEditBox(body, 260, 22)
-    searchBox:SetPoint("TOPLEFT", 18, -12)
-    -- Always enabled: WoW fires no "sound ended" event, so we can never know
-    -- whether there is something to stop. A no-op Stop is the honest default.
-    local stopBtn = UI.flatButton(body, 62, 22, COLOR.heroic, "Stop", 11)
-    stopBtn:SetPoint("LEFT", searchBox, "RIGHT", 10, 0)
-    stopBtn:SetScript("OnClick", function()
-        if Media:Stop() then setStatus("Stopped.") end
-    end)
-    local counter = UI.newText(body, FONTS.body, 11, COLOR.mute, "RIGHT")
-    counter:SetPoint("TOPRIGHT", -18, -16)
-
-    local note = UI.newText(body, FONTS.body, 10.5, COLOR.mute, "LEFT")
-    note:SetPoint("TOPLEFT", 18, -44); note:SetPoint("TOPRIGHT", -18, -44)
-    note:SetText("Every sound the game's interface uses, by name. Click a row to hear it; type to filter by name or ID. "
-        .. "These are SoundKit IDs, which other addons cannot read — to use one in Gloom's Auras, look its file up on "
-        .. "wago.tools and paste that FileDataID into Sounds above.")
-
-    local LIST_TOP = 92
-    local list = CreateFrame("Frame", nil, body)
-    list:SetPoint("TOPLEFT", 0, -LIST_TOP)
-    list:SetPoint("TOPRIGHT", 0, -LIST_TOP)
-    list:SetHeight(BROWSE_ROWS * BROWSE_ROW_H)
+-- ------------------------------------------------------------
+-- GAME SOUNDS — the game's own interface sounds by name. Click a line to hear
+-- it; type to filter by name or ID. 14 lines of 18; the list scrolls by 3.
+-- ★ WHY THERE IS NO "ADD" HERE: SoundKit ids cannot go into LibSharedMedia
+-- (see RegisterSound). This lets the owner HEAR the game's sounds; using one
+-- in Gloom's Auras still means finding its FileDataID on wago.tools and adding
+-- that under Sounds. Do not "fix" this by registering item.id.
+-- ------------------------------------------------------------
+local BROWSE_ROWS, BROWSE_ROW_H = 14, 18
+local function buildBrowser(parent)
+    local f = CreateFrame("Frame", nil, parent); f:SetSize(360, 100)
+    local s = { frame = f }
+    MP.secs[#MP.secs + 1] = s
+    UI.gLabel(f, "Search"):SetPoint("TOPLEFT", 0, 0)
+    local search = UI.gField(f, 294, { placeholder = "A name or an ID" })
+    search:SetPoint("TOPLEFT", 0, -15)
+    local stop = UI.gButton(f, "Stop", { w = 60, h = 16, size = 10, onClick = function() Media:Stop() end })
+    stop:SetPoint("TOPLEFT", 300, -15)
+    UI.attachTip(stop, "Stop", "Stops the sound that is playing. (The game never says when a sound ends, so this is always on.)")
+    local counter = UI.newText(f, FONTS.sa, 10, LILAC, "LEFT"); counter:SetPoint("TOPLEFT", 0, -41)
+    local st = UI.newText(f, FONTS.sa, 10, LIME, "RIGHT"); st:SetPoint("TOPRIGHT", 0, -41); st:SetWidth(240); st:SetWordWrap(false)
+    local nt = note(f, "Every sound the game's interface uses. Click one to hear it. These are SoundKit IDs, which other addons can't read — to use one in Gloom's Auras, look its file up on wago.tools and add that FileDataID under Sounds.")
+    nt:SetPoint("TOPLEFT", 0, -61)
+    local list = CreateFrame("Frame", nil, f)
+    list:SetSize(360, BROWSE_ROWS * BROWSE_ROW_H)
     list:EnableMouseWheel(true)
-
     local filtered, offset, rows = {}, 0, {}
-
     local function paint()
         local maxOff = math.max(0, #filtered - BROWSE_ROWS)
-        if offset > maxOff then offset = maxOff end
-        if offset < 0 then offset = 0 end
+        offset = math.max(0, math.min(maxOff, offset))
         for i = 1, BROWSE_ROWS do
             local row, item = rows[i], filtered[i + offset]
-            if item then
-                row.nameText:SetText(item.name)
-                row.idText:SetText(item.id)
-                row.item = item
-                row:Show()
-            else
-                row.item = nil
-                row:Hide()
-            end
+            row.item = item
+            if item then row.name:SetText(item.name); row.id:SetText(item.id); row:Show() else row:Hide() end
         end
-        if #filtered == 0 then
-            counter:SetText("no matches")
-        elseif #filtered <= BROWSE_ROWS then
-            counter:SetText(#filtered .. (#filtered == 1 and " sound" or " sounds"))
-        else
-            counter:SetText(("%d–%d of %d"):format(offset + 1, math.min(offset + BROWSE_ROWS, #filtered), #filtered))
-        end
+        if #filtered == 0 then counter:SetText("No matches")
+        elseif #filtered <= BROWSE_ROWS then counter:SetText(#filtered .. (#filtered == 1 and " sound" or " sounds"))
+        else counter:SetText(("%d–%d of %d"):format(offset + 1, math.min(offset + BROWSE_ROWS, #filtered), #filtered)) end
     end
-
     for i = 1, BROWSE_ROWS do
-        local row = CreateFrame("Button", nil, list)
-        row:SetHeight(BROWSE_ROW_H)
+        local row = CreateFrame("Button", nil, list); row:SetSize(360, BROWSE_ROW_H)
         row:SetPoint("TOPLEFT", 0, -(i - 1) * BROWSE_ROW_H)
-        row:SetPoint("TOPRIGHT", 0, -(i - 1) * BROWSE_ROW_H)
-        local hover = row:CreateTexture(nil, "BACKGROUND")
-        hover:SetAllPoints(); hover:SetColorTexture(1, 1, 1, 0.06); hover:Hide()
-        row:SetScript("OnEnter", function() hover:Show() end)
-        row:SetScript("OnLeave", function() hover:Hide() end)
-        row.nameText = UI.newText(row, FONTS.body, 12, COLOR.text, "LEFT")
-        row.nameText:SetPoint("LEFT", 18, 0); row.nameText:SetWidth(330)
-        row.idText = UI.newText(row, FONTS.body, 11, COLOR.mute, "RIGHT")
-        row.idText:SetPoint("RIGHT", -18, 0)
+        local hl = row:CreateTexture(nil, "BACKGROUND"); hl:SetPoint("TOPLEFT", -20, 0); hl:SetPoint("BOTTOMRIGHT", 20, 0)
+        hl:SetColorTexture(VIOLET.r, VIOLET.g, VIOLET.b, 0.15); hl:Hide()
+        row:SetScript("OnEnter", function() hl:Show() end)
+        row:SetScript("OnLeave", function() hl:Hide() end)
+        row.name = UI.newText(row, FONTS.sa, 10, COLOR.paper, "LEFT"); row.name:SetPoint("LEFT", 0, 0)
+        row.name:SetWidth(300); row.name:SetWordWrap(false)
+        row.id = UI.newText(row, FONTS.sa, 9, LILAC, "RIGHT"); row.id:SetPoint("RIGHT", 0, 0)
         row:SetScript("OnClick", function(self)
             if not self.item then return end
-            -- "kit" — the ONLY caller that passes it. See Media:Play.
-            Media:Play(self.item.id, "kit")
-            setStatus(self.item.name .. "  ·  SoundKit " .. self.item.id)
+            Media:Play(self.item.id, "kit")   -- "kit": the ONLY caller that passes it. See Media:Play.
+            status(st, self.item.name .. "  ·  SoundKit " .. self.item.id, true)
         end)
         rows[i] = row
     end
-
-    list:SetScript("OnMouseWheel", function(_, delta)
-        offset = offset - delta * 3
-        paint()
-    end)
-
+    list:SetScript("OnMouseWheel", function(_, delta) offset = offset - delta * 3; paint() end)
     local function applyFilter()
-        local q = (searchBox:GetText() or ""):lower():match("^%s*(.-)%s*$")
+        local q = (search:GetText() or ""):lower():match("^%s*(.-)%s*$")
         wipe(filtered)
         for _, item in ipairs(Media:SoundKits()) do
             if q == "" or item.name:lower():find(q, 1, true) or tostring(item.id):find(q, 1, true) then
@@ -817,87 +727,86 @@ local function buildBrowserSection(body)
         offset = 0
         paint()
     end
-
-    searchBox:SetScript("OnTextChanged", applyFilter)
-    searchBox:SetScript("OnEscapePressed", function(self) self:SetText(""); self:ClearFocus() end)
-    searchBox:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
-
+    search:HookScript("OnTextChanged", applyFilter)
+    search:SetScript("OnEscapePressed", function(self) self:SetText(""); self:ClearFocus() end)
+    s.refresh = function()
+        local top = 61 + math.ceil(nt:GetStringHeight()) + 14
+        list:ClearAllPoints(); list:SetPoint("TOPLEFT", 0, -top)
+        local h = top + BROWSE_ROWS * BROWSE_ROW_H
+        if math.abs((f:GetHeight() or 0) - h) > 0.5 then f:SetHeight(h) end
+    end
     applyFilter()
-    body:SetHeight(LIST_TOP + BROWSE_ROWS * BROWSE_ROW_H + 14)
+    s.refresh()
+    return f
 end
 
 local SPECS = {
     {
-        title = "Fonts", addLabel = "Add Font",
-        hint = "e.g.  MyFont.ttf  — TTF only (OTF is not supported by WoW)",
-        note = "Registered into LibSharedMedia — visible to every LSM-aware addon. Drop .ttf files into GloomsHub\\Fonts\\ first. A new font needs a full WoW restart (not /reload) to render correctly.",
+        id = "fonts", title = "Fonts", addLabel = "Add Font",
+        namePh = "My Font", filePh = "MyFont.ttf",
+        hint = "The file's name in GloomsHub\\Fonts\\ — .ttf only (WoW can't use .otf).",
+        note = "Registered into LibSharedMedia, so every addon that lists fonts can use them. Put the .ttf into GloomsHub\\Fonts\\ first. A new font needs a full restart of the game — WoW loads fonts at launch, so /reload isn't enough.",
         empty = "No fonts yet — add one above.",
         getEntries = function() return GloomsHubDB and GloomsHubDB.fonts or {} end,
         add = function(n, f) return Media:AddFont(n, f) end,
         remove = function(i) return Media:RemoveFont(i) end,
         buildPreview = function(row)
-            local fs = UI.newText(row, FONTS.body, 13, COLOR.text, "LEFT")
-            fs:SetPoint("LEFT", 300, 0); fs:SetWidth(170)
-            return function(_, entry)
-                UI.setFont(fs, FONT_PATH .. entry.file, 13)
-                fs:SetText("AaBbCc 123")
-            end
+            local fs = UI.newText(row, FONTS.sa, 12, COLOR.paper, "LEFT")
+            fs:SetPoint("LEFT", 190, 0); fs:SetWidth(140); fs:SetWordWrap(false)
+            return function(_, entry) UI.setFont(fs, FONT_PATH .. entry.file, 12); fs:SetText("AaBbCc 123") end
         end,
     },
     {
-        title = "Textures", addLabel = "Add Texture",
-        hint = "e.g.  MyBar.tga  or  MyBar.blp  or  MyBar.png",
-        note = "Registered into LibSharedMedia as statusbar textures — visible to every LSM-aware addon. Drop files into GloomsHub\\Textures\\ first; a /reload is enough to use a new one.",
+        id = "textures", title = "Textures", addLabel = "Add Texture",
+        namePh = "My Bar", filePh = "MyBar.tga",
+        hint = "The file's name in GloomsHub\\Textures\\ — .tga, .blp or .png.",
+        note = "Registered into LibSharedMedia as bar textures, so every addon that lists them can use them. Put the file into GloomsHub\\Textures\\ first; a /reload is enough.",
         empty = "No textures yet — add one above.",
         getEntries = function() return GloomsHubDB and GloomsHubDB.textures or {} end,
         add = function(n, f) return Media:AddTexture(n, f) end,
         remove = function(i) return Media:RemoveTexture(i) end,
         buildPreview = function(row)
-            local tex = row:CreateTexture(nil, "ARTWORK")
-            tex:SetSize(120, 14); tex:SetPoint("LEFT", 300, 0)
+            local tex = row:CreateTexture(nil, "ARTWORK"); tex:SetSize(130, 12); tex:SetPoint("LEFT", 190, 0)
             return function(_, entry) tex:SetTexture(TEXTURE_PATH .. entry.file) end
         end,
     },
     {
-        title = "Graphics", addLabel = "Add Graphic",
-        hint = "e.g.  GoldSwirl.png  or  GoldSwirl.tga",
-        note = "NOT in LibSharedMedia — decorative assets resolved by display name (overlays use these). Drop .png or .tga files into GloomsHub\\Graphics\\ first.",
+        id = "graphics", title = "Graphics", addLabel = "Add Graphic",
+        namePh = "Gold Swirl", filePh = "GoldSwirl.png",
+        hint = "The file's name in GloomsHub\\Graphics\\ — .png or .tga.",
+        note = "Decorative art for Gloom's Overlays, found by its display name. Not in LibSharedMedia. Put the file into GloomsHub\\Graphics\\ first.",
         empty = "No graphics yet — add one above.",
         getEntries = function() return GloomsHubDB and GloomsHubDB.graphics or {} end,
         add = function(n, f) return Media:AddGraphic(n, f) end,
         remove = function(i) return Media:RemoveGraphic(i) end,
         buildPreview = function(row)
-            local tex = row:CreateTexture(nil, "ARTWORK")
-            tex:SetSize(28, 28); tex:SetPoint("LEFT", 300, 0)
+            local tex = row:CreateTexture(nil, "ARTWORK"); tex:SetSize(24, 24); tex:SetPoint("LEFT", 190, 0)
             return function(_, entry) tex:SetTexture(GRAPHIC_PATH .. entry.file) end
         end,
     },
     {
-        title = "Sounds", addLabel = "Add Sound",
-        hint = "a FileDataID from wago.tools  (e.g.  567397)  — or  MySound.ogg",
-        note = "Registered into LibSharedMedia — this is what puts them in Gloom's Auras' sound picker, and every other LSM-aware addon. Paste a FileDataID from wago.tools, or drop an .ogg / .mp3 into GloomsHub\\Sounds\\ and type the filename. Browse the game's own sounds in the section below.",
-        empty = "No sounds yet — browse below, or paste a FileDataID above.",
+        id = "sounds", title = "Sounds", addLabel = "Add Sound", stop = true,
+        fileLabel = "FileDataID or File Name",
+        namePh = "My Sound", filePh = "567397 or MySound.ogg",
+        hint = "A FileDataID from wago.tools (e.g. 567397), or the name of an .ogg / .mp3 in GloomsHub\\Sounds\\.",
+        note = "Registered into LibSharedMedia — this is what puts them in Gloom's Auras' sound list, and every other addon that lists sounds. Paste a FileDataID from wago.tools, or put an .ogg / .mp3 into GloomsHub\\Sounds\\ and type its name. Hear the game's own sounds under Game Sounds.",
+        empty = "No sounds yet — find one under Game Sounds, or paste a FileDataID above.",
         getEntries = function() return GloomsHubDB and GloomsHubDB.sounds or {} end,
         add = function(n, f) return Media:AddSound(n, f) end,
         remove = function(i) return Media:RemoveSound(i) end,
-        fileLabel = function(entry)
+        fileText = function(entry)
             if type(entry.file) == "number" then return "FileDataID " .. entry.file end
             return (tostring(entry.file):gsub("^Interface\\AddOns\\GloomsHub\\Sounds\\", ""))
         end,
-        extraControl = function(body, addBtn)
-            local stopBtn = UI.flatButton(body, 110, 22, COLOR.heroic, "Stop", 11)
-            stopBtn:SetPoint("TOPRIGHT", addBtn, "BOTTOMRIGHT", 0, -6)
-            stopBtn:SetScript("OnClick", function()
-                if Media:Stop() then setStatus("Stopped.") end
-            end)
-        end,
         buildPreview = function(row)
-            local btn = UI.flatButton(row, 62, 20, COLOR.purple, "Play", 11)
-            btn:SetPoint("LEFT", 300, 0)
-            return function(_, entry)
-                btn:SetScript("OnClick", function()
-                    if not Media:Play(entry.file) then
-                        setStatus("\"" .. entry.name .. "\" did not play — the ID or file may be wrong.", false)
+            local b = UI.gButton(row, "Play", { w = 60, h = 16, size = 10 })
+            b:SetPoint("LEFT", 190, 0)
+            return function(r, entry)
+                b:SetScript("OnClick", function()
+                    local sec
+                    for _, x in ipairs(MP.secs) do if x.id == "sounds" then sec = x end end
+                    if not Media:Play(entry.file) and sec then
+                        status(sec.status, "\"" .. entry.name .. "\" didn't play — the ID or file may be wrong.", false)
                     end
                 end)
             end
@@ -905,57 +814,77 @@ local SPECS = {
     },
 }
 
-local function BuildMediaTab(container)
-    statusText = UI.newText(container, FONTS.body, 11, COLOR.mute, "LEFT")
-    statusText:SetPoint("BOTTOMLEFT", 16, 10); statusText:SetPoint("BOTTOMRIGHT", -16, 10)
-
-    -- The Gh mark + wordmark (LibGloomSkin MINOR 4). ★ This tab wears Gh, the
-    -- HUB-as-an-addon mark, not GS: GS belongs to the suite and is already on
-    -- the window's title bar right above this. The Media tab is the Hub's own
-    -- tab, so it names its owner the same way the other three name theirs.
-    UI.tabHeader(container, {
-        texture = GloomsHub.MEDIA .. "ui\\hub.png",
-        label   = "GLOOM'S HUB",
-        -- ★ x = 14 to match the Bars and Overlays rails EXACTLY, not 16 to match
-        -- this tab's own status line. The owner, 2026-07-25: these headers are
-        -- compared by TABBING BETWEEN THEM, so cross-tab alignment beats
-        -- internal alignment. 14 is the family inset — keep all four identical.
-        x       = 14,
-    })
-
-    scrollFrame = CreateFrame("ScrollFrame", nil, container)
-    scrollFrame:SetPoint("TOPLEFT", 0, -54)   -- clears the header divider at -48
-    scrollFrame:SetPoint("BOTTOMRIGHT", -12, 30)
-    scrollFrame:EnableMouseWheel(true)
-    scrollFrame:SetScript("OnMouseWheel", function(self, delta)
-        local range = self:GetVerticalScrollRange()
-        self:SetVerticalScroll(math.max(0, math.min(range, self:GetVerticalScroll() - delta * 42)))
-    end)
-    scrollChild = CreateFrame("Frame", nil, scrollFrame)
-    scrollChild:SetSize(math.max(1, container:GetWidth() - 16), 10)
-    scrollFrame:SetScrollChild(scrollChild)
-    scrollbar = UI.makeScrollbar(container, scrollFrame, function(b)
-        b:SetPoint("TOPRIGHT", -4, -56); b:SetPoint("BOTTOMRIGHT", -4, 32)   -- below the header
-    end)
-
-    for _, spec in ipairs(SPECS) do
-        makeSection(spec.title,
-            function(body) buildCatalogSection(body, spec) end,
-            function() return #(spec.getEntries() or {}) end)
+-- ------------------------------------------------------------
+-- THE SELECTOR — the five catalogs from y 52, 18 to a line: the name in
+-- Sansation 10, its count right-aligned in lilac; the open one violet 30%
+-- across the window. A click opens that section. Under them, what this is.
+-- ------------------------------------------------------------
+local CATALOGS = {
+    { id = "fonts", label = "Fonts", count = function() return #(GloomsHubDB and GloomsHubDB.fonts or {}) end },
+    { id = "textures", label = "Textures", count = function() return #(GloomsHubDB and GloomsHubDB.textures or {}) end },
+    { id = "graphics", label = "Graphics", count = function() return #(GloomsHubDB and GloomsHubDB.graphics or {}) end },
+    { id = "sounds", label = "Sounds", count = function() return #(GloomsHubDB and GloomsHubDB.sounds or {}) end },
+    { id = "browse", label = "Game Sounds", count = function() return #Media:SoundKits() end },
+}
+local function openSection()
+    local d = GloomsHubDB and GloomsHubDB.win and GloomsHubDB.win.media
+    return d and d.open
+end
+local function buildSelector(c)
+    local rows = {}
+    for i, cat in ipairs(CATALOGS) do
+        local r = CreateFrame("Button", nil, c); r:SetSize(200, 18)
+        r:SetPoint("TOPLEFT", 20, -(52 + (i - 1) * 18))
+        r.hl = r:CreateTexture(nil, "BACKGROUND"); r.hl:SetPoint("TOPLEFT", -20, 1); r.hl:SetPoint("BOTTOMRIGHT", 20, -1); r.hl:Hide()
+        r.name = UI.newText(r, FONTS.sa, 10, COLOR.paper, "LEFT"); r.name:SetPoint("LEFT", 0, 0); r.name:SetText(cat.label)
+        r.count = UI.newText(r, FONTS.sa, 10, LILAC, "RIGHT"); r.count:SetPoint("RIGHT", 0, 0)
+        r:SetScript("OnEnter", function(self) if openSection() ~= cat.id then self.hl:SetColorTexture(VIOLET.r, VIOLET.g, VIOLET.b, 0.15); self.hl:Show() end end)
+        r:SetScript("OnLeave", function() MP.renderSelector() end)
+        r:SetScript("OnClick", function() GloomsHub:ShowPage("media", cat.id); MP.renderSelector() end)
+        rows[i] = r
     end
-    makeSection("Browse Game Sounds", buildBrowserSection,
-        function() return #Media:SoundKits() end)
-    relayout()
-    setStatus("The suite's shared media catalog — fonts, statusbar textures, overlay graphics, and sounds.")
+    local about = note(c, "The suite's shared media: fonts, bar textures and sounds every addon can use, and the art Gloom's Overlays draws.", 200)
+    about:SetPoint("TOPLEFT", 20, -(52 + #CATALOGS * 18 + 20))
+    function MP.renderSelector()
+        local open = openSection()
+        for i, cat in ipairs(CATALOGS) do
+            local r = rows[i]
+            r.count:SetText(tostring(cat.count() or 0))
+            if open == cat.id then r.hl:SetColorTexture(VIOLET.r, VIOLET.g, VIOLET.b, 0.3); r.hl:Show() else r.hl:Hide() end
+        end
+    end
+    MP.renderSelector()
 end
 
+-- THE TAB — "gloomMEDIA:" lime, then white.
+local function buildTab(tab)
+    local lead = UI.newText(tab, FONTS.sa, 10, LIME, "LEFT"); lead:SetPoint("TOPLEFT", 20, -9)
+    lead:SetText("gloomMEDIA: ")
+    local name = UI.newText(tab, FONTS.sa, 10, COLOR.paper, "LEFT"); name:SetPoint("LEFT", lead, "RIGHT", 0, 0)
+    name:SetText("Suite Media Catalog")
+    return { refresh = function() end }
+end
+
+local sections = {}
+for _, spec in ipairs(SPECS) do
+    sections[#sections + 1] = { id = spec.id, title = spec.title, build = function(p)
+        local f = buildCatalog(p, spec)
+        MP.secs[#MP.secs].id = spec.id
+        return f
+    end, onShow = function() if MP.renderSelector then MP.renderSelector() end end }
+end
+sections[#sections + 1] = { id = "browse", title = "Game Sounds", build = buildBrowser,
+    onShow = function() if MP.renderSelector then MP.renderSelector() end end }
+
 GloomsHub:RegisterTab{
-    id = "media",
-    title = "MEDIA",
-    order = 90,
-    build = BuildMediaTab,
-    refresh = function()
-        for _, r in ipairs(refreshers) do r() end
-        if scrollChild then relayout() end
-    end,
+    id       = "media",
+    title    = "Media",
+    order    = 90,
+    wordmark = "MEDIA",
+    windows  = true,
+    selector = { build = buildSelector, h = 240 },
+    tab      = { w = 360, build = buildTab },
+    sections = sections,
+    onOpen   = function() refreshAll() end,
+    refresh  = function() refreshAll() end,
 }

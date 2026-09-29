@@ -6,7 +6,7 @@
 -- in, resize and scroll the windows, open the right-click menus. Prints counts
 -- and the distinct errors.
 --   cd tools/harness && luajit sweep-v3.lua
-ADDONS = { "GloomsHub", "GloomsAuras", "GloomsBars", "GloomsUnitFrames" }
+ADDONS = { "GloomsHub", "GloomsAuras", "GloomsBars", "GloomsUnitFrames", "GloomsPortraits", "GloomsOverlays" }
 dofile("run.lua")
 local W = __W
 local errs, seen, counts = {}, {}, {}
@@ -50,10 +50,10 @@ local function drive(tool, root, label)
             end
           end
         end
-        if not GloomsHub.V3:IsOpen() then GloomsHub:Open(tool) end
+        if not GloomsHub.V3:IsOpen() or GloomsHub.V3:Current() ~= tool then GloomsHub:Open(tool) end
       end
-      if rawget(o, "strip") and rawget(o, "box") and o.strip._scripts.OnMouseWheel then
-        bump("dial"); try(label .. " dial", function() W.fire(o.strip, "OnMouseWheel", 1); W.fire(o.strip, "OnMouseWheel", -1) end)
+      if rawget(o, "strip") and rawget(o, "box") and o.box._scripts.OnArrowPressed then
+        bump("dial"); try(label .. " dial", function() W.fire(o.box, "OnArrowPressed", "UP"); W.fire(o.box, "OnArrowPressed", "DOWN") end)
       end
       if o._kind == "EditBox" and o._scripts.OnEditFocusLost then
         bump("field"); try(label .. " field", function() o._text = "12"; W.fire(o, "OnEditFocusLost"); o._text = ""; W.fire(o, "OnEditFocusLost") end)
@@ -66,6 +66,9 @@ local SECTIONS = {
   auras = { "triggers", "appearance", "bar", "text", "effects", "load", "__global" },
   bars  = { "shape", "deco", "text", "glows", "casts", "cooldowns", "layout", "__global" },
   unitframes = { "global", "texts", "auras", "health", "power", "resource", "cast", "__global" },
+  portraits = { "global", "camera", "__global" },
+  overlays = { "texture", "size", "motion", "layer", "visibility", "__global" },
+  media = { "fonts", "textures", "graphics", "sounds", "browse", "__global" },
 }
 local function sweepTool(tool)
   try("open " .. tool, function() GloomsHub:Open(tool) end)
@@ -176,6 +179,14 @@ sweepTool("bars")
 -- opened by their links and driven like pop-outs.
 sweepTool("unitframes")
 sweepTool("unitframes")
+-- PORTRAITS: both units (the selector's last button is Target), then OVERLAYS
+-- and MEDIA once they are two-window tools
+sweepTool("portraits")
+sweepTool("portraits")
+for _, t in ipairs({ "overlays", "media" }) do
+  local def = GloomsHub._tabs and GloomsHub._tabs[t]
+  if def and def.windows then sweepTool(t) end
+end
 -- switching: to an old-style tool (if loaded) and back, Escape, reopen
 try("switch", function() GloomsHub:FocusTab("auras"); GloomsHub:FocusTab("bars") end)
 try("escape", function() GloomsHub:SuiteRoot():Hide(); GloomsHub:ToggleWindow("bars"); GloomsHub:ToggleWindow("bars") end)
