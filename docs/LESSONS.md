@@ -461,12 +461,33 @@ GU's `cNum` shows the live-stepping hook.
   (`relevel`/`restack`, on `GLOBAL_MOUSE_DOWN` so clicks on a window's CONTROLS count too). A
   window's plain `Raise()` does not fix it.
 
+### Measure text at the size it will be DRAWN (2026-09-30)
+- A list measured its labels, THEN took its window's scale: the first one after a /reload was
+  measured at scale 1 and drawn at the Addon UI Scale, and "Rename" came out "Rena…" (FINDINGS §23).
+  Set a frame's final scale before measuring anything inside it. And the first theory (a bounded
+  width) was built and shipped before the fix was proven — it did nothing. Test the cheap
+  discriminating thing first.
+
+### Addons load ALPHABETICALLY — a cross-tool lookup at login can come too early (2026-09-30)
+- GloomsOverlays loads before GloomsUnitFrames, so at PLAYER_LOGIN a gloomUI group looked for the
+  Player Frame before it existed and silently fell back to the screen (FINDINGS §24). When one tool
+  uses another's frames, have the OFFERING tool announce readiness (the Hub's `AnchorsChanged`) —
+  don't rely on load order, and don't paper over it with a timer.
+
+### Blurred art that relies on a mask (2026-09-30)
+- The gloss rim art is blurred PAST the silhouette (42% of its alpha outside it); every place that
+  draws it must also mask it, or it paints a fringe (FINDINGS §21 addendum). Check an art file's
+  alpha outside its shape before reusing it somewhere new.
+
 ### The harness's blind spots, again (2026-09-27)
 - `SetAllPoints` records anchors but leaves `GetWidth/GetHeight` at 0 — a frame that SIZES from its
   parent reads 0 in the stand-in (size from the window you were handed instead). Tiled textures
   (`SetHorizTile`) and hyperlinks don't render; `GetStringWidth` is approximate, so a header's
   pop-out icon can look further out than it will be. A section that changes its own height while
   it is first built re-enters the layout — guard it (`Windows.lua` `building`/`inLayout`).
+- (2026-09-30) `GetCenter / GetLeft / GetTop` return CONSTANTS in the stand-in, so nothing about
+  where one frame sits relative to another can be checked there (attaching a group "in place", a
+  group following its unit frame). Check the anchoring (which frame, which offset), not the result.
 - (2026-09-29) `C_Timer.After/NewTimer` are no-ops in the stand-in — a deferred call never runs, so
   do not rely on one for correctness (it hid the first-open drag handle). It has **no secret values**:
   a text's secret geometry (FINDINGS §21) could only be caught in game. And it reads the LIVE

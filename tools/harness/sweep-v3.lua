@@ -6,7 +6,7 @@
 -- in, resize and scroll the windows, open the right-click menus. Prints counts
 -- and the distinct errors.
 --   cd tools/harness && luajit sweep-v3.lua
-ADDONS = { "GloomsHub", "GloomsAuras", "GloomsBars", "GloomsUnitFrames", "GloomsPortraits", "GloomsOverlays" }
+ADDONS = { "GloomsHub", "GloomsAuras", "GloomsBars", "GloomsUnitFrames", "GloomsOverlays" }
 dofile("run.lua")
 local W = __W
 local errs, seen, counts = {}, {}, {}
@@ -66,9 +66,8 @@ local SECTIONS = {
   auras = { "triggers", "appearance", "bar", "text", "effects", "load", "__global" },
   bars  = { "shape", "deco", "text", "glows", "casts", "cooldowns", "layout", "__global" },
   unitframes = { "global", "texts", "auras", "health", "power", "resource", "cast", "__global" },
-  portraits = { "global", "camera", "__global" },
-  overlays = { "texture", "size", "motion", "layer", "visibility", "__global" },
-  media = { "fonts", "textures", "graphics", "sounds", "browse", "__global" },
+  overlays = { "texture", "portrait", "size", "psize", "motion", "camera", "layer", "visibility", "group", "__global" },
+  media = { "fonts", "textures", "graphics", "sounds", "browse", "gametex", "__global" },
 }
 local function sweepTool(tool)
   try("open " .. tool, function() GloomsHub:Open(tool) end)
@@ -179,11 +178,51 @@ sweepTool("bars")
 -- opened by their links and driven like pop-outs.
 sweepTool("unitframes")
 sweepTool("unitframes")
--- PORTRAITS: both units (the selector's last button is Target), then OVERLAYS
--- and MEDIA once they are two-window tools
-sweepTool("portraits")
-sweepTool("portraits")
-for _, t in ipairs({ "overlays", "media" }) do
+-- GLOOM'S UI (Overlays + Portraits, 2026-09-29): a texture, a portrait (3D,
+-- then 2D, then the target) and a group, each swept; Move to Group and the
+-- drag handles; then MEDIA.
+local OP = GloomsOverlays_Windows
+local function uiSweep(label, fn) try("ui " .. label, fn); sweepTool("overlays") end
+if OP then
+  try("open ui", function() GloomsHub:Open("overlays") end)
+  local list = GloomsOverlays_GetProfile().overlays
+  local tex; for _, ov in ipairs(list) do if ov.kind ~= "portrait" then tex = ov; break end end
+  uiSweep("texture", function()
+    if not tex then OP.createTexture(); tex = OP.current() end   -- the harness character may be on an empty profile
+    OP.Select(tex)
+  end)
+  local por
+  uiSweep("new portrait", function() OP.createPortrait(); por = OP.current() end)
+  uiSweep("portrait 2d", function() OP.Select(por); por.mode = "2d"; GloomsOverlays_ApplyAll(); OP.refreshAll() end)
+  uiSweep("portrait target", function() OP.Select(por); por.mode = "3d"; por.unit = "target"; GloomsOverlays_ApplyAll(); OP.refreshAll() end)
+  local g
+  uiSweep("new group", function() OP.createGroup(); g = OP.currentGroup() end)
+  try("ui move to group", function()
+    GloomsOverlays_SetGroup(por, g.id); GloomsOverlays_SetGroup(tex, g.id); GloomsOverlays_ApplyAll()
+    OP.Select(por); lastList = nil; OP.overlayMenu(OP.listClip)
+    for _, opt in ipairs(lastList.options) do if opt.value == "move" then lastList.onPick("move") end end
+    for _, opt in ipairs(lastList.options) do if opt.value ~= "__new" then bump("ui move"); lastList.onPick(opt.value) end end
+    GloomsOverlays_SetGroup(por, g.id); GloomsOverlays_ApplyAll()
+  end)
+  uiSweep("group", function() OP.Select(nil, g) end)
+  uiSweep("member", function() OP.Select(por) end)
+  try("ui handles", function()
+    for _, o in ipairs({ UIParent }) do
+      for _, ch in ipairs(rawget(o, "_children") or {}) do
+        if ch._scripts and ch._scripts.OnMouseDown and ch:IsShown() then
+          bump("ui handle"); W.fire(ch, "OnMouseDown", "LeftButton"); W.fire(ch, "OnUpdate"); W.fire(ch, "OnMouseUp")
+        end
+      end
+    end
+  end)
+  try("ui group menu", function()
+    OP.Select(nil, g); lastList = nil; OP.groupMenu(OP.listClip)
+    for _, opt in ipairs(lastList.options) do if opt.value ~= "delete" then bump("ui group menu"); lastList.onPick(opt.value) end end
+  end)
+  try("ui delete group", function() GloomsOverlays_DeleteGroup(g); GloomsOverlays_ApplyAll(); OP.Select(nil, nil); OP.refreshAll() end)
+  try("ui close", function() GloomsHub:SuiteRoot():Hide() end)
+end
+for _, t in ipairs({ "media" }) do
   local def = GloomsHub._tabs and GloomsHub._tabs[t]
   if def and def.windows then sweepTool(t) end
 end

@@ -58,7 +58,8 @@ local LEGACY_PROFILE_W, LEGACY_PROFILE_H = 1060, 585
 local LEGACY_W, LEGACY_H = 860, 650
 
 -- The switcher's order is the MOCKS' (Auras · Bars · Unit Frames · Portraits ·
--- Overlays · Media), fixed here so no tool's registration can reorder it;
+-- Overlays · Media — Portraits folded into Overlays as "UI" on 2026-09-29, still
+-- id "overlays"), fixed here so no tool's registration can reorder it;
 -- an unknown id falls back to its own `order`.
 local TAB_ORDER = { auras = 10, bars = 20, unitframes = 30, portraits = 40, overlays = 50, media = 90 }
 
@@ -77,8 +78,8 @@ local SUITE = {
   { addon = "GloomsAuras",      short = "Auras" },
   { addon = "GloomsBars",       short = "Bars" },
   { addon = "GloomsUnitFrames", short = "Unit Frames" },
-  { addon = "GloomsPortraits",  short = "Portraits" },
-  { addon = "GloomsOverlays",   short = "Overlays" },
+  -- Gloom's UI (2026-09-29): Overlays + Portraits, in the GloomsOverlays folder
+  { addon = "GloomsOverlays",   short = "UI" },
 }
 
 -- Version of any suite addon. nil = NOT INSTALLED (so the line can omit it);

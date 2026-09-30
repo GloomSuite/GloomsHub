@@ -93,11 +93,31 @@ GloomsHub:RegisterTab{
                  footer = function(parent) return frame end,  -- optional: pinned to the window's foot
                  onShow = fn }, … },
   globals  = { { label, choices, get, set, tip } },   -- switches for Global Settings (optional)
+  undo     = { snapshot = fn() → a deep COPY of what the user edits,          -- optional (2026-09-30,
+               restore  = fn(snap) → put it back (GloomsHub:UndoPatch keeps  --   Undo.lua): the suite's
+                          the live tables' identities) and redraw,           --   ONE undo history
+               token    = fn() → the live profile / preset (a change of token is a SWITCH, not a step) },
+  nudge    = fn(dx, dy, isOpen) → true if it moved something,   -- optional (2026-09-30): the arrow keys
+                                        --   (1 px, Shift 10) while the windows are open; isOpen(sectionId)
+                                        --   says whether that section is open or popped out. Move a
+                                        --   thing ONLY while its position section is open, else return
+                                        --   false so the arrows walk.
   onBuilt(sel, set) · onOpen() · onClose() · refresh()
 }
 GloomsHub:ShowPage(id, sectionId)       -- open that section (or bring its pop-out forward)
 GloomsHub:RefreshWindows(id)            -- after a change the tabs / layout / Global Settings show
 GloomsHub:SuiteWindow(id, "sel"|"set")  -- a tool's window · GloomsHub:SuiteRoot() — their parent
+-- (2026-09-30) The selector and settings windows keep ONE position / height for every tool
+-- (GloomsHubDB.winPlace); the selector is never under 340 (the TOOL RAIL on its left edge, one
+-- tab per tool: Media/ui/rail-<id>-bg|text.png, tools/gen-rail-art.py — a new tool needs its art).
+-- UNDO: GloomsHub:Undo() / :Redo() / :UndoCounts() / :UndoPatch(dst, src) / .UndoCopy(v); a
+-- tool's own change the Hub can't see (a slash command) is recorded at the next mouse release.
+
+-- ANCHORS (Anchors.lua, 2026-09-30) — frames one tool offers and another attaches to
+GloomsHub:RegisterAnchor(id, { label, frame = fn() → frame })   -- Unit Frames: "uf:player", "uf:target"
+GloomsHub:Anchors() → { { id, label } … } · :AnchorFrame(id) · :AnchorLabel(id)
+GloomsHub:AnchorsChanged()              -- the OFFERING tool, once its frames exist (addons load
+GloomsHub:OnAnchorsChanged(fn)          --   alphabetically — FINDINGS §24); takers re-place
 GloomsHub:SuiteManage(win)              -- a tool's own extra window joins the focus stacking
 ```
   The Hub draws the wordmark + tool switcher, the close discs, the section headers (one open at a
@@ -136,7 +156,15 @@ GloomsHub.Media:Play(ref, kind)      -- kind "kit" → PlaySound (SoundKitID); o
 GloomsHub.Media:Stop()               -- silences whatever Play last started
 GloomsHub.Media:SoundKits()          -- the game's 865 named SOUNDKIT entries, sorted (browser only)
 GloomsHub.SOUND_MANIFEST             -- GENERATED index of Sounds\; see SoundsManifest.lua
+-- THE TEXTURE BROWSER (Media.lua, 2026-09-30 — moved from Overlays' drawer)
+GloomsHub:PickTexture({ tool, text, sheet, actions = { { label, fn(text, sheet), tip } … } })
+                                     -- the Texture Browser window beside `tool`'s settings window
+GloomsHub:ClosePicker() · :PickerShown()
+GloomsHub:SheetFor(texture, cols, rows, frames, fps) → { fileID, cols, rows, frames, fps, uLeft,
+                                     --   uRight, vTop, vBottom } or nil (a 1 x 1 still texture)
 ```
+- Texture favorites: `GloomsHubDB.textureFavorites` = { { name, cols, rows, fps, frames } … }, copied
+  once from `VibeOverlayDB.favorites` (never moved). gloomMEDIA → Game Textures shows them.
 - Fonts register into LSM as `font`; textures as `statusbar`; graphics are NOT in LSM (name→path only).
 - **Sounds register into LSM as `sound` (added 2026-08-24).** That registration is the whole point:
   it is what puts them in GA's sound picker and every other LSM-aware addon. Two sources, both
@@ -646,9 +674,8 @@ end
 | `GloomsBars/Config.lua` | MINOR **16** — the two-window kit (stretched controls, `UI.gColor`'s pill, `UI.G_DIM`, `UI.gRounded`, the switch's `widths`), bumped 2026-09-27 in the commit that first called it |
 | `GloomsAuras/Config.lua` | MINOR **6** — calls `UI.colorPicker` directly (its `MakeColor` swatch) |
 | `GloomsAuras/Pages.lua` | MINOR **16** — the two-window kit; gates itself (it prints "update Gloom's Hub" and does not register below 16) |
-| `GloomsOverlays/GloomsOverlays_Editor.lua` | MINOR **4** — calls `UI.tabHeader` |
-| `GloomsOverlays/GloomsOverlays_Preview.lua` | MINOR **3** — the drawer needs nothing newer |
-| `GloomsPortraits/GloomsPortraits_Tab.lua` | MINOR **4** — calls `UI.tabHeader` |
+| `GloomsOverlays/GloomsOverlays_Pages.lua` | MINOR **17** (gloomUI; `_Editor.lua` and `_Preview.lua` are out of the TOC) |
+| ~~`GloomsPortraits`~~ | retired 2026-09-29 — folded into gloomUI |
 | `GloomsUnitFrames/GloomsUnitFrames_Tab.lua` | MINOR **12** — the kit, `UI.chip`, the picker's colour sources, the short dial (bumped 2026-09-21, redesign stage 2) |
 
 ★ Note the table is **not uniform, and that is correct** — each file declares what IT
@@ -657,7 +684,9 @@ added and the two files that call it were bumped **in the same commit**. GA foll
 same discipline on 2026-07-25 when its layout rework adopted `UI.tabHeader` — gate bumped
 in the commit that first called it, which is the only maintenance this gate ever needs.
 
-Hub currently ships **MINOR 16** (`Skin.lua`, 2026-09-27).
+Hub currently ships **MINOR 18** (`Skin.lua`). 2026-09-30 changed behavior without an API a tool
+calls (every edit box joins the Tab ring via `UI.tabbable`; `UI.afterEdit` — the Hub's undo hook;
+`UI.gList` scales before it measures; `UI.gWindow` marks itself `_gWin`), so the MINOR stayed.
 
 ⚠ **This line was stale for three weeks** — it still said MINOR 6 after 7 shipped on 2026-08-15, and
 was only caught on 09-08. It is the line a session reads to decide whether a `SKIN_NEEDS` bump is

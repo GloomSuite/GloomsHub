@@ -110,16 +110,38 @@ end
 
 -- A window's place is kept in SCREEN PIXELS (its top-left), so a scale change
 -- never throws it off the screen or across it.
+-- ★ ONE PLACE FOR EVERY TOOL (2026-09-30, the owner: switching tools made
+-- the windows "bounce all over the place"). The selector and the settings
+-- window keep ONE position and height, shared by every tool: switching puts
+-- the next tool's windows exactly where the last one's were. The shared record
+-- starts from the first tool opened after the change (its own old place, so
+-- nothing jumps); the per-tool records are no longer read. Pop-outs stay per
+-- tool. Heights still honour each window's minimum (the selector's is its
+-- tool rail).
+local function place(which, id)
+  GloomsHubDB = GloomsHubDB or {}
+  GloomsHubDB.winPlace = GloomsHubDB.winPlace or {}
+  local rec = GloomsHubDB.winPlace[which]
+  if not rec then
+    local old = id and db(id)[which]
+    rec = {}
+    if old then rec.l, rec.t, rec.h = old.l, old.t, old.h end
+    GloomsHubDB.winPlace[which] = rec
+  end
+  return rec
+end
+local SEL_MIN = 340   -- the tool rail's height: 30 + five tabs + gaps + 20 (the window's round corner)
+
 local function savePlace(win, rec)
   local l, t = win:GetLeft(), win:GetTop()
   if not (l and t) then return end
   local k = pxPerUnit() * win:GetEffectiveScale()
   rec.l, rec.t, rec.h = math.floor(l * k + 0.5), math.floor(t * k + 0.5), math.floor((win:GetHeight() or 0) + 0.5)
 end
-local function restorePlace(win, rec, dl, dt, dh)
+local function restorePlace(win, rec, dl, dt, dh, minH)
   local k = pxPerUnit() * win:GetEffectiveScale()
   if k <= 0 then k = 1 end
-  win:SetHeight(rec.h or dh)
+  win:SetHeight(math.max(minH or 0, rec.h or dh))
   win:ClearAllPoints()
   if rec.l and rec.t then
     win:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", rec.l / k, rec.t / k)
@@ -136,8 +158,9 @@ function V:ApplyScale()
   root:SetScale(s)
   for id, st in pairs(W) do
     local d = db(id)
-    if st.sel and d.sel and d.sel.l then restorePlace(st.sel, d.sel, 0, 0, st.selH or SEL_H) end
-    if st.set and d.set and d.set.l then restorePlace(st.set, d.set, 0, 0, SET_H) end
+    local ps, pt = place("sel", id), place("set", id)
+    if st.sel and ps.l then restorePlace(st.sel, ps, 0, 0, st.selH or SEL_H, SEL_MIN) end
+    if st.set and pt.l then restorePlace(st.set, pt, 0, 0, SET_H) end
     for sid, pw in pairs(st.pops or {}) do
       local rec = d.pops[sid]
       if pw:IsShown() and rec and rec.l then restorePlace(pw, rec, 0, 0, SET_H) end
@@ -151,7 +174,10 @@ local function ensureRoot()
   if root then return end
   root = CreateFrame("Frame", "GloomsSuiteWindows", UIParent)
   root:SetAllPoints(UIParent); root:SetFrameStrata("DIALOG"); root:Hide()
-  root:SetScript("OnHide", function() V:Closed() end)
+  root:SetScript("OnHide", function() V:Closed(); if Hub.UndoEnd then Hub:UndoEnd() end end)
+  -- the suite's one UNDO history lives while the windows are open (Undo.lua)
+  root:HookScript("OnShow", function() if Hub.UndoBegin then Hub:UndoBegin() end end)
+  if Hub.UndoKeys then Hub:UndoKeys(root) end
   tinsert(UISpecialFrames, "GloomsSuiteWindows")   -- Escape closes every window
   buildLadder()
   hookWorldTooltip()
@@ -572,10 +598,10 @@ local function buildTool(def)
   -- THE SELECTOR
   local selH = (def.selector and def.selector.h) or SEL_H
   st.selH = selH
-  local sel = UI.gWindow({ parent = root, w = SEL_W, h = selH, minH = math.min(200, selH), onFocus = front,
+  local sel = UI.gWindow({ parent = root, w = SEL_W, h = math.max(selH, SEL_MIN), minH = SEL_MIN, onFocus = front,
     onClose = closeAll,
-    onMoved = function() d.sel = d.sel or {}; savePlace(st.sel, d.sel) end,
-    onResized = function() d.sel = d.sel or {}; savePlace(st.sel, d.sel) end })
+    onMoved = function() savePlace(st.sel, place("sel", def.id)) end,
+    onResized = function() savePlace(st.sel, place("sel", def.id)) end })
   st.sel = sel
   local sw = CreateFrame("Button", nil, sel.content); sw:SetHeight(16)
   sw:SetPoint("TOPLEFT", 20, -17)
@@ -591,14 +617,51 @@ local function buildTool(def)
     UI.gList(self, list, def.id, function(v) Hub:FocusTab(v) end, { minW = 160 })
   end)
   UI.attachTip(sw, "Gloom Suite", function() return Hub:VersionLine() end)
+  -- Undo · Redo at the title row's right (Undo.lua)
+  if Hub.UndoButtons then Hub:UndoButtons(sel.content) end
+  -- ★ THE TOOL RAIL (2026-09-30, the owner's Figma "Frame 614": "too
+  -- cumbersome to switch between modules"). A column of small vertical tabs
+  -- outside the selector's LEFT edge — 18 wide, FLUSH with it (the mock's 2 gap
+  -- was a slip — the owner, 2026-09-30), the first 30
+  -- below its top, 4 apart — one per tool in switcher order: violet with white
+  -- capitals, the open tool lime with dark purple (#0f051d). Sansation 9 can't be
+  -- turned in WoW, so each tab is art (tools/gen-rail-art.py: rail-<id>-bg /
+  -- -text, tinted here). Gloom's UI keeps its OVERLAYS tab (the owner). A tool
+  -- with no art gets no tab. The window's clamp grows 20 to the left to keep
+  -- the rail on the screen.
+  do
+    local RAIL_H = { auras = 47, bars = 40, unitframes = 76, overlays = 64, media = 46 }
+    local VIOLET_TAB = { r = 0x6c / 255, g = 0x2f / 255, b = 0xe6 / 255 }
+    local DARK = { r = 0x0f / 255, g = 0x05 / 255, b = 0x1d / 255 }
+    local y = 30
+    for _, t in ipairs(Hub._ordered or {}) do
+      local h = RAIL_H[t.id]
+      if h and t.windows then
+        local b = CreateFrame("Button", nil, sel)
+        b:SetSize(18, h); b:SetPoint("TOPRIGHT", sel, "TOPLEFT", 0, -y)
+        local bg = b:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetTexture("Interface\\AddOns\\GloomsHub\\Media\\ui\\rail-" .. t.id .. "-bg.png")
+        local tx = b:CreateTexture(nil, "ARTWORK"); tx:SetAllPoints(); tx:SetTexture("Interface\\AddOns\\GloomsHub\\Media\\ui\\rail-" .. t.id .. "-text.png")
+        local on = t.id == def.id
+        UI.tint(bg, on and COLOR.lime or VIOLET_TAB)
+        UI.tint(tx, on and DARK or COLOR.paper)
+        if not on then
+          b:SetScript("OnEnter", function() bg:SetVertexColor(VIOLET_TAB.r * 1.25, VIOLET_TAB.g * 1.25, VIOLET_TAB.b * 1.15) end)
+          b:SetScript("OnLeave", function() UI.tint(bg, VIOLET_TAB) end)
+          b:SetScript("OnClick", function() Hub:FocusTab(t.id) end)
+        end
+        y = y + h + 4
+      end
+    end
+    sel:SetClampRectInsets(-20, 0, 20, -10)
+  end
   if def.selector and def.selector.build then def.selector.build(sel.content, { window = sel }) end
   st.pendingSet = true
 
   -- THE SETTINGS WINDOW
   local set = UI.gWindow({ parent = root, w = SET_W, h = SET_H, tabW = def.tab and (def.tab.w or 360) or nil, minH = 160, onFocus = front,
     onClose = closeAll,
-    onMoved = function() d.set = d.set or {}; savePlace(st.set, d.set) end,
-    onResized = function() d.set = d.set or {}; savePlace(st.set, d.set) end })
+    onMoved = function() savePlace(st.set, place("set", def.id)) end,
+    onResized = function() savePlace(st.set, place("set", def.id)) end })
   st.set = set
   if set.tab then makeTab(def, set) end
   st.scroll = UI.gScrollArea(set.content)
@@ -614,8 +677,8 @@ local function placeDefaults(def)
   local total = (SEL_W + 20 + SET_W) * k
   local l = math.floor(((pw or 1920) - total) / 2)
   local t = math.floor(((ph or 1080) + SET_H * k) / 2)
-  restorePlace(st.sel, d.sel or {}, l, t, st.selH or SEL_H)
-  restorePlace(st.set, d.set or {}, l + (SEL_W + 20) * k, t, SET_H)
+  restorePlace(st.sel, place("sel", def.id), l, t, st.selH or SEL_H, SEL_MIN)
+  restorePlace(st.set, place("set", def.id), l + (SEL_W + 20) * k, t, SET_H)
 end
 
 -- ------------------------------------------------------------

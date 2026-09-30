@@ -6,36 +6,55 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-09-29 (**every tool is now in the two-window design** — Portraits, Overlays and
-Media were built from the other tools' pages without mocks, at the owner's request; he is testing
-through use over the coming days. Item 18 closed. **The next session starts with item 19** — the
+**Last updated:** 2026-09-30 (a long build session: **Gloom's UI** (Overlays + Portraits as one tool,
+with groups), shaped bar fills in Unit Frames, the texture browser moved into gloomMEDIA, the tool
+rail, one window place for every tool, suite-wide UNDO, attaching gloomUI groups to unit frames,
+arrow-key nudges, Grow From. Item 19 closed. **The next session starts with item 21** — the
 owner's call.)
 ---
 
 ## Open items
 
-### 19 · ★ START HERE — "Gloom's UI": Overlays + Portraits as one module, and GROUPS that move as one
-**Repo:** `~/GloomsOverlays` + `~/GloomsPortraits` (and the Hub if the module becomes a new tool) ·
-**Size:** a design DISCUSSION first — no code until the owner has chosen · **Evidence:** the owner's
-request, 2026-09-29.
+### 21 · ★ START HERE — the texture browser, and how assets get in
+**Repo:** `~/GloomsHub` (`Media.lua`: the catalogs + the TEXTURE BROWSER block) · **Size:** a design
+DISCUSSION first · **Evidence:** the owner's request, 2026-09-30 ("I'd like to discuss the texture
+browser and how that and adding assets from the game library and external assets works").
 
-Two things he wants to talk through:
-1. **Combining Gloom's Overlays and Gloom's Portraits into one "Gloom's UI" module.** Both are "put a
-   graphic on screen, place it, give it a layer and a show condition". Questions to put to him, not
-   answer for him: one addon or two sharing a window; what happens to `/go` and `/gp`; one profile
-   system (Overlays has profiles, Portraits has none); and the migration.
-   ⚠ **Overlays' SavedVariables globals are `VibeOverlayDB` / `VibeOverlayDBChar` and must not be
-   renamed without a real migration** (its CLAUDE.md, "THE ONE THING…"). ⚠ Portraits keeps its
-   predecessor's migration shim (its CLAUDE.md, the privacy rule) — a merge must not surface the old name.
-2. **Grouping elements and moving a group as one unit** — overlays with a portrait, or several
-   overlays. Prior art in the suite: Unit Frames' per-piece drag handles on top of a unit anchor
-   (`GU:SetDragPiece`, 2026-09-27) and its rings-hugging unit box; Auras' groups (a container with its
-   own load rule). Offer the shapes (a group = a shared anchor with member offsets, like a unit frame)
-   and let him pick.
+What he wants to talk through: the texture browser (gloomMEDIA → Game Textures, and the Texture
+Browser window any tool's Browse opens — `GloomsHub:PickTexture`), how the GAME's art gets found
+(he uses Texture Atlas Viewer, `/tav`; flipbooks are named `…flipbook…` / `…-flip`; a sheet's grid
+is a GUESS the owner may have to correct) and how EXTERNAL art gets in (the Hub's drop-in folders
+`Fonts/ Textures/ Graphics/`, gitignored, registered by name in the Media catalogs). Explain first,
+then let him steer. Nothing is decided yet.
 
-**Read first:** `~/GloomsOverlays/CLAUDE.md` · `~/GloomsPortraits/CLAUDE.md` · the headers of
-`~/GloomsOverlays/GloomsOverlays_Pages.lua` and `~/GloomsPortraits/GloomsPortraits_Pages.lua` · the
-PER-PIECE DRAGGING block in `~/GloomsUnitFrames/GloomsUnitFrames.lua` (search `SetDragPiece`)
+**Read first:** the header of `~/GloomsHub/Media.lua` and its "THE TEXTURE BROWSER" block ·
+CONTRACTS §3 (the resolver) · `GloomsOverlays_BrowseAssets` in `~/GloomsOverlays/GloomsOverlays_Pages.lua`
+
+---
+
+### 22 · This session's builds — waiting on the owner's use (2026-09-30)
+**Repo:** `~/GloomsHub` · `~/GloomsOverlays` · `~/GloomsUnitFrames` · **Size:** his fixes as they come ·
+**Evidence:** each harness-checked (0 errors in `sweep-v3.lua`, targeted scripts); the owner
+confirmed in game what is marked ✓.
+- **Gloom's UI** (`~/GloomsOverlays`, folder unchanged): portraits are an overlay TYPE; groups with a
+  shared anchor, drag-into-group ✓, the eye hides as well as shows ✓, spritesheet settings, last
+  selection remembered ✓, **Attach To** a unit frame ✓ (the login-order fix ✓), Hide With Its Frame,
+  group Scale — untested in game: that attaching leaves a group exactly in place (the harness can't
+  tell), Hide With Its Frame, Scale.
+- **Unit Frames bar fills:** Fill End (round / angled / point) ✓, the track and the absorb stripes
+  cut to it ✓, Marker, Segments (dividers or Whole), Grow From — untested in game: the 1-px seam fix
+  (the owner saw seams), the masked gloss rim on a round end (his "white crust"), markers, segments.
+- **Hub:** the tool rail ✓, one place for every tool's windows ✓ (min selector height 340), the
+  Texture Browser ✓, Tab through fields, UNDO ✓ ("nice, I like it") — untested: that one action is
+  exactly one step, the Ctrl/Cmd+Z keys, arrow-key nudges.
+- **Waiting on his approval to DELETE:** `~/GloomsOverlays/GloomsOverlays_Preview.lua` (the old
+  drawer) and `GloomsOverlays_Editor.lua`, both out of the TOC. **The Portraits addon is retired**
+  (its AddOns symlink removed 2026-09-29; the repo untouched) — what happens to the repo and its
+  public GitHub copy is his call.
+
+**Read first:** `~/GloomsOverlays/CLAUDE.md` · the headers of `~/GloomsHub/Undo.lua` and
+`~/GloomsHub/Anchors.lua` · the "THE FILL'S EDGE PIECES" comment in `NewBar`
+(`~/GloomsUnitFrames/GloomsUnitFrames.lua`) · FINDINGS §21's 2026-09-29/30 addendum
 
 ---
 
@@ -53,24 +72,30 @@ The mocks: Figma page **"GloomSuite UI 3"** (`tools/figma.py` → `get_metadata`
 selector is the frame still NAMED "gloomBars, preview window" at y 1002), "Dropdown/Popup Menu".
 
 **Next, in order:**
-1. **His fixes from use** of Portraits, Overlays and Media — BugSack text first. My unmocked choices
-   to confirm if he raises them: Overlays' Class Color is one Off | Player | Target switch, Flip one
-   None | Horiz | Vert | Both switch, an empty Tint = white; Portraits has no nudge arrows (the dials'
-   arrow keys); Media's selector lists the five catalogs with counts.
-2. **Mocks needed from him:** the texture / sound / font / shape / spell pickers, the color picker,
-   Overlays' asset browser, the tooltip — all still wear the first design's kit. (The confirm and
-   name dialogs moved to the new kit 2026-09-27 at his request.)
+1. **His fixes from use** — BugSack text first. Unmocked choices to confirm if he raises them:
+   Overlays' Class Color is one Off | Player | Target switch, Flip one None | Horiz | Vert | Both
+   switch, an empty Tint = white.
+2. **Mocks needed from him:** the sound / font / shape / spell pickers, the color picker, the tooltip
+   — still the first design's kit. (The texture browser moved to the new kit 2026-09-30, built from
+   the pages without a mock at his request; the confirm and name dialogs 2026-09-27.)
 3. Delete the unmounted previous editors once he approves: Auras `Config.lua`'s (`BuildTab`, the
    accordion, `Build*Section`s, ~2,000 lines — **keep `C.X` and all it exports**), Unit Frames'
-   `GloomsUnitFrames_Tab.lua`, Portraits' `GloomsPortraits_Tab.lua`, Overlays' `GloomsOverlays_Editor.lua`
+   `GloomsUnitFrames_Tab.lua`, Overlays' `GloomsOverlays_Editor.lua` and `GloomsOverlays_Preview.lua`
    (all out of their TOCs).
 4. **Every tool has moved**, so the old big window's code (`Shell.lua`'s panel) and the first/second
    designs' kits can now be retired — check nothing still calls them first.
 
 **Decisions taken (do not re-ask):**
-- **Two windows per tool:** SELECTOR (240; its starting height is the tool's, `selector.h` — Unit
-  Frames' is 105) + SETTINGS (400). Both closes / Escape close the tool; a pop-out's close only puts
-  its section back. Height-only resize. Positions, heights, open section and pop-outs persist.
+- **Two windows per tool:** SELECTOR (240, never shorter than 340 — the tool rail) + SETTINGS (400).
+  Both closes / Escape close the tool; a pop-out's close only puts its section back. Height-only
+  resize. **ONE position and height per window, shared by every tool** (the owner, 2026-09-30: they
+  "bounced all over the place"); open section and pop-outs stay per tool.
+- **The TOOL RAIL** (the owner's Figma "Frame 614", 2026-09-30): vertical tabs FLUSH on the selector's
+  left edge — AURAS · BARS · UNIT FRAMES · OVERLAYS (gloomUI keeps that name) · MEDIA; violet + white,
+  the open tool lime + dark purple #0f051d. Art, since WoW can't turn text (`tools/gen-rail-art.py`).
+- **UNDO / REDO** (2026-09-30): ONE history for the whole suite (the owner: per-tool "would be weird"),
+  while the windows are open, 200 steps; curved arrows on the selector's title row (the tab strip's
+  right end is taken in Auras and Bars) + Ctrl/Cmd+Z, Shift for redo. Media is left out.
 - **One section open at a time**; pop out for more. **Global Settings is the Hub's**, same in every tool.
 - **Sansation only · dimmed = 30%, never hidden · close discs 20 above the top-right corner.**
 - **Layout:** a control's LABEL is Sansation **10** (the owner, 2026-09-27); the control sits **15**
@@ -113,6 +138,8 @@ selector is the frame still NAMED "gloomBars, preview window" at y 1002), "Dropd
 ### 12 · Gloom's Unit Frames — what is left
 **Repo:** `~/GloomsUnitFrames` · **Size:** watching, then small pieces · **Evidence:** bar mode owner-QA'd 2026-09-21 (FINDINGS §21)
 
+**Done 2026-09-29/30:** a bar's **Fill End**, **Marker**, **Segments** (dividers, or Whole = a row of
+window bars) and **Grow From** (item 22 says what is still unproven in game) · the capprobe deleted.
 **Done 2026-09-27/29:** a bar's gradient at ANY angle (item 18) · a shape's WIDTH and HEIGHT apart
 (it stretches; a lime bracket links them) · **no outline on bars** (the owner: no use for it; arcs keep
 theirs) · offsets out to ±1500 · **per-piece dragging** (a lime handle on the open section's piece) ·
@@ -132,7 +159,6 @@ widths · the bar's own offset, separate from the arc's · `/gu bar <ring> …` 
 5. **Flips for non-symmetric bar shapes** — a mirrored file per shape + a "Mirror" choice; only
    matters for the crescent set. Masks refuse flipped texcoords (§21).
 6. **The Gu mark** — still the Hub's logo. Art.
-7. **Delete the `/gu capprobe` probe** — its answer is in FINDINGS §21 (a mask honours CLAMP).
 ⚠ The tab's LOOK is item 16's (rebuilt 2026-09-27); do not tidy it separately.
 
 **Read first:** `~/GloomsUnitFrames/CLAUDE.md` · [FINDINGS.md](FINDINGS.md) §18–§21
@@ -170,6 +196,15 @@ from him; each is: drop the files in, run the script, paste the rows.
 ## Not open — recorded so nobody re-raises them
 
 > Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
+
+- **Carrying the old Portraits settings into Gloom's UI** — **NOT WANTED by the owner, 2026-09-29**:
+  *"you can delete any existing portrait settings … I'll rebuild."* A portrait is just an overlay TYPE
+  with ONE position (no separate 3D / 2D places).
+- **A true cross-tool group (the Hub moving and scaling pieces of several tools as one)** — **NOT
+  BUILT, by agreement 2026-09-30**: gloomUI groups ATTACH to a unit frame instead (the Hub's anchors).
+  **A linked "unit scale" for Unit Frames** was deferred: gloomUI scales a group, the unit frame is
+  adjusted by hand — the owner: "an acceptable compromise".
+- **Undo per tool** — **REJECTED by the owner 2026-09-30**: one suite-wide history.
 
 - **Merging Auras' Icon and Texture types** — **REJECTED by the owner 2026-09-27**: they are different
   to a user; they were made real instead (item 16's decisions).
@@ -216,90 +251,12 @@ from him; each is: drop the files in, run the script, paste the rows.
   can read at age 50, it's not a problem."* Measure if asked; do not lecture.
 - **The mid-combat ruling for GU** stands (2026-09-20): apply at regen is enough.
 
-- **GU's "This spell" aura kind (one aura by spell ID, wearing a Hub effect)** — **REMOVED by the
-  owner 2026-09-20.** On the player, the engine ignores `includeSpellIDs` AND `excludeSpellIDs` on
-  HARMFUL auras — measured through a slot and a group, in either creation order, with a fresh filter
-  table, against a permanent zone debuff (Void Breach) and a timed self-debuff (Blood Draw); the
-  HELPFUL side and GA's HARMFUL slots on the TARGET filter correctly (FINDINGS §20.6). *"It needs
-  to be able to track specific DEBUFFS to be of any value."* The Hub-effect-under-a-button machinery
-  went with it, which is why **item 15 (Effects animating in combat) is CLOSED as moot** — nothing
-  in the suite runs an effect under an aura button any more. The tab greys the spell-list boxes on a
-  player Debuffs group and says why. **Do not rebuild it on the same engine call.** The "boss debuff
-  on me" job is a Debuffs group with the *Boss debuffs* class filter.
-- **An automatic "is the spell known?" check to fix the silent yes (item 6)** — **DISPROVED by trace
-  2026-09-20**, FINDINGS §12: a bound, WORKING Corruption bar answers `known=no` on all three calls
-  (it is keyed on the debuff's ID). Any known-check would hide working auras. The owner's
-  Spell / Talent Known condition stands, and the Auras list now marks an aura whose cooldown trigger
-  points at an UNBOUND spell (the `!` next to the eye) so the next Soul Fire warns before it fires.
-- **"Why does GA's `ApplyConfig` run so hot?" (item 4)** — **ANSWERED and FIXED 2026-09-20**,
-  FINDINGS §1 addendum: `UpdateBar` re-attached on every feed and cleared the style fingerprint, so
-  every UNIT_AURA repainted every shown bar (1,165 pushes in a 30s dummy fight). The guard now keys
-  on the painted BUTTON + style; after the fix, 3,227 skipped / 0 deferred. `/ga hot on` is the
-  instrument, off by default.
-- **A texture-less aura drawing magenta (item 9)** — **RULED and FIXED 2026-09-20**: it shows its
-  spell's icon; an explicit texture always wins. Same resolver in the list rows.
-- **`hgAnchor` in two places (item 10)** — **COLLAPSED 2026-09-20.** GB delegates to the Hub's
-  `GrowAnchor`; the bodies were diffed identical first, the owner looked, nothing moved.
-- **Items 1, 2, 5, 7, 8** — all **CLOSED 2026-09-20** on owner evidence (bars, raids for weeks,
-  GB's profile clicks, the power condition on a Rogue incl. a group, `/ga debug`). ARCHIVE has it.
-- **Settings changing MID-COMBAT, in GU** — the owner, 2026-09-20: *"People don't do that.
-  Whether it updates mid-fight doesn't matter, as long as a change does at least go through after
-  combat ends."* **Said for GU only — he corrected a suite-wide reading.** Do not QA GU's
-  container rebuilds in combat; do make sure a refused write is replayed at regen.
-
-- **"An absorb ARC on the health ring"** — **NOT POSSIBLE, measured 2026-09-19**, FINDINGS §19:
-  no absorb-percent function exists, a curve refuses to evaluate a secret, and `UnitHealthPercent`'s
-  flag does not include absorbs (34 / 34 with a 292K shield). What shipped is the shield WASH
-  (presence via the plain-zero-then-secret alpha gate) and `[absorb]` as text. Reopen only on a new API.
-- **"Start an aura icon's glow from the button's OnShow / from a child's OnUpdate"** — **NO**,
-  FINDINGS §20: no script under an aura button ever fires and its `IsShown` is a secret boolean.
-  Effects start at wiring time and live under the button; the Hub's modules verify their mask bind.
-- **Class color + gradient on the health fill** — **mutually exclusive by the owner's call**
-  (2026-09-19): a gradient wins, and the switch hides in gradient mode. Do not blend them.
-- **A GA display as the "boss debuff on me" highlight** — **not the answer**: GA's displays are
-  CDM-trackable auras; a boss debuff is not one. The GU "This spell" aura group is the tool for it.
-
-- **"Draw the unit-frame rings with `SetGradient`, or hide an empty piece with alpha 0, or
-  position anything with a secret"** — **NO, all measured 2026-09-19**, FINDINGS §18. A texture with
-  `SetGradient` ignores a secret alpha; a secret alpha of exactly ZERO is ignored everywhere;
-  `SetPoint` accepts a secret and drops it. The engine's gradient is a ramp *layer*, "empty" is
-  geometry, and nothing is positioned by a value.
-- **"A cast ring could use the Cooldown swipe"** — **never needed** (2026-09-20): the player's times
-  are plain, and a target's fully secret cast draws through the duration object's percent
-  evaluators on the ring's own curves (§18.10). Do not reach for the swipe.
-- **"The cast ring hides when a target's total is secret"** — **KILLED 2026-09-20**, §18.10. The
-  total is secret in every delve cast and the ring draws anyway.
-- **Gloom's Unit Frames staying account-wide** — **RULED WRONG by the owner and REPLACED 2026-09-20.**
-  Profiles ship (`GloomsUnitFramesDB` v2: a library + per-character bindings; the old config became
-  "Default", which every unbound character lands on). Do not argue for the old shape.
-- **"Rings over 180° can be one piece"** — **NO.** Masks only subtract; two chunks, overlapped by a
-  hard-edged start mask. §18.
-
-- **"Show the 3D model of an enemy targeted mid-combat in an instance"** — **NOT POSSIBLE, measured
-  2026-09-19** (FINDINGS §17). On a restricted map the game identifies ONE unit for an addon: the
-  target, out of combat. Nameplate units and mouseover are secret even before the pull; `SetUnit`
-  on any of them loads nothing. What ships is the ceiling: 3D out of combat, 3D for a mob targeted
-  before the pull when tabbed back to (nameplate-matched, `SetCreature`), the correct 2D portrait
-  otherwise, flipping back to 3D when combat drops. The owner called it "so fucking lame" and he is
-  right; **do not re-chase it without a NEW API.** `UnitIsUnit("target","nameplateN")` being a real
-  boolean in combat is the one door that is open, and it is already used.
-- **A ROUND-BOTTOMED 3D bust (a mask on a PlayerModel)** — **IMPOSSIBLE on the current client**
-  (2026-09-19). A `PlayerModel` is a live viewport into a rectangle, not a texture; `MaskTexture`,
-  `SetClipsChildren` and alpha all act on textures or rectangles, and there is no render-to-texture
-  for addons. A corner matte hides the world under the corners; slicing into clipped copies is
-  jagged, heavy and the copies' idle animations drift apart. **Becomes a one-liner if Blizzard ever
-  ships model-to-texture — that is the only trigger for reopening it.** The owner wants it; record
-  the wish, not a hack.
-- **The WoWup / GitHub-Releases distribution path** — **RETIRED by the owner, 2026-09-19.** He runs
-  every suite addon as a SYMLINK for development; WoWup's GitHub install "doesn't work very well"
-  (learned on Build Barn and Loot Advisor, both moved to CurseForge). Tags still cut a GitHub
-  Release as a version marker, nothing more. **If the suite ever goes public it goes through
-  CurseForge**, and he will say when. Do not frame changes as "so WoWup picks it up", do not verify
-  `latest` for WoWup's sake, do not tell him to install from a release.
-- **Gloom's Portraits keeping its own minimap button / floating panel / slash subcommands** — all
-  **GONE with stage 2** (2026-09-19). The suite has ONE launcher; `/gp` opens the tab; the tab's
-  open/close IS the lock. Reset lives in the tab's rail.
-
+- **Not-open records settled 2026-09-19 → 20** (GU's "This spell" aura kind, the silent-yes known-check,
+  GA's hot `ApplyConfig`, texture-less auras, `hgAnchor`, mid-combat changes in GU, the absorb arc,
+  aura-button scripts, class color vs gradient, secret-value drawing rules, the cast swipe, GU
+  profiles, rings over 180°, enemy 3D models in instances, a round-bottomed 3D bust, the WoWup path,
+  Portraits' old launcher) — moved to ARCHIVE.md ("NOT-OPEN RECORDS moved out of the BACKLOG,
+  2026-09-30"). **Read them there before re-raising any of those.**
 - **Older "not open" records (settled July–August 2026)** — GB profiles and presets, GA's 12.1
   duration bars and the deleted Tracked-Bar mirror, the damage-meter and Quick Keybind non-bugs, icon
   overrides, the colour picker, empty-button collapse, the font-load warning, the ready-sound rules,

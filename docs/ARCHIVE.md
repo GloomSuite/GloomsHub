@@ -1859,3 +1859,109 @@ of the UI". **2026-09-27:** the owner replaced the whole big-window design with 
 window coordinates, the UI Scale control in the window's corner, Michroma titles, Saira) are void;
 the behavioral ones (groups' menu and drag, the triggers dropdown, Empty Icons Global/Show/Hide,
 Icon Scale, Name Off/On, one palette) carried over.
+
+
+---
+
+## NOT-OPEN RECORDS moved out of the BACKLOG, 2026-09-30
+
+(Settled 2026-09-19 → 20; moved verbatim to keep the backlog short. Still binding.)
+
+- **GU's "This spell" aura kind (one aura by spell ID, wearing a Hub effect)** — **REMOVED by the
+  owner 2026-09-20.** On the player, the engine ignores `includeSpellIDs` AND `excludeSpellIDs` on
+  HARMFUL auras — measured through a slot and a group, in either creation order, with a fresh filter
+  table, against a permanent zone debuff (Void Breach) and a timed self-debuff (Blood Draw); the
+  HELPFUL side and GA's HARMFUL slots on the TARGET filter correctly (FINDINGS §20.6). *"It needs
+  to be able to track specific DEBUFFS to be of any value."* The Hub-effect-under-a-button machinery
+  went with it, which is why **item 15 (Effects animating in combat) is CLOSED as moot** — nothing
+  in the suite runs an effect under an aura button any more. The tab greys the spell-list boxes on a
+  player Debuffs group and says why. **Do not rebuild it on the same engine call.** The "boss debuff
+  on me" job is a Debuffs group with the *Boss debuffs* class filter.
+- **An automatic "is the spell known?" check to fix the silent yes (item 6)** — **DISPROVED by trace
+  2026-09-20**, FINDINGS §12: a bound, WORKING Corruption bar answers `known=no` on all three calls
+  (it is keyed on the debuff's ID). Any known-check would hide working auras. The owner's
+  Spell / Talent Known condition stands, and the Auras list now marks an aura whose cooldown trigger
+  points at an UNBOUND spell (the `!` next to the eye) so the next Soul Fire warns before it fires.
+- **"Why does GA's `ApplyConfig` run so hot?" (item 4)** — **ANSWERED and FIXED 2026-09-20**,
+  FINDINGS §1 addendum: `UpdateBar` re-attached on every feed and cleared the style fingerprint, so
+  every UNIT_AURA repainted every shown bar (1,165 pushes in a 30s dummy fight). The guard now keys
+  on the painted BUTTON + style; after the fix, 3,227 skipped / 0 deferred. `/ga hot on` is the
+  instrument, off by default.
+- **A texture-less aura drawing magenta (item 9)** — **RULED and FIXED 2026-09-20**: it shows its
+  spell's icon; an explicit texture always wins. Same resolver in the list rows.
+- **`hgAnchor` in two places (item 10)** — **COLLAPSED 2026-09-20.** GB delegates to the Hub's
+  `GrowAnchor`; the bodies were diffed identical first, the owner looked, nothing moved.
+- **Items 1, 2, 5, 7, 8** — all **CLOSED 2026-09-20** on owner evidence (bars, raids for weeks,
+  GB's profile clicks, the power condition on a Rogue incl. a group, `/ga debug`). ARCHIVE has it.
+- **Settings changing MID-COMBAT, in GU** — the owner, 2026-09-20: *"People don't do that.
+  Whether it updates mid-fight doesn't matter, as long as a change does at least go through after
+  combat ends."* **Said for GU only — he corrected a suite-wide reading.** Do not QA GU's
+  container rebuilds in combat; do make sure a refused write is replayed at regen.
+
+- **"An absorb ARC on the health ring"** — **NOT POSSIBLE, measured 2026-09-19**, FINDINGS §19:
+  no absorb-percent function exists, a curve refuses to evaluate a secret, and `UnitHealthPercent`'s
+  flag does not include absorbs (34 / 34 with a 292K shield). What shipped is the shield WASH
+  (presence via the plain-zero-then-secret alpha gate) and `[absorb]` as text. Reopen only on a new API.
+- **"Start an aura icon's glow from the button's OnShow / from a child's OnUpdate"** — **NO**,
+  FINDINGS §20: no script under an aura button ever fires and its `IsShown` is a secret boolean.
+  Effects start at wiring time and live under the button; the Hub's modules verify their mask bind.
+- **Class color + gradient on the health fill** — **mutually exclusive by the owner's call**
+  (2026-09-19): a gradient wins, and the switch hides in gradient mode. Do not blend them.
+- **A GA display as the "boss debuff on me" highlight** — **not the answer**: GA's displays are
+  CDM-trackable auras; a boss debuff is not one. The GU "This spell" aura group is the tool for it.
+
+- **"Draw the unit-frame rings with `SetGradient`, or hide an empty piece with alpha 0, or
+  position anything with a secret"** — **NO, all measured 2026-09-19**, FINDINGS §18. A texture with
+  `SetGradient` ignores a secret alpha; a secret alpha of exactly ZERO is ignored everywhere;
+  `SetPoint` accepts a secret and drops it. The engine's gradient is a ramp *layer*, "empty" is
+  geometry, and nothing is positioned by a value.
+- **"A cast ring could use the Cooldown swipe"** — **never needed** (2026-09-20): the player's times
+  are plain, and a target's fully secret cast draws through the duration object's percent
+  evaluators on the ring's own curves (§18.10). Do not reach for the swipe.
+- **"The cast ring hides when a target's total is secret"** — **KILLED 2026-09-20**, §18.10. The
+  total is secret in every delve cast and the ring draws anyway.
+- **Gloom's Unit Frames staying account-wide** — **RULED WRONG by the owner and REPLACED 2026-09-20.**
+  Profiles ship (`GloomsUnitFramesDB` v2: a library + per-character bindings; the old config became
+  "Default", which every unbound character lands on). Do not argue for the old shape.
+- **"Rings over 180° can be one piece"** — **NO.** Masks only subtract; two chunks, overlapped by a
+  hard-edged start mask. §18.
+
+- **"Show the 3D model of an enemy targeted mid-combat in an instance"** — **NOT POSSIBLE, measured
+  2026-09-19** (FINDINGS §17). On a restricted map the game identifies ONE unit for an addon: the
+  target, out of combat. Nameplate units and mouseover are secret even before the pull; `SetUnit`
+  on any of them loads nothing. What ships is the ceiling: 3D out of combat, 3D for a mob targeted
+  before the pull when tabbed back to (nameplate-matched, `SetCreature`), the correct 2D portrait
+  otherwise, flipping back to 3D when combat drops. The owner called it "so fucking lame" and he is
+  right; **do not re-chase it without a NEW API.** `UnitIsUnit("target","nameplateN")` being a real
+  boolean in combat is the one door that is open, and it is already used.
+- **A ROUND-BOTTOMED 3D bust (a mask on a PlayerModel)** — **IMPOSSIBLE on the current client**
+  (2026-09-19). A `PlayerModel` is a live viewport into a rectangle, not a texture; `MaskTexture`,
+  `SetClipsChildren` and alpha all act on textures or rectangles, and there is no render-to-texture
+  for addons. A corner matte hides the world under the corners; slicing into clipped copies is
+  jagged, heavy and the copies' idle animations drift apart. **Becomes a one-liner if Blizzard ever
+  ships model-to-texture — that is the only trigger for reopening it.** The owner wants it; record
+  the wish, not a hack.
+- **The WoWup / GitHub-Releases distribution path** — **RETIRED by the owner, 2026-09-19.** He runs
+  every suite addon as a SYMLINK for development; WoWup's GitHub install "doesn't work very well"
+  (learned on Build Barn and Loot Advisor, both moved to CurseForge). Tags still cut a GitHub
+  Release as a version marker, nothing more. **If the suite ever goes public it goes through
+  CurseForge**, and he will say when. Do not frame changes as "so WoWup picks it up", do not verify
+  `latest` for WoWup's sake, do not tell him to install from a release.
+- **Gloom's Portraits keeping its own minimap button / floating panel / slash subcommands** — all
+  **GONE with stage 2** (2026-09-19). The suite has ONE launcher; `/gp` opens the tab; the tab's
+  open/close IS the lock. Reset lives in the tab's rail.
+
+
+---
+
+## Closed 2026-09-30 — BACKLOG 19: "Gloom's UI" (Overlays + Portraits) and groups
+
+Discussed and built 2026-09-29 → 30. **Portraits folded into Gloom's Overlays as an overlay TYPE**
+(`ov.kind = "portrait"`, `GloomsOverlays_Portraits.lua` — the delve-measured instance handling came
+across unchanged, FINDINGS §17); the tool is **gloomUI** (title "UI", wordmark "UI", `/gui` plus `/go`
+and `/gp`), the FOLDER stayed `GloomsOverlays` so `VibeOverlayDB` needed no migration. The owner
+chose NOT to carry the old portrait settings over. **Groups**: `profile.groups` = { id, name, x, y,
+collapsed, attach, hideWithAnchor, scale }; a member's x / y are an offset from the group's anchor;
+Move to Group, drag an overlay onto a group in the list, a green box on screen moves the group, a
+lime outline the selected overlay. The Portraits addon's AddOns symlink was removed (the repo kept).
+Follow-ups (attach to unit frames, scale, nudges, last selection) are BACKLOG 22.

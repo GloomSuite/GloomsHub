@@ -19,9 +19,11 @@ brief and its decisions.)
 
 ## The one-paragraph answer
 
-**The 7-phase plan is complete and QA'd. Six addons: the Hub and five tools.** GloomsHub is the
-shared base; Bars, Auras, Overlays, **Portraits** and **Unit Frames** each mount a tab in its window
-and hard-depend on it. StoneTweaks is retired; **all six suite repos are public under the
+**The 7-phase plan is complete and QA'd. Five addons: the Hub and four tools.** GloomsHub is the
+shared base; Bars, Auras, **Gloom's UI** (the `GloomsOverlays` folder — Overlays with Portraits folded
+in as an overlay type since 2026-09-29) and **Unit Frames** each mount their windows in it and
+hard-depend on it. **Gloom's Portraits is retired** (its AddOns symlink removed 2026-09-29; the repo
+and its public copy untouched — the owner's call what happens to them). StoneTweaks is retired; **all six suite repos are public under the
 `GloomSuite` org** (Build Barn stayed with `HandofDevastation`); `GloomsUnitFrames` went up on
 2026-09-20, verified anonymously (author `Gloom`, no linked account). **Hub, Bars and Auras are at
 `v1.4.0`; Overlays at `v1.3.0`; Portraits at `v1.0.0`** with stage 2 on `master` untagged; Unit
@@ -53,6 +55,11 @@ of it.
 ---
 
 ## Locked decisions — do not reopen
+
+- **Gloom's UI = Overlays + Portraits, in the `GloomsOverlays` FOLDER** (2026-09-29, the owner): the
+  folder and `VibeOverlayDB` never renamed; a portrait is an overlay TYPE; the old portrait settings
+  were not carried over. Groups attach to other tools' frames through the Hub's ANCHORS (CONTRACTS §2).
+- **ONE undo history for the whole suite; ONE window place for every tool** (2026-09-30, the owner).
 
 - **Shared base = GloomsHub**, permanent asset path `Interface\AddOns\GloomsHub\…`.
 - **★ THE SUITE UI IS BEING REBUILT FROM THE OWNER'S FIGMA MOCKS — THE TWO-WINDOW DESIGN**
@@ -172,9 +179,11 @@ modules + `GloomsHub.Effects`) · `Shell.lua` (the Suite window: `RegisterTab`/`
 `ToggleWindow` + `/gloom`, `/gloom px` (the pixel-grid probe — also the window's and the hovered
 control's edges), `/gloom texttest`, `/gloom fonttest`) · **`Windows.lua`** (the two-window Suite:
 selector, settings, pop-outs, Global Settings, the level bands that keep overlapping windows apart;
-`Shell.lua` routes a `windows` tool to it) · `Media.lua` (LSM registration — `RegisterAll` at the Hub's
+`Shell.lua` routes a `windows` tool to it; the tool rail) · **`Undo.lua`** (the suite's one undo
+history + the arrow-key nudges, 2026-09-30) · **`Anchors.lua`** (frames tools attach to, 2026-09-30) ·
+`Media.lua` (LSM registration — `RegisterAll` at the Hub's
 ADDON_LOADED, `VerifyFonts` at PLAYER_ENTERING_WORLD — `ResolveAssetPath`, `ListMedia`, the
-Media tab) · `MinimapButton.lua` (**the ONE suite launcher** — never one per tool). `Shell.lua`
+Media tab, and since 2026-09-30 THE TEXTURE BROWSER — gloomMEDIA → Game Textures and `PickTexture`) · `MinimapButton.lua` (**the ONE suite launcher** — never one per tool). `Shell.lua`
 is the OLD big window, kept for the tools not yet rebuilt (their old layouts, unscaled, on the light
 plate under the top bar); its glass-page code has no users now. `tools/figma.py` reads the
 mocks straight from the Figma desktop server (the app's connector lists no tools).

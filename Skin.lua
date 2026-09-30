@@ -248,9 +248,16 @@ end
 --     ignores the arrows.
 local editBoxes = setmetatable({}, { __mode = "k" })
 
+-- The ring is one WINDOW's boxes: the nearest two-window-kit window (UI.gWindow
+-- marks itself `_gWin`), else the frame just under UIParent (the first design).
 local function topLevel(f)
+  if f._gWin then return f end
   local p = f:GetParent()
-  while p and p ~= UIParent do f = p; p = f:GetParent() end
+  while p and p ~= UIParent do
+    f = p
+    if f._gWin then return f end
+    p = f:GetParent()
+  end
   return f
 end
 
@@ -267,16 +274,11 @@ local function tabRing(from)
   return ring
 end
 
-function UI.flatEditBox(parent, w, h)
-  local e = CreateFrame("EditBox", nil, parent)
-  e:SetSize(w, h); e:SetAutoFocus(false)
-  UI.setFont(e, FONT.body, 12); e:SetTextColor(COLOR.text.r, COLOR.text.g, COLOR.text.b)
-  e:SetTextInsets(6, 6, 0, 0)
-  local bg = e:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints()
-  bg:SetColorTexture(COLOR.purple.r, COLOR.purple.g, COLOR.purple.b, 0.10)
-  e.bg = bg   -- exposed so the kit's `UI.field` can reskin the same box (MINOR 11)
-  e:SetScript("OnEditFocusGained", function(self) if self.onFocus then self.onFocus(self, true) else bg:SetColorTexture(COLOR.purple.r, COLOR.purple.g, COLOR.purple.b, 0.22) end end)
-  e:SetScript("OnEditFocusLost",  function(self) if self.onFocus then self.onFocus(self, false) else bg:SetColorTexture(COLOR.purple.r, COLOR.purple.g, COLOR.purple.b, 0.10) end end)
+-- ★ Tab / Shift-Tab moves to the next / previous box. Every edit box in the
+-- kit joins: the first design's (MINOR 10) and, since 2026-09-30, the later
+-- kits' fields and dial number boxes (the owner: "I thought we made it
+-- possible to tab through fields" — the new widgets had never joined).
+function UI.tabbable(e)
   e:SetScript("OnTabPressed", function(self)
     local ring = tabRing(self)
     local n = #ring
@@ -287,6 +289,23 @@ function UI.flatEditBox(parent, w, h)
     self:ClearFocus()          -- commits, via the consumer's focus-lost hook
     nxt:SetFocus(); nxt:HighlightText()
   end)
+  editBoxes[e] = true
+  -- a committed or stepped value is an UNDO step (the Hub's Undo.lua sets UI.afterEdit)
+  e:HookScript("OnEditFocusLost", function() if UI.afterEdit then UI.afterEdit() end end)
+  e:HookScript("OnArrowPressed", function() if UI.afterEdit then UI.afterEdit() end end)
+end
+
+function UI.flatEditBox(parent, w, h)
+  local e = CreateFrame("EditBox", nil, parent)
+  e:SetSize(w, h); e:SetAutoFocus(false)
+  UI.setFont(e, FONT.body, 12); e:SetTextColor(COLOR.text.r, COLOR.text.g, COLOR.text.b)
+  e:SetTextInsets(6, 6, 0, 0)
+  local bg = e:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints()
+  bg:SetColorTexture(COLOR.purple.r, COLOR.purple.g, COLOR.purple.b, 0.10)
+  e.bg = bg   -- exposed so the kit's `UI.field` can reskin the same box (MINOR 11)
+  e:SetScript("OnEditFocusGained", function(self) if self.onFocus then self.onFocus(self, true) else bg:SetColorTexture(COLOR.purple.r, COLOR.purple.g, COLOR.purple.b, 0.22) end end)
+  e:SetScript("OnEditFocusLost",  function(self) if self.onFocus then self.onFocus(self, false) else bg:SetColorTexture(COLOR.purple.r, COLOR.purple.g, COLOR.purple.b, 0.10) end end)
+  UI.tabbable(e)
   e:SetScript("OnArrowPressed", function(self, key)
     if key ~= "UP" and key ~= "DOWN" then return end
     local delta = (key == "UP" and 1 or -1) * (IsShiftKeyDown() and 10 or 1)
@@ -2628,6 +2647,7 @@ function UI.dial(parent, opts)
     if v then apply(v) else paint() end
   end)
   box:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+  UI.tabbable(box)
   box:SetScript("OnEscapePressed", function(self) self:SetText(fmt(cur)); self:ClearFocus() end)
 
   function f:refresh() cur = snap(opts.get() or minV); paint() end
@@ -3385,6 +3405,7 @@ function UI.pillField(parent, w, opts)
     if self._escape then self._escape = nil; if opts.revert then opts.revert(self) end; return end
     if opts.commit then opts.commit(self:GetText() or "") end
   end)
+  UI.tabbable(e)
   function e:setEnabled(on)
     self:SetEnabled(on and true or false)
     if self.button then self.button:SetEnabled(on and true or false) end
@@ -3842,6 +3863,13 @@ function UI.gListFrame() return gFlyout() end
 function UI.gList(anchor, options, current, onPick, opts)
   opts = opts or {}
   local fly = gFlyout()
+  -- ★ The scale FIRST, then measure (2026-09-29, the owner: the first menu
+  -- after a /reload read "Rena…", later ones were fine). The list wears the
+  -- anchor's effective scale; set after the rows were measured, the FIRST
+  -- list was measured at scale 1 and drawn at the Addon UI Scale, where the
+  -- same text renders a little wider than the width it was given.
+  local es = anchor and anchor:GetEffectiveScale() or 1
+  fly:SetScale(es / UIParent:GetEffectiveScale())
   local y, widest, shownH = 0, 0, 0
   for i, opt in ipairs(options) do
     if opt.divider and i > 1 then y = y - GL_DIV end
@@ -3888,10 +3916,8 @@ function UI.gList(anchor, options, current, onPick, opts)
   fly.child:SetSize(w - 2, math.max(10, -y))
   fly:SetSize(w, shownH + 2 * GL_PAD)
   fly.scroll:SetVerticalScroll(0)
-  -- The list lives on UIParent; it wears the anchor's effective scale so it
-  -- lines up with a scaled window.
-  local es = anchor and anchor:GetEffectiveScale() or 1
-  fly:SetScale(es / UIParent:GetEffectiveScale())
+  -- (The list lives on UIParent and wears the anchor's effective scale so it
+  -- lines up with a scaled window — set at the top, before the measuring.)
   UI.gHairRefresh()   -- its lines are one pixel at the scale it now wears
   fly:ClearAllPoints()
   if opts.cursor then
@@ -3987,6 +4013,7 @@ function UI.gField(parent, w, opts)
     if self._escape then self._escape = nil; if opts.revert then opts.revert(self) end; return end
     if opts.commit then opts.commit(self:GetText() or "") end
   end)
+  UI.tabbable(e)
   function e:setEnabled(on) self:SetEnabled(on and true or false); self:SetAlpha(on and 1 or DIM) end
   -- a caller that re-insets the field keeps the nudge
   local si = e.SetTextInsets
@@ -4101,6 +4128,7 @@ function UI.gDial(parent, opts)
     if v then apply(v) else paint() end
   end)
   box:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+  UI.tabbable(box)
   box:SetScript("OnEscapePressed", function(self) self:SetText(fmt(cur)); self:ClearFocus() end)
 
   function f:refresh() cur = snap(opts.get() or minV); paint() end
@@ -4572,6 +4600,7 @@ function UI.gWindow(opts)
   local win = CreateFrame("Frame", opts.name, opts.parent or UIParent)
   win:SetSize(W, H)
   win:SetFrameStrata("DIALOG"); win:SetToplevel(false)
+  win._gWin = true   -- the Tab ring's boundary (UI.tabbable)
   win:SetMovable(true); win:SetResizable(true); win:SetClampedToScreen(true)
   win:SetClampRectInsets(0, 0, opts.tabW and 28 or 20, -10)
   win:EnableMouse(true); win:RegisterForDrag("LeftButton")

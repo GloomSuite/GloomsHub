@@ -545,9 +545,10 @@ end
 --   the SELECTOR — the five catalogs as a list with their counts (a click
 --     opens that section), the one open violet 30%;
 --   the TAB — "gloomMEDIA:" and what the catalog is;
---   five SECTIONS — Fonts · Textures · Graphics · Sounds (each: Display Name
+--   six SECTIONS — Fonts · Textures · Graphics · Sounds (each: Display Name
 --     | File Name, Add, what the catalog is for, then its entries with a
---     preview and a remove X) · Game Sounds (search, click to hear).
+--     preview and a remove X) · Game Sounds (search, click to hear) · Game
+--     Textures (the texture browser, 2026-09-29 — see below).
 -- The numbers are the family's: a labelled control is 31 tall, rows 41
 -- apart, columns 170 at 0 / 190.
 -- ============================================================
@@ -740,6 +741,353 @@ local function buildBrowser(parent)
     return f
 end
 
+-- ------------------------------------------------------------
+-- ★ THE TEXTURE BROWSER (2026-09-29, the owner: "I'd VERY MUCH expect to see
+-- it in the gloomMEDIA module"). Moved here from Gloom's Overlays' asset
+-- browser (the first design's drawer, which could dock off the screen and not
+-- be dragged back — the owner, the same day). One builder, two homes:
+--   · Media's GAME TEXTURES section — look a texture up, play it, keep favorites;
+--   · the TEXTURE BROWSER window, GloomsHub:PickTexture(opts), which any tool's
+--     texture field opens beside its settings window: its buttons hand the
+--     texture (and its spritesheet grid) back to that field.
+-- A texture is a Suite media name, an atlas, a file ID or an Interface\ path;
+-- more than one column or row plays it as a spritesheet (GloomsHub:SheetFor).
+-- Favorites live in GloomsHubDB.textureFavorites — COPIED once from
+-- Overlays' VibeOverlayDB.favorites (never moved; the old list stays as it was).
+-- ------------------------------------------------------------
+
+-- A spritesheet for a texture: { fileID, cols, rows, frames, fps, uLeft,
+-- uRight, vTop, vBottom } — what Gloom's Overlays plays — or nil for a still
+-- texture (a 1 x 1 grid). `fileID` is whatever SetTexture takes: the media
+-- path, the file ID, an atlas's file (its cut as the u / v bounds) or the path.
+function GloomsHub:SheetFor(texture, cols, rows, frames, fps)
+    cols, rows = math.max(1, math.floor(cols or 1)), math.max(1, math.floor(rows or 1))
+    if cols * rows <= 1 then return nil end
+    local t = (texture or ""):match("^%s*(.-)%s*$")
+    local sh = { cols = cols, rows = rows, fps = math.max(1, math.floor(fps or 15)),
+        frames = math.max(1, math.min(cols * rows, math.floor(frames or cols * rows))),
+        uLeft = 0, uRight = 1, vTop = 0, vBottom = 1 }
+    local path = GloomsHub:ResolveAssetPath(t)
+    local info = (not path) and t ~= "" and C_Texture and C_Texture.GetAtlasInfo(t)
+    if path then sh.fileID = path
+    elseif tonumber(t) then sh.fileID = tonumber(t)
+    elseif info then
+        sh.fileID = info.file
+        sh.uLeft, sh.uRight, sh.vTop, sh.vBottom = info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord
+    elseif t ~= "" then sh.fileID = t end
+    return sh
+end
+
+local function TextureFavorites()
+    if not GloomsHubDB then return {} end
+    if not GloomsHubDB.textureFavorites then
+        GloomsHubDB.textureFavorites = {}
+        local old = type(VibeOverlayDB) == "table" and VibeOverlayDB.favorites
+        if type(old) == "table" then
+            for _, fav in ipairs(old) do
+                local name = fav.texture or fav.name
+                if name then
+                    table.insert(GloomsHubDB.textureFavorites, { name = name, cols = fav.cols or 1, rows = fav.rows or 1,
+                        fps = fav.fps or 15, frames = fav.frames })
+                end
+            end
+        end
+    end
+    return GloomsHubDB.textureFavorites
+end
+
+-- The browser, 360 wide: Texture + Load · the preview · its status · Columns |
+-- Rows · Frames | Speed · Play, Stop, Add to Favorites · the host's buttons
+-- (two to a row) · Favorites (8 lines, the wheel scrolls; click one to load it,
+-- its X removes it). Returns the frame; frame.api = { load(text, sheet),
+-- setActions({ { label, fn(text, sheet), tip } … }), refresh() }.
+local TB_PREVIEW_H, TB_FAV_ROWS = 180, 8
+local function buildTextureBrowser(parent)
+    local f = CreateFrame("Frame", nil, parent); f:SetSize(360, 500)
+    local st = { text = "", cols = 1, rows = 1, frames = 1, fps = 15, playing = false }
+    local api = {}
+    f.api = api
+    UI.gLabel(f, "Texture"):SetPoint("TOPLEFT", 0, 0)
+    local field = UI.gField(f, 294, { placeholder = "A media name, atlas, file ID or path",
+        commit = function(text) if (text or "") ~= st.text then api.load(text) end end,
+        revert = function(self) self:SetText(st.text or "") end })
+    field:SetPoint("TOPLEFT", 0, -15)
+    UI.attachTip(field, "Texture", "A Suite media name (the Media catalog), an atlas name, a file ID, or an Interface\\ path. Enter or clicking away loads it.")
+    local loadB = UI.gButton(f, "Load", { w = 60, h = 16, size = 10, onClick = function() api.load(field:GetText()) end })
+    loadB:SetPoint("TOPLEFT", 300, -15)
+    -- the preview
+    local box = CreateFrame("Frame", nil, f); box:SetSize(360, TB_PREVIEW_H); box:SetPoint("TOPLEFT", 0, -41)
+    local bg = box:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(VIOLET.r, VIOLET.g, VIOLET.b, 0.08)
+    local pv = box:CreateTexture(nil, "ARTWORK"); pv:SetPoint("CENTER")
+    local stLine = UI.newText(f, FONTS.sa, 10, LILAC, "LEFT")
+    stLine:SetPoint("TOPLEFT", 0, -(41 + TB_PREVIEW_H + 6)); stLine:SetWidth(360); stLine:SetWordWrap(false)
+    local y0 = 41 + TB_PREVIEW_H + 26
+    local base = { u0 = 0, u1 = 1, v0 = 0, v1 = 1 }   -- the texture's own cut (an atlas's) before the grid
+    local function frameCoords(i)
+        local cw, rh = (base.u1 - base.u0) / st.cols, (base.v1 - base.v0) / st.rows
+        local col, row = i % st.cols, math.floor(i / st.cols)
+        return base.u0 + col * cw, base.u0 + (col + 1) * cw, base.v0 + row * rh, base.v0 + (row + 1) * rh
+    end
+    local function stop()
+        st.playing = false
+        box:SetScript("OnUpdate", nil)
+        pv:SetTexCoord(frameCoords(0))
+    end
+    local function play()
+        if st.cols * st.rows <= 1 then return end
+        st.playing = true
+        local total = math.max(1, math.min(st.frames, st.cols * st.rows))
+        local dur, t, i = 1 / math.max(1, st.fps), 0, 0
+        box:SetScript("OnUpdate", function(_, dt)
+            t = t + dt
+            if t >= dur then t = t - dur; i = (i + 1) % total; pv:SetTexCoord(frameCoords(i)) end
+        end)
+    end
+    -- the preview's size: the file (or the frame of a sheet) fitted into the box
+    local natW, natH = 1, 1
+    local function fit()
+        local w, h = natW / st.cols, natH / st.rows
+        local k = math.min((360 - 20) / math.max(1, w), (TB_PREVIEW_H - 20) / math.max(1, h), 4)
+        pv:SetSize(math.max(1, w * k), math.max(1, h * k))
+    end
+    local function regrid()
+        local was = st.playing
+        stop(); fit()
+        if was then play() end
+    end
+    local function dial(label, key, min, max, x, y, onSet, tip)
+        local d = UI.gDial(f, { w = 170, label = label, min = min, max = max, step = 1, dragPx = 400,
+            get = function() return st[key] end,
+            set = function(v) st[key] = v; if onSet then onSet() end; regrid(); api.refresh() end })
+        d:SetPoint("TOPLEFT", x, -y)
+        if tip then UI.attachTip(d.strip, label, tip) end
+        return d
+    end
+    local dCols = dial("Columns", "cols", 1, 64, 0, y0, function() st.frames = st.cols * st.rows end,
+        "How many frames across. More than one column or row plays the texture as an animation — left to right, then row by row. 1 x 1 = a still texture. For an atlas this is a guess.")
+    local dRows = dial("Rows", "rows", 1, 64, 190, y0, function() st.frames = st.cols * st.rows end)
+    local dFrames = dial("Frames", "frames", 1, 4096, 0, y0 + 41, nil, "How many cells to play — fewer than Columns x Rows when the last row isn't full.")
+    local dFps = dial("Speed (frames per second)", "fps", 1, 60, 190, y0 + 41)
+    local bY = y0 + 82
+    local playB = UI.gButton(f, "Play", { w = 60, h = 16, size = 10, onClick = function() play(); api.refresh() end })
+    playB:SetPoint("TOPLEFT", 0, -bY)
+    local stopB = UI.gButton(f, "Stop", { w = 60, h = 16, size = 10, onClick = function() stop(); api.refresh() end })
+    stopB:SetPoint("TOPLEFT", 66, -bY)
+    local favB = UI.gButton(f, "Add to Favorites", { h = 16, size = 10, pad = 10 })
+    favB:SetPoint("TOPRIGHT", 0, -bY)
+    local function say(msg, ok) status(stLine, msg, ok) end
+    favB:SetScript("OnClick", function()
+        if (st.text or "") == "" then say("Load a texture first.", false); return end
+        local favs = TextureFavorites()
+        for _, fav in ipairs(favs) do
+            if fav.name == st.text and fav.cols == st.cols and fav.rows == st.rows and (fav.frames or fav.cols * fav.rows) == st.frames then
+                say("Already a favorite with these settings."); return
+            end
+        end
+        table.insert(favs, { name = st.text, cols = st.cols, rows = st.rows, fps = st.fps, frames = st.frames })
+        say("Added to favorites.", true)
+        api.refresh()
+        if MP.renderSelector then MP.renderSelector() end
+    end)
+    -- the host's buttons
+    local actBtns, actions = {}, {}
+    local aY = bY + 30
+    function api.setActions(list)
+        actions = list or {}
+        for i, a in ipairs(actions) do
+            local b = actBtns[i]
+            if not b then b = UI.gButton(f, "", { w = 170, h = 16, size = 10 }); actBtns[i] = b end
+            b.text:SetText(a.label)
+            b:ClearAllPoints(); b:SetPoint("TOPLEFT", ((i - 1) % 2) * 190, -(aY + math.floor((i - 1) / 2) * 24))
+            b:SetScript("OnClick", function()
+                if (st.text or "") == "" then say("Load a texture first.", false); return end
+                a.fn(st.text, GloomsHub:SheetFor(st.text, st.cols, st.rows, st.frames, st.fps))
+            end)
+            b:Show()
+            if a.tip then UI.attachTip(b, a.label, a.tip) end
+        end
+        for i = #actions + 1, #actBtns do actBtns[i]:Hide() end
+        api.refresh()
+    end
+    -- favorites
+    local favHead = UI.gLabel(f, "Favorites")
+    local favEmpty = note(f, "No favorites yet — load a texture and click Add to Favorites.")
+    local favList = CreateFrame("Frame", nil, f); favList:SetSize(360, TB_FAV_ROWS * 18)
+    favList:EnableMouseWheel(true)
+    local favRows, favOff = {}, 0
+    for i = 1, TB_FAV_ROWS do
+        local r = CreateFrame("Button", nil, favList); r:SetSize(360, 18); r:SetPoint("TOPLEFT", 0, -(i - 1) * 18)
+        local hl = r:CreateTexture(nil, "BACKGROUND"); hl:SetPoint("TOPLEFT", -4, 0); hl:SetPoint("BOTTOMRIGHT", 4, 0)
+        hl:SetColorTexture(VIOLET.r, VIOLET.g, VIOLET.b, 0.15); hl:Hide()
+        r:SetScript("OnEnter", function() hl:Show() end)
+        r:SetScript("OnLeave", function() hl:Hide() end)
+        r.name = UI.newText(r, FONTS.sa, 10, COLOR.paper, "LEFT"); r.name:SetPoint("LEFT", 0, 0); r.name:SetWidth(210); r.name:SetWordWrap(false)
+        r.meta = UI.newText(r, FONTS.sa, 9, LILAC, "RIGHT"); r.meta:SetPoint("RIGHT", -20, 0)
+        r.x = UI.gX(r); r.x:SetPoint("RIGHT", 4, 0)
+        r:SetScript("OnClick", function(self)
+            local fav = self.fav; if not fav then return end
+            api.load(fav.name, { cols = fav.cols or 1, rows = fav.rows or 1, frames = fav.frames, fps = fav.fps or 15 })
+        end)
+        r.x:SetScript("OnClick", function()
+            local favs = TextureFavorites()
+            for k, fav in ipairs(favs) do if fav == r.fav then table.remove(favs, k); break end end
+            api.refresh()
+            if MP.renderSelector then MP.renderSelector() end
+        end)
+        UI.attachTip(r.x, "Remove", "Takes this texture off your favorites.")
+        favRows[i] = r
+    end
+    favList:SetScript("OnMouseWheel", function(_, d) favOff = favOff - d * 2; api.refresh() end)
+    -- the scrollbar, in the margin right of the list, only while it overflows
+    -- (the gloomUI / Auras lists' bar: 3 wide, black 50%, a violet 50% thumb)
+    local track = CreateFrame("Frame", nil, favList); track:SetWidth(3)
+    track:SetPoint("TOPLEFT", favList, "TOPLEFT", 370.5, 0); track:SetPoint("BOTTOMLEFT", favList, "BOTTOMLEFT", 370.5, 0)
+    local tt = track:CreateTexture(nil, "BACKGROUND"); tt:SetAllPoints(); tt:SetColorTexture(0, 0, 0, 0.5)
+    local thumb = CreateFrame("Frame", nil, track); thumb:SetWidth(3)
+    local th = thumb:CreateTexture(nil, "ARTWORK"); th:SetAllPoints(); th:SetColorTexture(VIOLET.r, VIOLET.g, VIOLET.b, 0.5)
+    track:Hide()
+
+    function api.load(text, sheet)
+        text = (text or ""):match("^%s*(.-)%s*$")
+        st.text = text
+        field:SetText(text)
+        stop()
+        base.u0, base.u1, base.v0, base.v1 = 0, 1, 0, 1
+        natW, natH = 256, 256
+        pv:SetTexCoord(0, 1, 0, 1)
+        st.cols, st.rows, st.frames, st.fps = 1, 1, 1, st.fps or 15
+        if text == "" then pv:SetTexture(nil); say("Enter a Suite media name, an atlas, a file ID or an Interface\\ path."); api.refresh(); return end
+        local path = GloomsHub:ResolveAssetPath(text)
+        local info = (not path) and C_Texture and C_Texture.GetAtlasInfo(text)
+        if path then
+            pv:SetTexture(path); say(("Suite media \"%s\"."):format(text), true)
+        elseif tonumber(text) then
+            pv:SetTexture(tonumber(text)); say(("File ID %s."):format(text), true)
+        elseif info then
+            pv:SetTexture(info.file)
+            base.u0, base.u1, base.v0, base.v1 = info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord
+            natW, natH = info.width or 256, info.height or 256
+            -- the old browser's guess at a flipbook's grid
+            local uSpan, vSpan = info.rightTexCoord - info.leftTexCoord, info.bottomTexCoord - info.topTexCoord
+            if uSpan > 0 and vSpan > 0 then
+                st.cols = math.max(1, math.floor(1 / uSpan + 0.5)); st.rows = math.max(1, math.floor(1 / vSpan + 0.5))
+                st.frames = st.cols * st.rows
+            end
+            say(("Atlas \"%s\" — %d x %d%s"):format(text, natW, natH,
+                (st.cols * st.rows > 1) and (" · a %d x %d spritesheet?"):format(st.cols, st.rows) or ""), true)
+        else
+            pv:SetTexture(text); say(("\"%s\" isn't a media name or an atlas — shown as a path."):format(text))
+        end
+        if sheet then
+            st.cols, st.rows = sheet.cols or 1, sheet.rows or 1
+            st.frames = sheet.frames or st.cols * st.rows
+            st.fps = sheet.fps or 15
+        end
+        fit()
+        pv:SetTexCoord(frameCoords(0))
+        if st.cols * st.rows > 1 then play() end
+        api.refresh()
+    end
+
+    function api.refresh()
+        for _, d in ipairs({ dCols, dRows, dFrames, dFps }) do d:refresh() end
+        local anim = st.cols * st.rows > 1
+        dFrames:setEnabled(anim); dFps:setEnabled(anim)
+        playB:SetEnabled(anim and not st.playing); stopB:SetEnabled(st.playing)
+        local rowsN = math.ceil(#actions / 2)
+        local fy = (#actions > 0) and (aY + rowsN * 24 + 10) or (bY + 36)
+        favHead:ClearAllPoints(); favHead:SetPoint("TOPLEFT", 0, -fy)
+        local favs = TextureFavorites()
+        local maxOff = math.max(0, #favs - TB_FAV_ROWS)
+        favOff = math.max(0, math.min(maxOff, favOff))
+        favList:ClearAllPoints(); favList:SetPoint("TOPLEFT", 0, -(fy + 18))
+        favEmpty:ClearAllPoints(); favEmpty:SetPoint("TOPLEFT", 0, -(fy + 18)); favEmpty:SetShown(#favs == 0)
+        for i = 1, TB_FAV_ROWS do
+            local r, fav = favRows[i], favs[i + favOff]
+            r.fav = fav
+            if fav then
+                r.name:SetText(fav.name)
+                local total = (fav.cols or 1) * (fav.rows or 1)
+                r.meta:SetText(total > 1 and ("%d x %d · %d fps"):format(fav.cols, fav.rows, fav.fps or 15) or "still")
+                r:Show()
+            else r:Hide() end
+        end
+        if maxOff > 0 then
+            local view = TB_FAV_ROWS * 18
+            local thH = math.max(18, math.floor(view * TB_FAV_ROWS / #favs + 0.5))
+            thumb:SetHeight(thH)
+            thumb:ClearAllPoints(); thumb:SetPoint("TOP", track, "TOP", 0, -math.floor((view - thH) * (favOff / maxOff) + 0.5))
+            track:Show()
+        else
+            track:Hide()
+        end
+        local h = fy + 18 + ((#favs > 0) and (math.min(#favs, TB_FAV_ROWS) * 18) or math.ceil(favEmpty:GetStringHeight()))
+        if math.abs((f:GetHeight() or 0) - h) > 0.5 then f:SetHeight(h) end
+    end
+    f:HookScript("OnHide", function() stop() end)
+    api.load("")
+    return f
+end
+
+-- Media's GAME TEXTURES section: the browser, and — with Gloom's UI loaded —
+-- its button to make a new overlay from what is shown.
+local function buildGameTextures(parent)
+    local b = buildTextureBrowser(parent)
+    local s = { frame = b, refresh = b.api.refresh }
+    MP.secs[#MP.secs + 1] = s
+    local function actions()
+        if GloomsOverlays_SaveFromPreview then
+            return { { label = "Save as New Overlay", fn = function(t, sh) GloomsOverlays_SaveFromPreview(t, sh) end,
+                tip = "Makes a new texture overlay in Gloom's UI from this texture — spritesheet settings included — and opens it there." } }
+        end
+        return {}
+    end
+    b:HookScript("OnShow", function() b.api.setActions(actions()) end)
+    b.api.setActions(actions())
+    return b
+end
+
+-- THE TEXTURE BROWSER window. opts = { tool = the calling tool's id (the
+-- window opens beside its settings window), text, sheet (to start from),
+-- actions = { { label, fn(text, sheet), tip } … } }. Moves like every Suite
+-- window, stays on the screen, closes with the tool.
+local picker
+function GloomsHub:PickTexture(opts)
+    opts = opts or {}
+    local root = GloomsHub:SuiteRoot()
+    if not root then return end
+    if not picker then
+        picker = UI.gWindow({ parent = root, w = 400, h = 640, minH = 640, maxH = 640,
+            onFocus = function(self) GloomsHub:SuiteManage(self) end })
+        if picker.grip then picker.grip:Hide() end
+        local title = UI.newText(picker.content, FONTS.sa, 14, COLOR.paper, "LEFT")
+        title:SetPoint("TOPLEFT", 20, -20); title:SetText("Texture Browser")
+        picker.browser = buildTextureBrowser(picker.content)
+        picker.browser:SetPoint("TOPLEFT", 20, -50)
+        picker.openBeside = function() end   -- (the harness drives windows that carry this)
+        picker:Hide()
+    end
+    picker.browser.api.setActions(opts.actions)
+    picker.browser.api.load(opts.text, opts.sheet)
+    -- beside the tool's settings window, else left of its selector, else centred
+    local set = opts.tool and GloomsHub:SuiteWindow(opts.tool, "set")
+    local sel = opts.tool and GloomsHub:SuiteWindow(opts.tool, "sel")
+    local sw = root:GetWidth() or 0
+    picker:ClearAllPoints()
+    if set and set:GetRight() and set:GetRight() + 20 + 400 <= sw then
+        picker:SetPoint("TOPLEFT", set, "TOPRIGHT", 20, 0)
+    elseif sel and sel:GetLeft() and sel:GetLeft() - 20 - 400 >= 0 then
+        picker:SetPoint("TOPRIGHT", sel, "TOPLEFT", -20, 0)
+    else
+        picker:SetPoint("CENTER", root, "CENTER")
+    end
+    picker:Show()
+    UI.gSnap(picker)
+    GloomsHub:SuiteManage(picker)
+end
+function GloomsHub:ClosePicker() if picker then picker:Hide() end end
+function GloomsHub:PickerShown() return picker ~= nil and picker:IsShown() end
+
 local SPECS = {
     {
         id = "fonts", title = "Fonts", addLabel = "Add Font",
@@ -815,7 +1163,7 @@ local SPECS = {
 }
 
 -- ------------------------------------------------------------
--- THE SELECTOR — the five catalogs from y 52, 18 to a line: the name in
+-- THE SELECTOR — the catalogs from y 52, 18 to a line: the name in
 -- Sansation 10, its count right-aligned in lilac; the open one violet 30%
 -- across the window. A click opens that section. Under them, what this is.
 -- ------------------------------------------------------------
@@ -825,6 +1173,7 @@ local CATALOGS = {
     { id = "graphics", label = "Graphics", count = function() return #(GloomsHubDB and GloomsHubDB.graphics or {}) end },
     { id = "sounds", label = "Sounds", count = function() return #(GloomsHubDB and GloomsHubDB.sounds or {}) end },
     { id = "browse", label = "Game Sounds", count = function() return #Media:SoundKits() end },
+    { id = "gametex", label = "Game Textures", count = function() return #TextureFavorites() end },
 }
 local function openSection()
     local d = GloomsHubDB and GloomsHubDB.win and GloomsHubDB.win.media
@@ -874,6 +1223,8 @@ for _, spec in ipairs(SPECS) do
     end, onShow = function() if MP.renderSelector then MP.renderSelector() end end }
 end
 sections[#sections + 1] = { id = "browse", title = "Game Sounds", build = buildBrowser,
+    onShow = function() if MP.renderSelector then MP.renderSelector() end end }
+sections[#sections + 1] = { id = "gametex", title = "Game Textures", build = buildGameTextures,
     onShow = function() if MP.renderSelector then MP.renderSelector() end end }
 
 GloomsHub:RegisterTab{

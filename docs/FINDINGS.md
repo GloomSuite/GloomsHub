@@ -1732,6 +1732,54 @@ image instead.
   IMAGE as the StatusBar texture (a StatusBar crops rather than stretches its texture, so the ramp
   stays put in space); ACROSS the axis `SetGradient` on the base is fine — that axis never shrinks.
 
+### ▶ Addendum 2026-09-29/30 — pieces on the MOVING EDGE (Unit Frames' Fill End, Marker, Segments)
+- **`TESTED` 2026-09-29, `/gu fillprobe` (a throwaway, deleted), the owner's screenshots at 39% and
+  at 0% (dead):** a texture ANCHORED to the StatusBar's fill texture (`SetPoint(…, sb:GetStatusBarTexture(),
+  "RIGHT")`) rides the engine-sized edge on the player's SECRET health, and sits at the far left at 0%;
+  ten squares whose alpha is a STEP curve through `UnitHealthPercent` (off below i/10, on above)
+  switched cleanly, never half-lit — the basis of Whole Segments.
+- **`TESTED` (owner, in game):** a CLAMP-wrapped mask of the end art at the box's far end cuts the
+  TRACK to the fill end's shape (the art's inner column is solid, so CLAMP carries it over the rest —
+  the Rounded Ends trick); the owner: "that's better". The absorb stripes use the same mask — not yet
+  seen under a shield.
+- **`TESTED` (measured 2026-09-29):** the gloss's round-end rim art (`gloss-cap-*`) has **42% of its
+  alpha OUTSIDE the half-disc** — it relies on a mask. Unmasked on the moving end it drew the white
+  "crust" the owner saw (`OBSERVED`); now masked by the end's mask — the fix is `UNTESTED` in game.
+- **`OBSERVED` (the owner):** a faint SEAM where the fill meets its end piece. `SUSPECTED` cause: two
+  shapes butted at an edge that lands between pixels are each anti-aliased on their own. Fix built,
+  `UNTESTED`: the end pieces overlap the fill by one screen pixel; the track is one texture (masked),
+  no join.
+- **Fixed on the owner's screenshot (a flat red wedge beside a red→maroon fill):** the end's GRADIENT
+  piece was one colour picked "where the end is" — wrong for a gradient ACROSS the bar. It is now the
+  bar's own ramp, static in space, cut by a mask that rides the edge.
+
+### `KILLED`
+- ~~*"The end's gradient piece can be a single colour: the ramp's value at the end, as a curve of the
+  percent."*~~ Right only for a gradient ALONG the bar. **KILLED** 2026-09-30.
+
+---
+
+## §23 — A dropdown / menu was too narrow the FIRST time it opened after a /reload ✅ `TESTED` 2026-09-30
+
+**Symptom (the owner):** right-clicking a gloomUI group right after a /reload showed "Rena…"; every
+later menu was fine. **Cause, `TESTED` by the fix (the owner: "that fixed it"):** `UI.gList` measured
+its labels BEFORE giving the list the anchor's effective scale; the first list ever was measured at
+scale 1 and drawn at the Addon UI Scale, where the same text renders wider. The scale is now set first.
+### `KILLED`
+- ~~*"GetStringWidth returned the already-truncated width because the rows had no width yet — use
+  GetUnboundedStringWidth."*~~ Built and shipped to the owner; **it changed nothing.** Reverted.
+
+---
+
+## §24 — An attached gloomUI group sat in the wrong place right after a /reload ✅ `TESTED` 2026-09-30
+
+**Symptom (the owner's screenshots):** a group attached to the Player Frame drew off to one side
+until gloomUI was opened. **Cause:** addons load ALPHABETICALLY — GloomsOverlays before
+GloomsUnitFrames — so at PLAYER_LOGIN gloomUI placed its overlays before Unit Frames had built its
+frames; the anchor lookup found nothing and fell back to the screen (the right offsets from the
+wrong origin). **Fix, confirmed by the owner:** Unit Frames calls `GloomsHub:AnchorsChanged()` once
+its frames exist; gloomUI listens (`OnAnchorsChanged`) and places everything again.
+
 ---
 
 ## §22 — Why the Suite window looked soft in game and sharp in Figma ✅ `TESTED` 2026-09-26

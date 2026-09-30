@@ -32,6 +32,8 @@ Shapes.lua
 Effects.lua
 Shell.lua
 Windows.lua
+Undo.lua
+Anchors.lua
 SoundsManifest.lua
 Media.lua
 MinimapButton.lua
