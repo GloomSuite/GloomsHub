@@ -580,6 +580,55 @@ end
 -- (the name, the file under it in lilac, the preview at 190, the X), 30 apart.
 -- ------------------------------------------------------------
 local ROW_H = 30
+-- ★ A FILE'S PIXEL SIZE (2026-09-30, TESTED in game by the owner: a texture
+-- given a file and NO size of its own reports the file's size — darkset-main.png
+-- read 3041 652, its true size). WoW has no API for it; this is that trick: one
+-- unanchored probe texture per file, polled until the file has loaded (up to 3 s),
+-- the answer cached. TextureSize(src, onReady) → w, h now, or nil and onReady(w, h)
+-- later. src = a path or a file ID. (The harness can't measure — sizes stay blank.)
+-- ★ ONE WAITER PER `key` (2026-09-30: the owner's client locked up for a minute —
+-- "insecure scripts exceeded execution limit"). Each answer repainted the grid,
+-- each repaint queued ANOTHER callback for every file still loading, and each of
+-- those repainted again: doubling without end. Waiters are now keyed (a grid
+-- cell, a catalog row, the preview) so asking again only replaces the last ask,
+-- and the grid folds its repaints into one per frame. Don't make it a list again.
+local sizes, waiting = {}, {}
+local function TextureSize(src, onReady, key)
+    if not src or src == "" then return nil end
+    local known = sizes[src]
+    if known then return known[1], known[2] end
+    if known == false then return nil end
+    local pending = waiting[src]
+    if pending then
+        if onReady then pending[key or onReady] = onReady end
+        return nil
+    end
+    waiting[src] = {}
+    if onReady then waiting[src][key or onReady] = onReady end
+    local t = UIParent:CreateTexture(nil, "BACKGROUND")
+    t:SetTexture(src)
+    local tries = 0
+    local function check()
+        local w, h = t:GetSize()
+        tries = tries + 1
+        if w and h and w > 0 and h > 0 then
+            sizes[src] = { math.floor(w + 0.5), math.floor(h + 0.5) }
+            t:SetTexture(nil)
+            local cbs = waiting[src]; waiting[src] = nil
+            for _, cb in pairs(cbs or {}) do cb(sizes[src][1], sizes[src][2]) end
+        elseif tries < 30 then
+            C_Timer.After(0.1, check)
+        else
+            t:SetTexture(nil); waiting[src] = nil; sizes[src] = false   -- never answered: stop asking
+        end
+    end
+    check()
+    local k = sizes[src]
+    if k then return k[1], k[2] end
+    return nil
+end
+Media.TextureSize = TextureSize
+
 local function buildCatalog(parent, spec)
     local f = CreateFrame("Frame", nil, parent); f:SetSize(360, 200)
     local s = { frame = f }
@@ -639,6 +688,19 @@ local function buildCatalog(parent, spec)
             row:ClearAllPoints(); row:SetPoint("TOPLEFT", 0, -y); row:Show()
             row.name:SetText(entry.name)
             row.file:SetText(spec.fileText and spec.fileText(entry) or entry.file)
+            if spec.path then
+                -- the file's pixel size, right of the preview
+                if not row.dims then
+                    row.dims = UI.newText(row, FONTS.sa, 9, LILAC, "RIGHT"); row.dims:SetPoint("RIGHT", -20, 0)
+                end
+                row.entry = entry
+                row.dims:SetText("")
+                local function withSize(w, h)
+                    if row.entry == entry then row.dims:SetText(("%d x %d"):format(w, h)) end
+                end
+                local w, h = TextureSize(spec.path .. entry.file, withSize, row)
+                if w then withSize(w, h) end
+            end
             if row.preview then row.preview(row, entry) end
             row.x:SetScript("OnClick", function()
                 UI.confirm(("Remove \"%s\" from the catalog? The file itself stays where it is."):format(entry.name), function()
@@ -778,6 +840,20 @@ function GloomsHub:SheetFor(texture, cols, rows, frames, fps)
     return sh
 end
 
+-- The pixel size of ANY texture the suite takes — a Suite media name, an atlas,
+-- a file ID or a path: w, h now, or nil and onReady(w, h) once the game has
+-- loaded the file (TextureSize above). An atlas answers at once. (Gloom's UI
+-- starts a new overlay at its image's size with this — the owner, 2026-09-30.)
+function GloomsHub:TextureSize(texture, onReady)
+    local t = type(texture) == "string" and texture:match("^%s*(.-)%s*$") or texture
+    if not t or t == "" then return nil end
+    local path = type(t) == "string" and GloomsHub:ResolveAssetPath(t)
+    if path then return TextureSize(path, onReady) end
+    local info = type(t) == "string" and not tonumber(t) and C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(t)
+    if info and (info.width or 0) > 0 then return info.width, info.height end
+    return TextureSize(tonumber(t) or t, onReady)
+end
+
 local function TextureFavorites()
     if not GloomsHubDB then return {} end
     if not GloomsHubDB.textureFavorites then
@@ -801,6 +877,39 @@ end
 -- (two to a row) · Favorites (8 lines, the wheel scrolls; click one to load it,
 -- its X removes it). Returns the frame; frame.api = { load(text, sheet),
 -- setActions({ { label, fn(text, sheet), tip } … }), refresh() }.
+-- ★ A LIST'S SCROLLBAR CAN BE GRABBED (2026-09-30, the owner: "I can't click it
+-- and drag it down to move quickly"). The bar stays 3 wide; an invisible strip 6
+-- either side takes the mouse. Press on the thumb and drag; press elsewhere on the
+-- bar and the thumb jumps there (centred) and keeps following until release.
+-- getOff() / getMax() / setOff(o) are the list's own row offset.
+local function DragBar(track, thumb, getOff, getMax, setOff)
+    local hit = CreateFrame("Frame", nil, track)
+    hit:SetPoint("TOPLEFT", -6, 0); hit:SetPoint("BOTTOMRIGHT", 6, 0); hit:EnableMouse(true)
+    local grab = 0
+    local function follow()
+        local _, cy = GetCursorPosition(); cy = cy / track:GetEffectiveScale()
+        local top, view, thH, maxOff = track:GetTop(), track:GetHeight() or 0, thumb:GetHeight() or 0, getMax()
+        if not top or maxOff <= 0 then return end
+        local frac = (top - cy - grab) / math.max(1, view - thH)
+        local o = math.floor(math.max(0, math.min(1, frac)) * maxOff + 0.5)
+        if o ~= getOff() then setOff(o) end
+    end
+    hit:SetScript("OnMouseDown", function(self, button)
+        if button ~= "LeftButton" then return end
+        local _, cy = GetCursorPosition(); cy = cy / track:GetEffectiveScale()
+        local tTop, tBot = thumb:GetTop(), thumb:GetBottom()
+        grab = (tTop and tBot and cy <= tTop and cy >= tBot) and (tTop - cy) or (thumb:GetHeight() or 0) / 2
+        follow()
+        self:SetScript("OnUpdate", function(me)
+            if not IsMouseButtonDown("LeftButton") then me:SetScript("OnUpdate", nil); return end
+            follow()
+        end)
+    end)
+    hit:SetScript("OnMouseUp", function(self) self:SetScript("OnUpdate", nil) end)
+    hit:SetScript("OnHide", function(self) self:SetScript("OnUpdate", nil) end)
+    return hit
+end
+
 local TB_PREVIEW_H, TB_FAV_ROWS = 180, 8
 local function buildTextureBrowser(parent)
     local f = CreateFrame("Frame", nil, parent); f:SetSize(360, 500)
@@ -828,43 +937,84 @@ local function buildTextureBrowser(parent)
         local col, row = i % st.cols, math.floor(i / st.cols)
         return base.u0 + col * cw, base.u0 + (col + 1) * cw, base.v0 + row * rh, base.v0 + (row + 1) * rh
     end
+    -- ★ STOPPED = THE WHOLE SHEET (2026-09-30, the owner: stopping "just stops on
+    -- what it thinks is one frame, rather than showing the entire asset"). Not
+    -- playing, the preview shows the whole texture with the grid's cuts drawn
+    -- over it, so Columns / Rows can be matched to the art by eye; Play shows one
+    -- cell at a time. Changing the grid stops it, back to the lines.
+    local natW, natH = 1, 1
+    local lines = {}
+    local function drawLines()
+        local n = 0
+        if not st.playing and st.cols * st.rows > 1 then
+            local w, h = pv:GetWidth() or 0, pv:GetHeight() or 0
+            local function line(x1, y1, x2, y2)
+                n = n + 1
+                local l = lines[n]
+                if not l then l = box:CreateTexture(nil, "OVERLAY"); lines[n] = l end
+                l:SetColorTexture(LIME.r, LIME.g, LIME.b, 0.7)
+                l:ClearAllPoints(); l:SetPoint("TOPLEFT", pv, "TOPLEFT", x1, -y1)
+                l:SetSize(math.max(1, x2 - x1), math.max(1, y2 - y1)); l:Show()
+            end
+            for c = 1, st.cols - 1 do local x = math.floor(w * c / st.cols + 0.5); line(x, 0, x + 1, h) end
+            for r = 1, st.rows - 1 do local y = math.floor(h * r / st.rows + 0.5); line(0, y, w, y + 1) end
+        end
+        for i = n + 1, #lines do lines[i]:Hide() end
+    end
+    -- the preview's size: the whole file (stopped) or one cell (playing), fitted into the box
+    local function fit()
+        local w, h = natW, natH
+        if st.playing then w, h = natW / st.cols, natH / st.rows end
+        local k = math.min((360 - 20) / math.max(1, w), (TB_PREVIEW_H - 20) / math.max(1, h), 4)
+        pv:SetSize(math.max(1, w * k), math.max(1, h * k))
+        drawLines()
+    end
     local function stop()
         st.playing = false
         box:SetScript("OnUpdate", nil)
-        pv:SetTexCoord(frameCoords(0))
+        pv:SetTexCoord(base.u0, base.u1, base.v0, base.v1)
+        fit()
     end
     local function play()
         if st.cols * st.rows <= 1 then return end
         st.playing = true
         local total = math.max(1, math.min(st.frames, st.cols * st.rows))
         local dur, t, i = 1 / math.max(1, st.fps), 0, 0
+        fit()
+        pv:SetTexCoord(frameCoords(0))
         box:SetScript("OnUpdate", function(_, dt)
             t = t + dt
             if t >= dur then t = t - dur; i = (i + 1) % total; pv:SetTexCoord(frameCoords(i)) end
         end)
     end
-    -- the preview's size: the file (or the frame of a sheet) fitted into the box
-    local natW, natH = 1, 1
-    local function fit()
-        local w, h = natW / st.cols, natH / st.rows
-        local k = math.min((360 - 20) / math.max(1, w), (TB_PREVIEW_H - 20) / math.max(1, h), 4)
-        pv:SetSize(math.max(1, w * k), math.max(1, h * k))
+    local function regrid(key)
+        -- a new grid: back to the whole sheet and its lines; Frames / Speed keep playing
+        if (key == "cols" or key == "rows") or not st.playing then stop()
+        else stop(); play() end
     end
-    local function regrid()
-        local was = st.playing
-        stop(); fit()
-        if was then play() end
+    -- ★ A GRID SET BY HAND IS REMEMBERED (2026-09-30, the owner) — by the
+    -- texture's name, in GloomsHubDB.textureGrids, so loading it again (from any
+    -- tool, any source) starts on that grid, playing. Set back to 1 x 1 = forgotten.
+    -- A grid handed in by the caller (an overlay's own, a favorite's) wins.
+    local function remember()
+        if not GloomsHubDB or (st.text or "") == "" then return end
+        GloomsHubDB.textureGrids = GloomsHubDB.textureGrids or {}
+        if st.cols * st.rows > 1 then
+            GloomsHubDB.textureGrids[st.text] = { cols = st.cols, rows = st.rows, frames = st.frames, fps = st.fps }
+        else
+            GloomsHubDB.textureGrids[st.text] = nil
+        end
     end
     local function dial(label, key, min, max, x, y, onSet, tip)
         local d = UI.gDial(f, { w = 170, label = label, min = min, max = max, step = 1, dragPx = 400,
             get = function() return st[key] end,
-            set = function(v) st[key] = v; if onSet then onSet() end; regrid(); api.refresh() end })
+            set = function(v) st[key] = v; if onSet then onSet() end; regrid(key); remember(); api.refresh() end })
         d:SetPoint("TOPLEFT", x, -y)
         if tip then UI.attachTip(d.strip, label, tip) end
         return d
     end
     local dCols = dial("Columns", "cols", 1, 64, 0, y0, function() st.frames = st.cols * st.rows end,
-        "How many frames across. More than one column or row plays the texture as an animation — left to right, then row by row. 1 x 1 = a still texture. For an atlas this is a guess.")
+        "How many frames across. More than one column or row plays the texture as an animation — left to right, then row by row. 1 x 1 = a still texture. The game never says how a flipbook is cut: set Columns and Rows until the green lines fall between the frames, then Play.")
     local dRows = dial("Rows", "rows", 1, 64, 190, y0, function() st.frames = st.cols * st.rows end)
     local dFrames = dial("Frames", "frames", 1, 4096, 0, y0 + 41, nil, "How many cells to play — fewer than Columns x Rows when the last row isn't full.")
     local dFps = dial("Speed (frames per second)", "fps", 1, 60, 190, y0 + 41)
@@ -946,6 +1096,9 @@ local function buildTextureBrowser(parent)
     local thumb = CreateFrame("Frame", nil, track); thumb:SetWidth(3)
     local th = thumb:CreateTexture(nil, "ARTWORK"); th:SetAllPoints(); th:SetColorTexture(VIOLET.r, VIOLET.g, VIOLET.b, 0.5)
     track:Hide()
+    DragBar(track, thumb, function() return favOff end,
+        function() return math.max(0, #TextureFavorites() - TB_FAV_ROWS) end,
+        function(o) favOff = o; api.refresh() end)
 
     function api.load(text, sheet)
         text = (text or ""):match("^%s*(.-)%s*$")
@@ -959,33 +1112,52 @@ local function buildTextureBrowser(parent)
         if text == "" then pv:SetTexture(nil); say("Enter a Suite media name, an atlas, a file ID or an Interface\\ path."); api.refresh(); return end
         local path = GloomsHub:ResolveAssetPath(text)
         local info = (not path) and C_Texture and C_Texture.GetAtlasInfo(text)
+        -- a file's real size, when the game has it (the whole-sheet view and its
+        -- grid lines need the true shape; 256 x 256 until then)
+        local function sized(src, msg)
+            local function apply(w, h)
+                if st.text ~= text then return end
+                natW, natH = w, h
+                say(("%s — %d x %d"):format(msg, w, h), true)
+                if st.playing then fit() else stop() end
+            end
+            local w, h = TextureSize(src, apply, f)
+            if w then apply(w, h) end
+        end
         if path then
             pv:SetTexture(path); say(("Suite media \"%s\"."):format(text), true)
+            sized(path, ("Suite media \"%s\""):format(text))
         elseif tonumber(text) then
             pv:SetTexture(tonumber(text)); say(("File ID %s."):format(text), true)
+            sized(tonumber(text), ("File ID %s"):format(text))
         elseif info then
             pv:SetTexture(info.file)
             base.u0, base.u1, base.v0, base.v1 = info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord
             natW, natH = info.width or 256, info.height or 256
-            -- the old browser's guess at a flipbook's grid
-            local uSpan, vSpan = info.rightTexCoord - info.leftTexCoord, info.bottomTexCoord - info.topTexCoord
-            if uSpan > 0 and vSpan > 0 then
-                st.cols = math.max(1, math.floor(1 / uSpan + 0.5)); st.rows = math.max(1, math.floor(1 / vSpan + 0.5))
-                st.frames = st.cols * st.rows
-            end
+            -- ★ NO GRID GUESS (2026-09-30). This used to take 1 / the atlas's share
+            -- of its FILE as Columns x Rows — which is how big the atlas is, not
+            -- how many frames it has: every still atlas played, and no flipbook
+            -- came out right. The game doesn't expose a flipbook's cut, so it
+            -- loads as a still and the owner sets the grid against the lines.
+            local isFlip = text:lower():find("flipbook", 1, true) or text:lower():find("-flip", 1, true)
             say(("Atlas \"%s\" — %d x %d%s"):format(text, natW, natH,
-                (st.cols * st.rows > 1) and (" · a %d x %d spritesheet?"):format(st.cols, st.rows) or ""), true)
+                isFlip and " · a flipbook: set its grid" or ""), true)
         else
             pv:SetTexture(text); say(("\"%s\" isn't a media name or an atlas — shown as a path."):format(text))
+            sized(text, ("Path \"%s\""):format(text))
+        end
+        local mine = GloomsHubDB and GloomsHubDB.textureGrids and GloomsHubDB.textureGrids[text]
+        if not (sheet and (sheet.cols or 1) * (sheet.rows or 1) > 1) and mine then
+            sheet = mine
+            stLine:SetText(stLine:GetText() .. "  · your grid")
         end
         if sheet then
             st.cols, st.rows = sheet.cols or 1, sheet.rows or 1
             st.frames = sheet.frames or st.cols * st.rows
             st.fps = sheet.fps or 15
         end
-        fit()
-        pv:SetTexCoord(frameCoords(0))
-        if st.cols * st.rows > 1 then play() end
+        stop()
+        if sheet and st.cols * st.rows > 1 then play() end
         api.refresh()
     end
 
@@ -1029,11 +1201,377 @@ local function buildTextureBrowser(parent)
     return f
 end
 
--- Media's GAME TEXTURES section: the browser, and — with Gloom's UI loaded —
--- its button to make a new overlay from what is shown.
+-- ------------------------------------------------------------
+-- ★ THE ART LIST (2026-09-30, the owner: "Browse Assets suggests I'd be able to
+-- browse all assets … I'm actually NOT able to browse much of anything"). The
+-- loader above can only show what you already know the name of; this is what
+-- you FIND it with. Three sources, one grid of thumbnails, one search:
+--   · Game Art — every atlas in the client, from C_Texture.GetAtlasElements()
+--     (the same call Texture Atlas Viewer builds its list from — TAV itself is
+--     NOT needed; it only adds a file-name table to group atlases by sheet,
+--     which the owner may still want if the flat list proves too big);
+--   · My Media — the Textures and Graphics catalogs. Only what was ADDED there:
+--     WoW cannot list a folder, so a file merely dropped in is invisible;
+--   · Favorites — the browser's favorites, with their spritesheet grids.
+-- Search: every word must appear in the name (so "fire flip" finds
+-- "…fire…flipbook"). Flipbooks Only keeps names with "flipbook" / "-flip".
+-- Loose game FILES that are not atlases can't be listed by anyone — those
+-- still go in by file ID in the loader's field.
+-- 360 wide: the source switch · Search · Flipbooks Only and the count · 5 x 5
+-- thumbnails at a pitch of 72 (the wheel scrolls a row) · the hovered name.
+-- onPick(name, sheet) hands a click to the loader.
+-- ------------------------------------------------------------
+local AL_COLS, AL_ROWS, AL_PITCH, AL_CELL = 5, 5, 72, 64
+local AL_GRID_Y = 93
+local AL_H = AL_GRID_Y + AL_ROWS * AL_PITCH - 8 + 24
+local gameArt   -- { {name, low}, … } sorted — built once, on first use
+local function GameArt()
+    if gameArt then return gameArt end
+    local out = {}
+    local names = C_Texture and C_Texture.GetAtlasElements and C_Texture.GetAtlasElements()
+    if type(names) == "table" then
+        for i, n in ipairs(names) do out[i] = { name = n, low = n:lower() } end
+        table.sort(out, function(a, b) return a.low < b.low end)
+    end
+    if #out > 0 then gameArt = out end   -- an empty answer is asked again next time
+    return out
+end
+local function MyArt()
+    local out = {}
+    for _, kind in ipairs({ "textures", "graphics" }) do
+        for _, e in ipairs(GloomsHub:ListMedia(kind)) do
+            out[#out + 1] = { name = e.name, low = e.name:lower(), tex = e.tex,
+                meta = (kind == "textures") and "Texture" or "Graphic" }
+        end
+    end
+    table.sort(out, function(a, b) return a.low < b.low end)
+    return out
+end
+local function FavArt()
+    local out = {}
+    for _, fav in ipairs(TextureFavorites()) do
+        local total = (fav.cols or 1) * (fav.rows or 1)
+        out[#out + 1] = { name = fav.name, low = fav.name:lower(),
+            sheet = { cols = fav.cols or 1, rows = fav.rows or 1, frames = fav.frames, fps = fav.fps or 15 },
+            meta = total > 1 and ("%d x %d · %d fps"):format(fav.cols, fav.rows, fav.fps or 15) or "still" }
+    end
+    return out
+end
+local function IsFlipbook(low) return low:find("flipbook", 1, true) or low:find("-flip", 1, true) end
+
+-- ★ SHEETS (2026-09-30, the owner, comparing with Texture Atlas Viewer: TAV lists
+-- the image FILES and shows each whole, with its pieces on it; Game Art lists
+-- the pieces). Built from the game's own grouping — every atlas's info.file is
+-- the file it's cut from — so no TAV. One item per file: the whole image, its
+-- pieces (the Game Art items), its size worked out from any piece (piece width
+-- / its share of the file), and a NAME: the game won't give a file's name, so
+-- it's what the pieces' names have in common ("RecruitAFriend"), else the first
+-- piece's name. Search matches a sheet when ANY of its pieces would (`low` is
+-- all their names), so a piece not named after its sheet still finds it.
+local sheetArt
+local function SheetArt()
+    if sheetArt then return sheetArt end
+    local byFile, out = {}, {}
+    for _, item in ipairs(GameArt()) do
+        local info = C_Texture.GetAtlasInfo(item.name)
+        if info and info.file then
+            local sh = byFile[info.file]
+            if not sh then
+                sh = { sheetFile = info.file, pieces = {} }
+                byFile[info.file] = sh; out[#out + 1] = sh
+            end
+            sh.pieces[#sh.pieces + 1] = item
+            local du, dv = (info.rightTexCoord or 1) - (info.leftTexCoord or 0), (info.bottomTexCoord or 1) - (info.topTexCoord or 0)
+            if not sh.w and du > 0 and dv > 0 and (info.width or 0) > 0 then
+                sh.w, sh.h = math.floor(info.width / du + 0.5), math.floor(info.height / dv + 0.5)
+            end
+        end
+    end
+    for _, sh in ipairs(out) do
+        local first = sh.pieces[1].name
+        local pre = first:lower()
+        for i = 2, #sh.pieces do
+            local o, n = sh.pieces[i].low, 0
+            while n < #pre and n < #o and pre:byte(n + 1) == o:byte(n + 1) do n = n + 1 end
+            pre = pre:sub(1, n)
+            if n == 0 then break end
+        end
+        local name = first:sub(1, #pre):gsub("[%-_%s]+$", "")
+        sh.name = (#sh.pieces > 1 and #name >= 4) and name or first
+        local lows = {}
+        for i, pc in ipairs(sh.pieces) do lows[i] = pc.low end
+        sh.low = table.concat(lows, " ")
+        sh.key = "sheet:" .. tostring(sh.sheetFile)
+        sh.meta = #sh.pieces == 1 and "1 piece" or (#sh.pieces .. " pieces")
+        sh.badge = sh.meta
+    end
+    table.sort(out, function(a, b) return a.name:lower() < b.name:lower() end)
+    if #out > 0 then sheetArt = out end
+    return out
+end
+
+-- Draw `item` into a thumbnail texture, fitted into AL_CELL - 4 keeping its shape.
+local function PaintThumb(t, item, onSized, key)
+    local box = AL_CELL - 4
+    local w, h = box, box
+    local info = (not item.tex) and (not item.sheetFile) and C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(item.name)
+    if item.sheetFile then
+        -- a whole sheet: its file, uncut
+        t:SetTexture(item.sheetFile); t:SetTexCoord(0, 1, 0, 1)
+        if item.w then
+            local k = math.min(box / item.w, box / item.h)
+            w, h = math.max(1, item.w * k), math.max(1, item.h * k)
+            info = { width = item.w, height = item.h }
+        end
+    elseif item.tex then
+        t:SetTexture(item.tex); t:SetTexCoord(0, 1, 0, 1)
+        local iw, ih = TextureSize(item.tex, onSized, key)
+        if iw then
+            local k = math.min(box / iw, box / ih)
+            w, h = math.max(1, iw * k), math.max(1, ih * k)
+            info = { width = iw, height = ih }
+        end
+    elseif info then
+        t:SetTexture(nil); t:SetAtlas(item.name, false)   -- (the name is known good: `info`)
+        local iw, ih = info.width or box, info.height or box
+        if iw > 0 and ih > 0 then
+            local k = math.min(box / iw, box / ih)
+            w, h = math.max(1, iw * k), math.max(1, ih * k)
+        end
+    else
+        local path = GloomsHub:ResolveAssetPath(item.name)
+        t:SetTexture(path or tonumber(item.name) or item.name); t:SetTexCoord(0, 1, 0, 1)
+    end
+    t:SetSize(w, h)
+    return info
+end
+
+local function buildArtList(parent, onPick)
+    local f = CreateFrame("Frame", nil, parent); f:SetSize(360, AL_H)
+    local prefs = GloomsHubDB and GloomsHubDB.textureBrowse
+    if GloomsHubDB and not prefs then prefs = { src = "game", flip = false }; GloomsHubDB.textureBrowse = prefs end
+    prefs = prefs or { src = "game", flip = false }
+    local items, filtered, offset, selected = {}, {}, 0, nil
+    local openSheet, sheetQuery   -- the sheet whose pieces are showing, and the search it was found with
+    local api = {}
+    f.api = api
+
+    local switch = UI.gSwitch(f, { { "game", "Game Art" }, { "sheets", "Sheets" }, { "mine", "My Media" }, { "favs", "Favorites" } },
+        function() return prefs.src end,
+        function(v) prefs.src = v; openSheet = nil; api.reload() end, { w = 360, size = 10 })
+    switch:SetPoint("TOPLEFT", 0, 0)
+    UI.attachTip(switch.segs[1], "Game Art", "Every atlas in the game — the same list Texture Atlas Viewer shows.")
+    UI.attachTip(switch.segs[2], "Sheets", "The game's art by image file — each whole sheet, the way Texture Atlas Viewer shows it. Click one to see it whole and open its pieces.")
+    UI.attachTip(switch.segs[3], "My Media", "Your own files — the ones added under Textures and Graphics in gloomMEDIA.")
+    UI.attachTip(switch.segs[4], "Favorites", "The textures you've added to favorites, with their spritesheet settings.")
+
+    UI.gLabel(f, "Search"):SetPoint("TOPLEFT", 0, -26)
+    local search = UI.gField(f, 360, { placeholder = "Words in the name — swirl, glow, fire flip…" })
+    search:SetPoint("TOPLEFT", 0, -41)
+    UI.attachTip(search, "Search", "Shows the art whose name has every word you type, in any order. Escape clears it.")
+
+    local flip = UI.gCheck(f, "Flipbooks Only", function() return prefs.flip end,
+        function(v) prefs.flip = v and true or false; api.filter() end)
+    flip:SetPoint("TOPLEFT", 0, -67)
+    UI.attachTip(flip, "Flipbooks Only", "Only animations — names with \"flipbook\" or \"-flip\" in them, the game's own spritesheets.")
+    -- inside a sheet: the way back, where Flipbooks Only was
+    local back = UI.gButton(f, "‹ All Sheets", { h = 16, size = 10, pad = 10, onClick = function()
+        openSheet = nil
+        search:SetText(sheetQuery or "")
+        api.reload()
+    end })
+    back:SetPoint("TOPLEFT", 0, -67); back:Hide()
+    UI.attachTip(back, "All Sheets", "Back to the list of sheets, and the search you found this one with.")
+    local counter = UI.newText(f, FONTS.sa, 10, LILAC, "RIGHT"); counter:SetPoint("TOPRIGHT", 0, -70)
+    f.counter = counter
+
+    -- the grid
+    local grid = CreateFrame("Frame", nil, f)
+    grid:SetSize(360, AL_ROWS * AL_PITCH - 8); grid:SetPoint("TOPLEFT", 0, -AL_GRID_Y)
+    grid:EnableMouseWheel(true)
+    local empty = note(grid, "", 340)
+    f.empty = empty
+    empty:SetPoint("TOPLEFT", 0, 0)
+    local hoverName = UI.newText(f, FONTS.sa, 10, COLOR.paper, "LEFT")
+    hoverName:SetPoint("TOPLEFT", 0, -(AL_GRID_Y + AL_ROWS * AL_PITCH - 8 + 8)); hoverName:SetWidth(270); hoverName:SetWordWrap(false)
+    local hoverMeta = UI.newText(f, FONTS.sa, 9, LILAC, "RIGHT")
+    hoverMeta:SetPoint("TOPRIGHT", 0, -(AL_GRID_Y + AL_ROWS * AL_PITCH - 8 + 9))
+    local function showName(item, info)
+        if not item then
+            hoverName:SetText(openSheet and (openSheet.name .. "  ·  " .. openSheet.meta) or (selected and not selected:find("^sheet:") and selected) or "")
+            hoverMeta:SetText(""); return
+        end
+        hoverName:SetText(item.name)
+        local size = info and info.width and ("%d x %d"):format(info.width, info.height)
+        if size and item.meta then hoverMeta:SetText(item.meta .. "  ·  " .. size)
+        else hoverMeta:SetText(size or item.meta or "") end
+    end
+    local cells = {}
+    for i = 1, AL_COLS * AL_ROWS do
+        local c = CreateFrame("Button", nil, grid); c:SetSize(AL_CELL, AL_CELL)
+        c:SetPoint("TOPLEFT", ((i - 1) % AL_COLS) * AL_PITCH, -math.floor((i - 1) / AL_COLS) * AL_PITCH)
+        c.bg = c:CreateTexture(nil, "BACKGROUND"); c.bg:SetAllPoints()
+        c.tex = c:CreateTexture(nil, "ARTWORK"); c.tex:SetPoint("CENTER")
+        -- My Media's cells carry their pixel size along the bottom
+        c.sizeBg = c:CreateTexture(nil, "OVERLAY"); c.sizeBg:SetPoint("BOTTOMLEFT"); c.sizeBg:SetPoint("BOTTOMRIGHT")
+        c.sizeBg:SetHeight(12); c.sizeBg:SetColorTexture(0, 0, 0, 0.6); c.sizeBg:Hide()
+        c.size = UI.newText(c, FONTS.sa, 8, COLOR.paper, "CENTER"); c.size:SetDrawLayer("OVERLAY", 1)
+        c.size:SetPoint("BOTTOM", 0, 2); c.size:Hide()
+        c:SetScript("OnEnter", function(self) self.hot = true; api.paintCell(self); showName(self.item, self.info) end)
+        c:SetScript("OnLeave", function(self) self.hot = nil; api.paintCell(self); showName(nil) end)
+        c:SetScript("OnClick", function(self)
+            if not self.item then return end
+            local item = self.item
+            selected = item.key or item.name
+            for _, o in ipairs(cells) do api.paintCell(o) end
+            if item.pieces then
+                -- a sheet: show it whole, and open its pieces
+                onPick(tostring(item.sheetFile))
+                sheetQuery = search:GetText()
+                openSheet = item
+                search:SetText("")
+                api.reload()
+            else
+                onPick(item.name, item.sheet)
+            end
+        end)
+        cells[i] = c
+    end
+    -- the scrollbar (the favorites' bar), in the margin, only while it overflows
+    local track = CreateFrame("Frame", nil, grid); track:SetWidth(3)
+    track:SetPoint("TOPLEFT", grid, "TOPLEFT", 370.5, 0); track:SetPoint("BOTTOMLEFT", grid, "BOTTOMLEFT", 370.5, 0)
+    local tt = track:CreateTexture(nil, "BACKGROUND"); tt:SetAllPoints(); tt:SetColorTexture(0, 0, 0, 0.5)
+    local thumb = CreateFrame("Frame", nil, track); thumb:SetWidth(3)
+    local th = thumb:CreateTexture(nil, "ARTWORK"); th:SetAllPoints(); th:SetColorTexture(VIOLET.r, VIOLET.g, VIOLET.b, 0.5)
+    track:Hide()
+    local function maxRows() return math.max(0, math.ceil(#filtered / AL_COLS) - AL_ROWS) end
+    DragBar(track, thumb, function() return offset end, maxRows, function(o) offset = o; api.paint() end)
+
+    function api.paintCell(c)
+        local a, col = 0.08, VIOLET
+        if c.item and (c.item.key or c.item.name) == selected then a, col = 0.3, LIME
+        elseif c.hot and c.item then a = 0.25 end
+        c.bg:SetColorTexture(col.r, col.g, col.b, a)
+    end
+    local function fmtN(n)
+        local s = tostring(n)
+        while true do local k; s, k = s:gsub("^(%d+)(%d%d%d)", "%1,%2"); if k == 0 then break end end
+        return s
+    end
+    -- sizes arriving (many at once) repaint the grid ONCE, on the next frame
+    local repaintQueued
+    function api.repaintSoon()
+        if repaintQueued then return end
+        repaintQueued = true
+        C_Timer.After(0, function() repaintQueued = nil; if f:IsVisible() then api.paint() end end)
+    end
+    function api.paint()
+        local total = #filtered
+        local maxOff = math.max(0, math.ceil(total / AL_COLS) - AL_ROWS)
+        offset = math.max(0, math.min(maxOff, offset))
+        for i, c in ipairs(cells) do
+            local item = filtered[offset * AL_COLS + i]
+            c.item = item
+            if item then
+                c.info = PaintThumb(c.tex, item, function() if c.item == item then api.repaintSoon() end end, c)
+                -- the badge: My Media's pixel size, a sheet's piece count
+                local badge = item.badge or (item.tex and c.info and ("%d x %d"):format(c.info.width, c.info.height))
+                c.size:SetShown(badge ~= nil); c.sizeBg:SetShown(badge ~= nil)
+                if badge then c.size:SetText(badge) end
+                c:Show()
+            else c.info = nil; c:Hide() end
+            api.paintCell(c)
+        end
+        -- what's empty, said plainly
+        local msg
+        if total == 0 then
+            if #items == 0 then
+                msg = (prefs.src == "mine") and "Nothing here yet. Put a file into GloomsHub\\Textures\\ or GloomsHub\\Graphics\\, then add it under Textures or Graphics in gloomMEDIA — WoW can't look inside a folder, so only files added there show up."
+                    or (prefs.src == "favs") and "No favorites yet — pick something and click Add to Favorites."
+                or (prefs.src == "sheets") and "The game didn't hand over its sheets."
+                    or "The game didn't hand over its list of art."
+            else
+                msg = "Nothing matches."
+            end
+        end
+        empty:SetText(msg or ""); empty:SetShown(msg ~= nil)
+        local one, many = "item", "items"
+        if prefs.src == "game" or openSheet then one, many = "atlas", "atlases"
+        elseif prefs.src == "sheets" then one, many = "sheet", "sheets" end
+        if total == 0 then counter:SetText("")
+        elseif total <= AL_COLS * AL_ROWS then
+            counter:SetText(fmtN(total) .. " " .. (total == 1 and one or many))
+        else
+            counter:SetText(("%s–%s of %s"):format(fmtN(offset * AL_COLS + 1),
+                fmtN(math.min(total, (offset + AL_ROWS) * AL_COLS)), fmtN(total)))
+        end
+        if maxOff > 0 then
+            local view = AL_ROWS * AL_PITCH - 8
+            local thH = math.max(18, math.floor(view * AL_ROWS / (maxOff + AL_ROWS) + 0.5))
+            thumb:SetHeight(thH)
+            thumb:ClearAllPoints(); thumb:SetPoint("TOP", track, "TOP", 0, -math.floor((view - thH) * (offset / maxOff) + 0.5))
+            track:Show()
+        else
+            track:Hide()
+        end
+        showName(nil)
+    end
+    function api.filter()
+        local words = {}
+        for w in (search:GetText() or ""):lower():gmatch("%S+") do words[#words + 1] = w end
+        wipe(filtered)
+        for _, item in ipairs(items) do
+            local ok = openSheet or not prefs.flip or IsFlipbook(item.low)
+            if ok then
+                for _, w in ipairs(words) do
+                    if not item.low:find(w, 1, true) then ok = false; break end
+                end
+            end
+            if ok then filtered[#filtered + 1] = item end
+        end
+        offset = 0
+        api.paint()
+    end
+    function api.reload()
+        if prefs.src == "mine" then items = MyArt()
+        elseif prefs.src == "favs" then items = FavArt()
+        elseif prefs.src == "sheets" then items = openSheet and openSheet.pieces or SheetArt()
+        else items = GameArt() end
+        switch:refresh(); flip:refresh()
+        flip:SetShown(not openSheet); back:SetShown(openSheet ~= nil)
+        api.filter()
+    end
+    function api.select(name) selected = (name ~= "" and name) or nil; for _, c in ipairs(cells) do api.paintCell(c) end; showName(nil) end
+
+    -- typing filters after a breath (the game list is tens of thousands long)
+    local pending
+    search:HookScript("OnTextChanged", function(_, user)
+        if not user then api.filter(); return end
+        if pending then return end
+        pending = true
+        C_Timer.After(0.15, function() pending = nil; api.filter() end)
+    end)
+    search:SetScript("OnEscapePressed", function(self) self:SetText(""); self:ClearFocus(); api.filter() end)
+    grid:SetScript("OnMouseWheel", function(_, d) offset = offset - d; api.paint() end)
+    f:HookScript("OnShow", function() api.reload() end)
+    api.reload()
+    return f
+end
+
+-- Media's GAME TEXTURES section: the art list, then the browser under it, and —
+-- with Gloom's UI loaded — its button to make a new overlay from what is shown.
 local function buildGameTextures(parent)
-    local b = buildTextureBrowser(parent)
-    local s = { frame = b, refresh = b.api.refresh }
+    local f = CreateFrame("Frame", nil, parent); f:SetSize(360, 600)
+    local b = buildTextureBrowser(f)
+    local list = buildArtList(f, function(name, sheet) b.api.load(name, sheet) end)
+    list:SetPoint("TOPLEFT", 0, 0)
+    b:SetPoint("TOPLEFT", 0, -(AL_H + 20))
+    local function fitH()
+        local h = AL_H + 20 + (b:GetHeight() or 0)
+        if math.abs((f:GetHeight() or 0) - h) > 0.5 then f:SetHeight(h) end
+    end
+    b:HookScript("OnSizeChanged", fitH); fitH()
+    local s = { frame = f, refresh = function() b.api.refresh(); fitH() end }
     MP.secs[#MP.secs + 1] = s
     local function actions()
         if GloomsOverlays_SaveFromPreview then
@@ -1044,39 +1582,45 @@ local function buildGameTextures(parent)
     end
     b:HookScript("OnShow", function() b.api.setActions(actions()) end)
     b.api.setActions(actions())
-    return b
+    return f
 end
 
 -- THE TEXTURE BROWSER window. opts = { tool = the calling tool's id (the
 -- window opens beside its settings window), text, sheet (to start from),
 -- actions = { { label, fn(text, sheet), tip } … } }. Moves like every Suite
--- window, stays on the screen, closes with the tool.
+-- window, stays on the screen, closes with the tool. Two columns since
+-- 2026-09-30: the art list (find it) | the browser (load, grid, use it).
 local picker
+local PICKER_W = 780
 function GloomsHub:PickTexture(opts)
     opts = opts or {}
     local root = GloomsHub:SuiteRoot()
     if not root then return end
     if not picker then
-        picker = UI.gWindow({ parent = root, w = 400, h = 640, minH = 640, maxH = 640,
+        picker = UI.gWindow({ parent = root, w = PICKER_W, h = 640, minH = 640, maxH = 640,
             onFocus = function(self) GloomsHub:SuiteManage(self) end })
         if picker.grip then picker.grip:Hide() end
         local title = UI.newText(picker.content, FONTS.sa, 14, COLOR.paper, "LEFT")
         title:SetPoint("TOPLEFT", 20, -20); title:SetText("Texture Browser")
+        -- the art list on the left, the browser on the right
         picker.browser = buildTextureBrowser(picker.content)
-        picker.browser:SetPoint("TOPLEFT", 20, -50)
+        picker.browser:SetPoint("TOPLEFT", 400, -50)
+        picker.list = buildArtList(picker.content, function(name, sheet) picker.browser.api.load(name, sheet) end)
+        picker.list:SetPoint("TOPLEFT", 20, -50)
         picker.openBeside = function() end   -- (the harness drives windows that carry this)
         picker:Hide()
     end
     picker.browser.api.setActions(opts.actions)
     picker.browser.api.load(opts.text, opts.sheet)
+    picker.list.api.select(opts.text or "")
     -- beside the tool's settings window, else left of its selector, else centred
     local set = opts.tool and GloomsHub:SuiteWindow(opts.tool, "set")
     local sel = opts.tool and GloomsHub:SuiteWindow(opts.tool, "sel")
     local sw = root:GetWidth() or 0
     picker:ClearAllPoints()
-    if set and set:GetRight() and set:GetRight() + 20 + 400 <= sw then
+    if set and set:GetRight() and set:GetRight() + 20 + PICKER_W <= sw then
         picker:SetPoint("TOPLEFT", set, "TOPRIGHT", 20, 0)
-    elseif sel and sel:GetLeft() and sel:GetLeft() - 20 - 400 >= 0 then
+    elseif sel and sel:GetLeft() and sel:GetLeft() - 20 - PICKER_W >= 0 then
         picker:SetPoint("TOPRIGHT", sel, "TOPLEFT", -20, 0)
     else
         picker:SetPoint("CENTER", root, "CENTER")
@@ -1087,6 +1631,15 @@ function GloomsHub:PickTexture(opts)
 end
 function GloomsHub:ClosePicker() if picker then picker:Hide() end end
 function GloomsHub:PickerShown() return picker ~= nil and picker:IsShown() end
+
+-- ★ WoW MISREADS AN IMAGE EXACTLY 6 TIMES AS WIDE AS IT IS TALL (TESTED
+-- 2026-09-30 in game: a 480 x 80 PNG loaded as an 80 x 80 scramble — after a
+-- full restart, and re-encoded without Figma's metadata; padded copies at
+-- 481 x 80, 512 x 80 and 480 x 128 all read true; the owner's 500 x 80 re-export
+-- works). Almost certainly read as a cube map's six faces. The addon CAN'T flag
+-- a bad file — the game reports it as a square — so the catalogs say it up front.
+-- (Only the wide case was tested; a 1 x 6 strip is unproven either way.)
+local SIX_TO_ONE = "|cffff9966Avoid an image exactly 6 times as wide as it is tall (480 x 80, say) — WoW loads it scrambled. A pixel wider fixes it.|r"
 
 local SPECS = {
     {
@@ -1108,11 +1661,12 @@ local SPECS = {
         id = "textures", title = "Textures", addLabel = "Add Texture",
         namePh = "My Bar", filePh = "MyBar.tga",
         hint = "The file's name in GloomsHub\\Textures\\ — .tga, .blp or .png.",
-        note = "Registered into LibSharedMedia as bar textures, so every addon that lists them can use them. Put the file into GloomsHub\\Textures\\ first; a /reload is enough.",
+        note = "Registered into LibSharedMedia as bar textures, so every addon that lists them can use them. Put the file into GloomsHub\\Textures\\ first; a /reload is enough. " .. SIX_TO_ONE,
         empty = "No textures yet — add one above.",
         getEntries = function() return GloomsHubDB and GloomsHubDB.textures or {} end,
         add = function(n, f) return Media:AddTexture(n, f) end,
         remove = function(i) return Media:RemoveTexture(i) end,
+        path = TEXTURE_PATH,
         buildPreview = function(row)
             local tex = row:CreateTexture(nil, "ARTWORK"); tex:SetSize(130, 12); tex:SetPoint("LEFT", 190, 0)
             return function(_, entry) tex:SetTexture(TEXTURE_PATH .. entry.file) end
@@ -1122,11 +1676,12 @@ local SPECS = {
         id = "graphics", title = "Graphics", addLabel = "Add Graphic",
         namePh = "Gold Swirl", filePh = "GoldSwirl.png",
         hint = "The file's name in GloomsHub\\Graphics\\ — .png or .tga.",
-        note = "Decorative art for Gloom's Overlays, found by its display name. Not in LibSharedMedia. Put the file into GloomsHub\\Graphics\\ first.",
+        note = "Decorative art for Gloom's UI, found by its display name. Not in LibSharedMedia. Put the file into GloomsHub\\Graphics\\ first; a /reload is enough. " .. SIX_TO_ONE,
         empty = "No graphics yet — add one above.",
         getEntries = function() return GloomsHubDB and GloomsHubDB.graphics or {} end,
         add = function(n, f) return Media:AddGraphic(n, f) end,
         remove = function(i) return Media:RemoveGraphic(i) end,
+        path = GRAPHIC_PATH,
         buildPreview = function(row)
             local tex = row:CreateTexture(nil, "ARTWORK"); tex:SetSize(24, 24); tex:SetPoint("LEFT", 190, 0)
             return function(_, entry) tex:SetTexture(GRAPHIC_PATH .. entry.file) end

@@ -286,6 +286,14 @@ GU's `cNum` shows the live-stepping hook.
 
 ## Verification & evidence
 
+- **★ Drive the control the owner clicks, not the field behind it.** The group On/Off test set
+  `g.enabled = false` directly and passed; the switch's own setter was broken (the `and false or nil`
+  trap above) and he found it in one click. A harness check of a new control must fire the control's
+  OnClick / setter. — 2026-09-30.
+- **★ The harness loads the owner's REAL SavedVariables** — when he starts using a new feature in his
+  data (a `[title]` text code), the stand-in client (`tools/harness/wow.lua`) may lack the API it
+  calls, and the sweep dies on a stub gap that is not a bug. Add the stub; don't "fix" the addon.
+
 - **★ `AuraData.spellId` — lower-case d.** A probe reading `d.spellID` printed `nil` for every aura
   on the player and was written up, for ten minutes, as "12.1 strips spell IDs from aura data". It
   does not. Print the field list before concluding a field is absent.
@@ -358,6 +366,17 @@ GU's `cNum` shows the live-stepping hook.
 ---
 
 ## Lua & tooling
+
+- **★ `x = (not v) and false or nil` is ALWAYS nil.** `false or nil` is nil, so the "off" branch never
+  stores false. On 2026-09-30 gloomUI's group On/Off saved "on" when clicked Off, the switch (which
+  paints from the saved value) never moved, and the group only seemed to hide because the same click
+  also turned its eyes off. Write `if v then x = nil else x = false end`.
+- **★ An async "tell me when ready" that REPAINTS must not re-register on the repaint.** The texture
+  browser's size reader called back → the grid repainted → the repaint asked again for every size
+  still loading, appending another callback each time → each answer repainted again. Doubling without
+  end: the client locked up for a minute ("insecure scripts exceeded execution limit"). Key the waiters
+  (one per cell / row, a re-ask REPLACES), fold repaints into one per frame, and give up for good on a
+  file that never answers. `Media.lua` `TextureSize`.
 
 - **★ `Skin.lua` ends the lib body with `end   -- if lib` — anything pasted AFTER that line is
   outside the lib.** On 2026-09-21 the whole kit (300 lines) landed after it: `UI` and `COLOR` were
@@ -571,6 +590,11 @@ GU's `cNum` shows the live-stepping hook.
 ---
 
 ## WoW client behaviour
+
+- **★ An image EXACTLY 6:1 (480 × 80) loads scrambled and reads as a square** (FINDINGS §25 — likely
+  taken for a cube map). A pixel wider fixes it. Two wrong theories (a remembered old version, Figma's
+  metadata) were tried first; when one exact size fails, test padded copies at neighbouring sizes
+  before blaming the file's contents.
 
 - **★ An EditBox shows the TAIL of text that does not fit.** A 42px readout holding "-700px"
   displays "0px" — the cursor sits at the end after `SetText`, and the box scrolls to it. On

@@ -236,8 +236,17 @@ function Hub:Nudge(dx, dy)
     local p = d.pops and d.pops[sid]
     return p and p.shown and true or false
   end
-  local step = IsShiftKeyDown() and 10 or 1
-  local ok, moved = pcall(def.nudge, dx * step, dy * step, isOpen)
+  -- ★ ONE SCREEN PIXEL, not one unit (2026-09-30, the owner: "I nudge up and it's
+  -- too high, I nudge one pixel down, and it's too low"). On his screen one
+  -- UIParent unit is 1.828 px (/gloom px), so a 1-unit nudge jumped ~2 px and a
+  -- centre could fall between steps. The tools' positions are UIParent units, so
+  -- the step is 1 / (px per unit); positions become fractional (kept to 1/1000),
+  -- which the dials show with `fine` (LibGloomSkin MINOR 19).
+  local _, ph = GetPhysicalScreenSize()
+  local ppu = ((ph and ph > 0) and ph / 768 or 1) * UIParent:GetEffectiveScale()
+  local step = (IsShiftKeyDown() and 10 or 1) / ppu
+  local function r(v) return math.floor(v * step * 1000 + 0.5) / 1000 end
+  local ok, moved = pcall(def.nudge, r(dx), r(dy), isOpen)
   if not ok then geterrorhandler()(moved); return false end
   if moved then
     if nudgeTimer then nudgeTimer:Cancel() end

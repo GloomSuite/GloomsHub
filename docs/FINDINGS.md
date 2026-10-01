@@ -1850,5 +1850,45 @@ owner: "that looks better". ~~*"Sansation, like Saira, sits high and wants a 1-u
    at 100%. Its gear option "0.5333" is 768/1440 (a 1440p screen's 1 px); on 4K it is 1.5 px. Its
    scale change fires no `UI_SCALE_CHANGED`, so the Suite would only re-fit on the next `/reload`.
 
+**Re-measured 2026-09-30 — `TESTED` with `/gloom px`:** still **1 unit = 1.828 px** (uiScale 0.70, the
+Mac on Default — which fixed SHARPNESS, not this ratio). Consequence: a 1-unit position step is ~2
+screen pixels, so a centre could fall between steps (the owner: "I nudge up and it's too high…").
+The arrow keys now move ONE SCREEN PIXEL (CONTRACTS §2 `nudge`), positions go fractional, and the
+position dials show a decimal (`fine`). The owner: "that's better".
+
 **What is left is not ours:** WoW's font rasteriser is not macOS's, so type in Figma will always
 look a little smoother than type in the game — Blizzard's own panels included.
+
+## §25 — Textures: listing the game's art, reading a file's size, and the 6:1 image ✅ `TESTED` 2026-09-30
+
+Found building the texture browser (BACKLOG 21, closed). All in game, by the owner.
+
+- **`C_Texture.GetAtlasElements()` lists every atlas in the client** — `TESTED`: 15,043 on 12.x (the
+  browser's counter). It is the call Texture Atlas Viewer builds its whole list from; **TAV is not
+  needed** to browse atlases. TAV adds only a table of FILE NAMES (`FilePaths.lua`, private to it).
+  Each atlas's `GetAtlasInfo(name).file` is the file it is cut from, which is enough to GROUP by sheet
+  (the browser's Sheets view — `TESTED`: "recruitafriend" gave the same sheet TAV shows, 31 pieces).
+  Loose files that are not atlases cannot be listed by any API.
+- **A file's pixel size: a texture given a file and NO size reports the file's size** — `TESTED`:
+  `UIParent:CreateTexture()` + `SetTexture(path)`, then `GetSize()` a moment later read **3041 652**
+  for a 3041 × 652 PNG. Immediately after `SetTexture` it may read 0 0 — poll (`Media.lua`
+  `TextureSize`, cached, one waiter per key — see LESSONS on the freeze).
+- **A NEW file is not found until a `/reload`** — `TESTED`: four PNGs written while the game ran read
+  `0 0` until `/reload`, then their true sizes. (A restart is NOT needed — the standing rule.)
+- **★ An image EXACTLY 6 times as wide as tall loads scrambled** — `TESTED`: a 480 × 80 PNG showed as
+  stripes and read **80 × 80**. Padded copies at **481 × 80, 512 × 80 and 480 × 128 all read true**;
+  the owner's 490 / 500 × 80 re-export works. Cause `SUSPECTED`: read as a cube map's six faces. Only
+  the WIDE case was tested; a 1 × 6 strip is unproven. The addon cannot detect it (the game reports a
+  square), so the Media catalogs carry a standing warning.
+- **Non-power-of-two sizes are fine** for PNG — `TESTED` across the owner's art (1312 × 362, 756 × 161,
+  481 × 80, 3041 × 652). The Warcraft Wiki's "power-of-two sizes" is out of date for PNG.
+
+**KILLED:**
+- ~~"WoW remembered an earlier 80 × 80 version of the file"~~ — the owner had no earlier version, and a
+  full restart changed nothing.
+- ~~"Figma's export metadata (sRGB, gAMA, tEXt) breaks WoW's PNG reader"~~ — a re-encoded copy with only
+  IHDR / IDAT / IEND scrambled identically; simplering.png carries sRGB + gAMA and loads fine.
+- ~~"A flipbook's grid can be guessed from its atlas"~~ — the old browser took 1 / the atlas's share of
+  its FILE as Columns × Rows: that is how big the atlas is, not how many frames it has. Every still
+  atlas played and no flipbook came out right (the owner). There is no API for a flipbook's cut; it
+  loads as a still and the owner sets the grid against drawn lines (remembered per name).

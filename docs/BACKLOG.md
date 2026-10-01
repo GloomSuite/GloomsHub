@@ -6,34 +6,17 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-09-30 (a long build session: **Gloom's UI** (Overlays + Portraits as one tool,
-with groups), shaped bar fills in Unit Frames, the texture browser moved into gloomMEDIA, the tool
-rail, one window place for every tool, suite-wide UNDO, attaching gloomUI groups to unit frames,
-arrow-key nudges, Grow From. Item 19 closed. **The next session starts with item 21** — the
-owner's call.)
+**Last updated:** 2026-09-30, evening (item 21 CLOSED — the texture browser rebuilt: search, Game
+Art / Sheets / My Media / Favorites, sizes, grid lines, remembered grids; then gloomUI group On/Off,
+image-sized new overlays, one-screen-pixel nudges, corner-bracket handles, Unit Frames hiding
+Blizzard's cast bar + `[guild]` / `[title]`, the two Slant shapes, the spacebar as `_`. Item 22 says
+what is still untested in game. **No item is marked to start with — the owner's call.**)
 ---
 
 ## Open items
 
-### 21 · ★ START HERE — the texture browser, and how assets get in
-**Repo:** `~/GloomsHub` (`Media.lua`: the catalogs + the TEXTURE BROWSER block) · **Size:** a design
-DISCUSSION first · **Evidence:** the owner's request, 2026-09-30 ("I'd like to discuss the texture
-browser and how that and adding assets from the game library and external assets works").
-
-What he wants to talk through: the texture browser (gloomMEDIA → Game Textures, and the Texture
-Browser window any tool's Browse opens — `GloomsHub:PickTexture`), how the GAME's art gets found
-(he uses Texture Atlas Viewer, `/tav`; flipbooks are named `…flipbook…` / `…-flip`; a sheet's grid
-is a GUESS the owner may have to correct) and how EXTERNAL art gets in (the Hub's drop-in folders
-`Fonts/ Textures/ Graphics/`, gitignored, registered by name in the Media catalogs). Explain first,
-then let him steer. Nothing is decided yet.
-
-**Read first:** the header of `~/GloomsHub/Media.lua` and its "THE TEXTURE BROWSER" block ·
-CONTRACTS §3 (the resolver) · `GloomsOverlays_BrowseAssets` in `~/GloomsOverlays/GloomsOverlays_Pages.lua`
-
----
-
-### 22 · This session's builds — waiting on the owner's use (2026-09-30)
-**Repo:** `~/GloomsHub` · `~/GloomsOverlays` · `~/GloomsUnitFrames` · **Size:** his fixes as they come ·
+### 22 · The 2026-09-30 builds — waiting on the owner's use
+**Repo:** `~/GloomsHub` · `~/GloomsOverlays` · `~/GloomsUnitFrames` · `~/GloomsBars` · **Size:** his fixes as they come ·
 **Evidence:** each harness-checked (0 errors in `sweep-v3.lua`, targeted scripts); the owner
 confirmed in game what is marked ✓.
 - **Gloom's UI** (`~/GloomsOverlays`, folder unchanged): portraits are an overlay TYPE; groups with a
@@ -52,8 +35,22 @@ confirmed in game what is marked ✓.
   (its AddOns symlink removed 2026-09-29; the repo untouched) — what happens to the repo and its
   public GitHub copy is his call.
 
+- **Built 2026-09-30 (second half), harness-checked:**
+  - **Texture Browser** (Hub `Media.lua`): sources Game Art ✓ (15,043) · Sheets ✓ · My Media ✓ ·
+    Favorites; search ✓; pixel sizes on My Media and in the catalogs ✓; grid lines over a stopped
+    sheet ✓; the freeze fix ✓ — untested: **remembered grids**, **dragging the scrollbars**, the 6:1
+    warning's wording.
+  - **gloomUI:** a group **On/Off** (the save bug fixed after his report — the FIX is untested in
+    game) · a new overlay starts at its **image's size** (untested in game).
+  - **Hub:** arrow keys move **one screen pixel** + `fine` dials ✓ ("that's better") · drag handles
+    are **corner brackets** ✓.
+  - **Unit Frames:** **Hide Blizzard's Cast Bar** (its own, not EUI's — untested in game, incl. Edit
+    Mode) · `[guild]` / `[title]` ✓.
+  - **Bars:** the **Slant / and Slant \ shapes** ✓ (size) — the **even-border fix** (`growX`) is
+    untested in game · the spacebar shows as **`_`** ✓.
+
 **Read first:** `~/GloomsOverlays/CLAUDE.md` · the headers of `~/GloomsHub/Undo.lua` and
-`~/GloomsHub/Anchors.lua` · the "THE FILL'S EDGE PIECES" comment in `NewBar`
+`~/GloomsHub/Anchors.lua` · the TEXTURE BROWSER / ART LIST blocks in `~/GloomsHub/Media.lua` · the "THE FILL'S EDGE PIECES" comment in `NewBar`
 (`~/GloomsUnitFrames/GloomsUnitFrames.lua`) · FINDINGS §21's 2026-09-29/30 addendum
 
 ---
@@ -205,6 +202,15 @@ from him; each is: drop the files in, run the script, paste the rows.
   **A linked "unit scale" for Unit Frames** was deferred: gloomUI scales a group, the unit frame is
   adjusted by hand — the owner: "an acceptable compromise".
 - **Undo per tool** — **REJECTED by the owner 2026-09-30**: one suite-wide history.
+- **Texture Atlas Viewer as the browser's source** — **NOT NEEDED, 2026-09-30**: the game lists every
+  atlas itself (`C_Texture.GetAtlasElements`), and the Sheets view groups them by file. The owner: "less
+  concerned about TAV". FINDINGS §25.
+- **Guessing a flipbook's grid** — **REMOVED 2026-09-30** (it was always wrong; FINDINGS §25). Everything
+  loads still; the owner sets the grid against the lines, and it's remembered per name. Don't restore.
+- **A script that packs a frame sequence (e.g. After Effects' PNG sequence) into a spritesheet** —
+  offered 2026-09-30; the owner: build it **when he has a render**, not before.
+- **Guild RANK as a text code** — the owner asked for `[guild]` and `[title]` only (2026-09-30).
+- **"An image loads scrambled"** — check its size for EXACTLY 6:1 first (FINDINGS §25). Not our bug.
 
 - **Merging Auras' Icon and Texture types** — **REJECTED by the owner 2026-09-27**: they are different
   to a user; they were made real instead (item 16's decisions).
@@ -216,41 +222,11 @@ from him; each is: drop the files in, run the script, paste the rows.
 - **"Overlay and unit-frame sizes don't match"** — they DO: both are UI units on UIParent, measured
   equal with `/go debug` 2026-09-29 (the case was a health orb at 80, not 123). Check the numbers first.
 
-- **The ONE big Suite window for rebuilt tools, and baked "glass" backgrounds** — **RETIRED
-  2026-09-27.** The glass panels went solid (one shared background, drawn panels) on the 26th, then
-  the owner replaced the monolithic window with two windows per tool ("it covers so much of the
-  screen"). The big window survives only for tools not yet rebuilt. Do not rebuild baked panels.
-- **"The game looks soft/thick — rebuild the UI to fix it"** — first check the **display chain**
-  (FINDINGS §22): the Mac's display setting and HDR fixed what no addon change could. Do not
-  re-chase sharpness in code before the owner's setup has been checked.
-
-- **GLASS BUTTONS** (glass on every control) — **REJECTED 2026-09-22**; what the owner adopted on
-  2026-09-25 is glass PANELS that never move, baked into each page's background from his own
-  exports (item 16). WoW gives addons **no backdrop blur and no render-to-texture**, so glass on
-  anything that moves or scrolls is still impossible. Do not re-offer per-control glass.
-- **"Our text is soft because the window is scaled"** — **KILLED 2026-09-26** (FINDINGS §22): the
-  same words scaled ×1.094 and drawn natively at the same size are pixel-identical in game. Do not
-  rebuild the kit to avoid SetScale.
-- **WEBP textures** — **NOT SUPPORTED** (Warcraft Wiki, `TextureBase:SetTexture`: BLP, JPEG, PNG,
-  TGA only, power-of-two sizes; PNG since 10.0.7 and it needs the `.png` extension written out).
-  For a large opaque background BLP (DXT) or JPEG is the small option; PNG for crisp small art.
-
-- **The Unit Frames tab tidy pass (item 13)** — **CLOSED 2026-09-21 as superseded**: the whole
-  Suite UI is being redesigned from mocks (item 16). Do not tidy the old tab.
-- **Audiowide for the redesign's wordmarks** — **WRONG, corrected by the owner 2026-09-21**: the
-  Figma file uses **Michroma** everywhere; he had confused the two. Audiowide is not shipped.
-- **The scrub dial as a jog wheel (ticks sliding under a fixed mark)** — **built and REJECTED
-  2026-09-21**; so was the first cut (a needle riding over the ticks, hidden while dragging). The
-  owner's definition is in `UI.dial`'s header. Do not rebuild either.
-- **Offering the BUTTON shape catalog to a unit frame** — **RULED OUT by the owner 2026-09-21**:
-  *"they are fundamentally different things."* GU reads only the Hub's BAR-shape family
-  (`GloomsHub.BAR_SHAPES`); the mechanism is shared, the lists never mix in a picker.
-- **A shared Offset X/Y between a display's arc and bar** — **RULED OUT 2026-09-21**: *"no scenario
-  in which the X/Y placement would be the same."* Each mode keeps its own.
-- **WCAG contrast thresholds for the redesign** — the owner **does not care** (2026-09-21): *"if I
-  can read at age 50, it's not a problem."* Measure if asked; do not lecture.
-- **The mid-combat ruling for GU** stands (2026-09-20): apply at regen is enough.
-
+- **Not-open records settled 2026-09-19 → 27** (the one big Suite window and baked glass, "soft" UI →
+  check the display chain first (FINDINGS §22), glass buttons, text softness from SetScale, WEBP and
+  texture sizes, the GU tab tidy, Audiowide, the jog-wheel dial, button shapes on unit frames, a
+  shared arc/bar offset, WCAG thresholds, GU's mid-combat ruling) — moved to ARCHIVE.md ("NOT-OPEN
+  RECORDS moved out of the BACKLOG — second batch, 2026-09-30"). **Read them there before re-raising.**
 - **Not-open records settled 2026-09-19 → 20** (GU's "This spell" aura kind, the silent-yes known-check,
   GA's hot `ApplyConfig`, texture-less auras, `hgAnchor`, mid-combat changes in GU, the absorb arc,
   aura-button scripts, class color vs gradient, secret-value drawing rules, the cast swipe, GU

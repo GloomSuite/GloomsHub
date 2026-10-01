@@ -56,6 +56,11 @@ local SHAPE_DEF = {
     -- landscape-elongated (3:2 & 2:1) — no plate extension
     { "square32w",     1.5, "landscape", "Wide square 3:2" },
     { "square21w",     2,   "landscape", "Wide square 2:1" },
+    -- SLANTED (2026-09-30, the owner): a square skewed by Unit Frames' slanted
+    -- bar-end angle (sideways half the height over the full height), to sit with
+    -- those bars. "/" leans right, "\" left. Art: tools/gen-slant-shapes.py.
+    { "slant-r",       1.5, "landscape", "Slant /" },
+    { "slant-l",       1.5, "landscape", "Slant \\" },
 }
 
 GloomsHub.SHAPES      = {}   -- key → { aspect, orient, label }
@@ -65,6 +70,15 @@ for _, d in ipairs(SHAPE_DEF) do
     GloomsHub.SHAPE_ORDER[#GloomsHub.SHAPE_ORDER + 1] = d[1]
 end
 
+-- ★ A SLANTED SIDE NEEDS MORE SIDEWAYS GROWTH (2026-09-30, the owner: the
+-- slants' border was "thicker on top and bottom, narrow on the sides"). A border
+-- or bloom is the shape GROWN — `grow` px out on every side of its footprint
+-- box (GrowAnchor). That's exact for a straight side; a slanted one sits only
+-- 2/3 of the half-width from the centre (its midpoint) and leans 26.6°, so the
+-- same box growth reaches it at 2/3 x cos 26.6° = 0.60 of the thickness.
+-- `growX` multiplies the sideways growth to even it: 1.5 / cos(atan 0.5) = 1.677.
+for _, k in ipairs({ "slant-r", "slant-l" }) do GloomsHub.SHAPES[k].growX = 1.5 / math.cos(math.atan(0.5)) end
+
 -- Grouped for a thumbnail-grid picker.
 GloomsHub.SHAPE_GROUPS = {
     { title = "1:1", keys = { "circle", "square", "roundsq1", "roundsq2", "roundsq3",
@@ -72,7 +86,7 @@ GloomsHub.SHAPE_GROUPS = {
     { title = "Portrait", keys = { "pill32", "pill21", "square32", "square21",
                                    "roundsq1-32", "roundsq1-21", "roundsq2-32", "roundsq2-21",
                                    "roundsq3-32", "roundsq3-21" } },
-    { title = "Landscape", keys = { "square32w", "square21w" } },
+    { title = "Landscape", keys = { "square32w", "square21w", "slant-r", "slant-l" } },
 }
 
 -- The parts every shape ships:
@@ -118,13 +132,15 @@ end
 -- anchor for every icon / plate / border mask and glow — delegates here, as do
 -- GloomsHub.Effects' modules and Gloom's Auras. Change the formula and every
 -- shaped thing in the suite moves together; there is no second copy to keep in step.
-function GloomsHub:GrowAnchor(tex, icon, grow)
+-- `key` (optional): the shape, for its `growX` (a slanted side, above).
+function GloomsHub:GrowAnchor(tex, icon, grow, key)
     grow = grow or 0
+    local fx = (key and GloomsHub.SHAPES[key] and GloomsHub.SHAPES[key].growX) or 1
     local w, h = icon:GetWidth(), icon:GetHeight()
     local m0 = 0.5 * math.min(w, h)
     local aspect = math.max(w, h) / math.max(1, math.min(w, h))
     local addS, addL = 2 * grow, grow * (aspect + 1) / aspect
-    local mx = m0 + (w <= h and addS or addL)
+    local mx = m0 + fx * (w <= h and addS or addL)
     local my = m0 + (h < w and addS or addL)
     tex:ClearAllPoints()
     tex:SetPoint("TOPLEFT", icon, "TOPLEFT", -mx, my)

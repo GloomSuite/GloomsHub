@@ -9,11 +9,10 @@
 > **Keep this file short enough to re-read.** If it passes ~180 lines, move the settled history to
 > [ARCHIVE.md](ARCHIVE.md). A document nobody re-reads is a document nobody corrects.
 
-**Last updated:** 2026-09-29 (**the FOURTH Suite design, "two windows", is on master for ALL SIX
-tools**: a selector + a settings window per tool, sections with pop-outs, Global Settings, Sansation
-only — `LibGloomSkin` **MINOR 18**, the Hub's `Windows.lua`. Portraits, Overlays and Media joined on
-2026-09-27, built without mocks; nothing opens in the old big window any more. BACKLOG 16 holds the
-brief and its decisions.)
+**Last updated:** 2026-09-30 (**the two-window Suite design is on master for every tool** — a
+selector + a settings window per tool, sections with pop-outs, Global Settings, Sansation only —
+`LibGloomSkin` **MINOR 20**, the Hub's `Windows.lua`; BACKLOG 16 holds its brief and decisions. The
+texture browser lives in gloomMEDIA; the arrow keys move one screen pixel suite-wide.)
 
 ---
 
@@ -170,9 +169,9 @@ the revised dropdown list**, **and THE DARK KIT (MINOR 13, 2026-09-23 — the se
 stretched `UI.gButton / gSwitch / gDrop / gField / gDial / gCheck / gColor` (the color PILL), `UI.gList`
 (the owner's Dropdown/Popup mock), `UI.gHair` (one-pixel lines), `UI.gRounded`, `UI.gWindow` (tab ·
 body · floating close · resize grip), `UI.gSectionHead`, `UI.gScrollArea` (fades + bar),
-`UI.gProfileBlock`, `UI.G_DIM` (30%), `UI.G_NUDGE` (0, measured), and (MINOR 17) the class-color
-source + `UI.StampClassColors`** — the older widgets kept, drawing on the light plate for the tabs
-not yet rebuilt; `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are aliases) · **`Shapes.lua`** (the suite's silhouette catalog — 21 shapes,
+`UI.gProfileBlock`, `UI.G_DIM` (30%), `UI.G_NUDGE` (0, measured), (MINOR 17) the class-color
+source + `UI.StampClassColors`, (MINOR 19) `fine` dials, (MINOR 20) `UI.gBrackets`** — the older widgets kept, drawing on the light plate for the tabs
+not yet rebuilt; `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are aliases) · **`Shapes.lua`** (the suite's silhouette catalog — 23 shapes, the two SLANTS added 2026-09-30,
 `GloomsHub:ShapeAsset/ShapeInfo/GrowAnchor` — **the ONE grow-anchor; GB's `hgAnchor` delegates
 to it since 2026-09-20**) · **`Effects.lua`** (the eight shaped animation
 modules + `GloomsHub.Effects`) · `Shell.lua` (the Suite window: `RegisterTab`/`Open`/`FocusTab`/

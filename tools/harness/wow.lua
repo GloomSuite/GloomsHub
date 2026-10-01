@@ -311,3 +311,7 @@ local proto = getmetatable(__W.new("x")).__index
 function CreateVector2D(x, y) return { x = x, y = y, GetXY = function(s) return s.x, s.y end } end
 function SetPortraitTexture() end
 dofile("wow-uf.lua")
+
+-- [title] / [guild] (Unit Frames text codes, 2026-09-30)
+function UnitPVPName(u) return UnitName and UnitName(u) or "Name" end
+function GetGuildInfo(u) return nil end

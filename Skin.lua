@@ -9,7 +9,7 @@
 -- change it THERE and every consumer in the same session.
 -- ============================================================
 
-local MAJOR, MINOR = "LibGloomSkin-1.0", 18  -- MINOR 18 (2026-09-27): no mouse wheel on UI.dial / UI.gDial (it only scrolls the window now); their number box steps with ↑/↓, Shift ×10; tooltips wait 1 s (UI.TIP_DELAY) and reach inside switches, dials and colors; UI.confirm and UI.nameDialog in the two-window design (the list plate, Sansation, the kit buttons; coral only for a destroying accept). MINOR 17 (2026-09-27): "Use Class Color" in every two-window color control (UI.ClassRGB, UI.CLASS_SOURCE, UI.ClassColorValue, UI.StampClassColors, UI.pickColorWithClass); gList `font` + dividers with space; gLabel 10; label→control 15. MINOR 16 (2026-09-27, the TWO-WINDOW design, Figma "GloomSuite UI 3"): Sansation everywhere (FONT.sa/saM/saB → Sansation), every glass widget restyled and STRETCHED to its column (gButton/gSwitch/gDrop/gField/gDial/gCheck/gColor → the pill, gList), UI.gPill, UI.gRounded (gradient + per-corner), UI.gCloseDisc, UI.gSectionHead, UI.gScrollArea (fades + bar), UI.gWindow (tab · body · close · resize grip · drag anywhere), UI.gSnap, UI.gProfileBlock, UI.G_POPOUT/G_POPIN. MINOR 15 (2026-09-26, glass → solid panels): COLOR.panel, UI.G_CORNER, UI.gPanel (the rounded panel), UI.gHair/gHairRefresh (a line ONE SCREEN PIXEL thick at any scale), UI.gOutline,  every glass-kit outline and rule is a hairline; UI.gSwitch's segments abut (Figma's 0.5 strokes, inside). MINOR 14 (2026-09-25, the THIRD redesign, "Glass"): THE GLASS KIT — COLOR.lime/slate/deep/list, FONT.saM, UI.gTitle/gLabel/gButton/gSwitch/gList/gDrop/gField/gDial/gCheck/gColor/gX/gScroll/gProfileBar, UI.dial `glass` + `nobox`, UI.colorDot `dot` + `gap`. MINOR 13 (2026-09-23, the SECOND redesign, "GloomSuite UI 2"): THE DARK KIT — COLOR.void/sky/jade/coral/flame, FONT.sa/saB (Saira), UI.accentOf, UI.pill, UI.pillPick, UI.profileStack, and UI.openList (the kit list, openable from any button), the dark UI.dial, UI.plate/rule/text/box/colorDot/toggle2/pillField/xbtn/scrollPane. MINOR 12 (2026-09-21, redesign stages 2–3): UI.chip (the colour chip), the picker's colour SOURCES (selected, committed by OK), the SHORT and BARE dials, UI.cell, the revised dropdown list, the kit popover. MINOR 11: THE KIT — the redesign's tokens (COLOR.plate/ink/violet/…, FONT.ui/uiB/mark) and widgets (UI.button · segments · toggleBar · check · field · label · pick · sectionHeader · dial · wordmark · profileRow); the old widgets stay for tabs not yet migrated
+local MAJOR, MINOR = "LibGloomSkin-1.0", 20  -- MINOR 20 (2026-09-30): UI.gBrackets — corner brackets outset from a frame (the drag handles). MINOR 19 (2026-09-30): UI.gDial `fine` — a position dial that shows and keeps a value between its steps (a one-screen-pixel nudge), one decimal when it isn't whole; typing keeps tenths. MINOR 18 (2026-09-27): no mouse wheel on UI.dial / UI.gDial (it only scrolls the window now); their number box steps with ↑/↓, Shift ×10; tooltips wait 1 s (UI.TIP_DELAY) and reach inside switches, dials and colors; UI.confirm and UI.nameDialog in the two-window design (the list plate, Sansation, the kit buttons; coral only for a destroying accept). MINOR 17 (2026-09-27): "Use Class Color" in every two-window color control (UI.ClassRGB, UI.CLASS_SOURCE, UI.ClassColorValue, UI.StampClassColors, UI.pickColorWithClass); gList `font` + dividers with space; gLabel 10; label→control 15. MINOR 16 (2026-09-27, the TWO-WINDOW design, Figma "GloomSuite UI 3"): Sansation everywhere (FONT.sa/saM/saB → Sansation), every glass widget restyled and STRETCHED to its column (gButton/gSwitch/gDrop/gField/gDial/gCheck/gColor → the pill, gList), UI.gPill, UI.gRounded (gradient + per-corner), UI.gCloseDisc, UI.gSectionHead, UI.gScrollArea (fades + bar), UI.gWindow (tab · body · close · resize grip · drag anywhere), UI.gSnap, UI.gProfileBlock, UI.G_POPOUT/G_POPIN. MINOR 15 (2026-09-26, glass → solid panels): COLOR.panel, UI.G_CORNER, UI.gPanel (the rounded panel), UI.gHair/gHairRefresh (a line ONE SCREEN PIXEL thick at any scale), UI.gOutline,  every glass-kit outline and rule is a hairline; UI.gSwitch's segments abut (Figma's 0.5 strokes, inside). MINOR 14 (2026-09-25, the THIRD redesign, "Glass"): THE GLASS KIT — COLOR.lime/slate/deep/list, FONT.saM, UI.gTitle/gLabel/gButton/gSwitch/gList/gDrop/gField/gDial/gCheck/gColor/gX/gScroll/gProfileBar, UI.dial `glass` + `nobox`, UI.colorDot `dot` + `gap`. MINOR 13 (2026-09-23, the SECOND redesign, "GloomSuite UI 2"): THE DARK KIT — COLOR.void/sky/jade/coral/flame, FONT.sa/saB (Saira), UI.accentOf, UI.pill, UI.pillPick, UI.profileStack, and UI.openList (the kit list, openable from any button), the dark UI.dial, UI.plate/rule/text/box/colorDot/toggle2/pillField/xbtn/scrollPane. MINOR 12 (2026-09-21, redesign stages 2–3): UI.chip (the colour chip), the picker's colour SOURCES (selected, committed by OK), the SHORT and BARE dials, UI.cell, the revised dropdown list, the kit popover. MINOR 11: THE KIT — the redesign's tokens (COLOR.plate/ink/violet/…, FONT.ui/uiB/mark) and widgets (UI.button · segments · toggleBar · check · field · label · pick · sectionHeader · dial · wordmark · profileRow); the old widgets stay for tabs not yet migrated
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if lib then
@@ -3592,8 +3592,51 @@ function UI.gHair(t, axis)
   sizeHair(t, axis)
   return t
 end
+local bracketSets = setmetatable({}, { __mode = "k" })
 function UI.gHairRefresh()
   for t, axis in pairs(hairs) do sizeHair(t, axis) end
+  for b in pairs(bracketSets) do b:layout() end
+end
+
+-- ★ UI.gBrackets(frame, r, g, b, a, opts?) — CORNER BRACKETS around a frame
+-- (2026-09-30, the owner: the drag box "is actually in the way" of precise
+-- positioning). Eight one-pixel lines, two at each corner, `outset` screen
+-- pixels OUTSIDE the frame's edges (default 10), each arm `len` pixels long
+-- (default 12) — measured in real pixels, so they read the same at any scale.
+-- Nothing is drawn over the frame itself; the frame keeps its size, so a drag
+-- handle's mouse area is unchanged. Returns { :SetColor(r,g,b,a), :layout() }.
+function UI.gBrackets(frame, r, g, b, a, opts)
+  opts = opts or {}
+  local set = { lines = {} }
+  for i = 1, 8 do
+    local t = frame:CreateTexture(nil, "OVERLAY")
+    t:SetColorTexture(r, g, b, a or 0.9)
+    set.lines[i] = t
+  end
+  -- corner: TOPLEFT (-1, +1) · TOPRIGHT (+1, +1) · BOTTOMLEFT (-1, -1) · BOTTOMRIGHT (+1, -1)
+  local CORNERS = { { "TOPLEFT", -1, 1 }, { "TOPRIGHT", 1, 1 }, { "BOTTOMLEFT", -1, -1 }, { "BOTTOMRIGHT", 1, -1 } }
+  function set:layout()
+    local px = hairSize(frame)
+    local out, len = (opts.outset or 10) * px, (opts.len or 12) * px
+    for i, c in ipairs(CORNERS) do
+      local pt, sx, sy = c[1], c[2], c[3]
+      local hz, vt = self.lines[i * 2 - 1], self.lines[i * 2]
+      -- the corner point, `out` outside; the horizontal arm runs inward along x,
+      -- the vertical one inward along y
+      local cx, cy = sx * out, sy * out
+      local hAnchor = (sx < 0 and "LEFT" or "RIGHT")
+      local vAnchor = (sy > 0 and "TOP" or "BOTTOM")
+      hz:ClearAllPoints(); hz:SetSize(len, px)
+      hz:SetPoint(vAnchor .. hAnchor, frame, pt, cx, cy)
+      vt:ClearAllPoints(); vt:SetSize(px, len)
+      vt:SetPoint(vAnchor .. hAnchor, frame, pt, cx, cy)
+    end
+  end
+  function set:SetColor(r2, g2, b2, a2) for _, t in ipairs(self.lines) do t:SetColorTexture(r2, g2, b2, a2 or 0.9) end end
+  set:layout()
+  bracketSets[set] = true
+  frame:HookScript("OnShow", function() set:layout() end)
+  return set
 end
 
 -- A hairline outline that can change colour: four OVERLAY textures INSIDE the
@@ -4034,8 +4077,11 @@ function UI.gDial(parent, opts)
   local dragPx = opts.dragPx or 900
   local decimals = 0
   do local s = step; while s % 1 ~= 0 and decimals < 3 do s = s * 10; decimals = decimals + 1 end end
+  local fine = opts.fine and true or false
   local function fmt(v)
     if opts.fmt then return opts.fmt(v) end
+    -- `fine`: a value between whole steps (a pixel nudge) shows one decimal
+    if fine and math.abs(v - math.floor(v + 0.5)) >= 0.05 then return ("%.1f"):format(v) end
     return decimals == 0 and tostring(math.floor(v + 0.5)) or ("%." .. decimals .. "f"):format(v)
   end
   local function snap(v)
@@ -4067,7 +4113,12 @@ function UI.gDial(parent, opts)
   f.box = box
   if opts.nobox then box:Hide(); f:SetWidth(101) end
 
-  local cur, enabled = snap(opts.get() or minV), true
+  -- `fine` keeps the value as it is (only clamped) until the dial itself moves it
+  local function held(v)
+    if not fine then return snap(v) end
+    return math.max(minV, math.min(maxV, v))
+  end
+  local cur, enabled = held(opts.get() or minV), true
   local editing, dragging = false, false
   local function paint()
     local frac = (maxV > minV) and ((cur - minV) / (maxV - minV)) or 0
@@ -4125,13 +4176,18 @@ function UI.gDial(parent, opts)
     editing = false
     if self._abandon then self._abandon = nil; paint(); return end
     local v = tonumber((self:GetText() or ""):match("[-%d%.]+"))
-    if v then apply(v) else paint() end
+    -- `fine`: a typed 12.5 stays 12.5 (tenths)
+    if v and fine then
+      v = math.max(minV, math.min(maxV, math.floor(v * 10 + 0.5) / 10))
+      if v ~= cur then cur = v; opts.set(v) end
+      paint()
+    elseif v then apply(v) else paint() end
   end)
   box:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
   UI.tabbable(box)
   box:SetScript("OnEscapePressed", function(self) self:SetText(fmt(cur)); self:ClearFocus() end)
 
-  function f:refresh() cur = snap(opts.get() or minV); paint() end
+  function f:refresh() cur = held(opts.get() or minV); paint() end
   function f:setEnabled(on)
     enabled = on and true or false
     box:SetEnabled(enabled)

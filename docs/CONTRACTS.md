@@ -98,7 +98,9 @@ GloomsHub:RegisterTab{
                           the live tables' identities) and redraw,           --   ONE undo history
                token    = fn() → the live profile / preset (a change of token is a SWITCH, not a step) },
   nudge    = fn(dx, dy, isOpen) → true if it moved something,   -- optional (2026-09-30): the arrow keys
-                                        --   (1 px, Shift 10) while the windows are open; isOpen(sectionId)
+                                        --   (ONE SCREEN PIXEL, Shift 10 — dx/dy arrive in UIParent
+                                        --   units, fractional: 1 / (px per unit), 0.547 on the owner's
+                                        --   4K at 1.828 px/unit) while the windows are open; isOpen(sectionId)
                                         --   says whether that section is open or popped out. Move a
                                         --   thing ONLY while its position section is open, else return
                                         --   false so the arrows walk.
@@ -162,6 +164,11 @@ GloomsHub:PickTexture({ tool, text, sheet, actions = { { label, fn(text, sheet),
 GloomsHub:ClosePicker() · :PickerShown()
 GloomsHub:SheetFor(texture, cols, rows, frames, fps) → { fileID, cols, rows, frames, fps, uLeft,
                                      --   uRight, vTop, vBottom } or nil (a 1 x 1 still texture)
+GloomsHub:TextureSize(texture, onReady) → w, h now, or nil and onReady(w, h) once the file loads
+                                     -- (2026-09-30) any texture the suite takes: a media name, an
+                                     -- atlas (answers at once), a file ID or a path. A file's size is
+                                     -- read by the unanchored-texture trick (FINDINGS §25); cached.
+                                     -- Gloom's UI starts a new overlay at its image's size with it.
 ```
 - Texture favorites: `GloomsHubDB.textureFavorites` = { { name, cols, rows, fps, frames } … }, copied
   once from `VibeOverlayDB.favorites` (never moved). gloomMEDIA → Game Textures shows them.
@@ -479,6 +486,12 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
   · **Disabled = `UI.G_DIM` (0.3)**, never hidden. Boxed text is NOT nudged (`UI.G_NUDGE` = 0).
   · **DIALS (MINOR 18):** `UI.dial` / `UI.gDial` take NO mouse wheel (the wheel only scrolls the
     window); their number box steps with ↑/↓, Shift ×10, from the number typed if there is one.
+    **`fine = true` (MINOR 19)** — a POSITION dial: it shows the saved value as it is (one decimal
+    when it isn't whole) instead of snapping it to the step, and a typed value keeps its tenths.
+    Dragging the dial still snaps to whole steps. Every position dial in gloomUI and Unit Frames.
+  · **`UI.gBrackets(frame, r, g, b, a, {outset, len}?)` (MINOR 20)** — four corner brackets, 1 screen
+    px thick, `outset` (10) screen px outside the frame, arms `len` (12) px; nothing drawn over the
+    frame, so a drag handle keeps its mouse area. Re-laid out with the hairlines on a scale change.
   · **DIALOGS (MINOR 18):** `UI.confirm` and `UI.nameDialog` wear the two-window kit — the list's plate
     in a violet hairline, Sansation, `UI.gButton`s, the Suite windows' scale. The accept button is
     coral only for Delete / Remove / Clear; **a confirm that does anything else must pass its own
@@ -674,7 +687,8 @@ end
 | `GloomsBars/Config.lua` | MINOR **16** — the two-window kit (stretched controls, `UI.gColor`'s pill, `UI.G_DIM`, `UI.gRounded`, the switch's `widths`), bumped 2026-09-27 in the commit that first called it |
 | `GloomsAuras/Config.lua` | MINOR **6** — calls `UI.colorPicker` directly (its `MakeColor` swatch) |
 | `GloomsAuras/Pages.lua` | MINOR **16** — the two-window kit; gates itself (it prints "update Gloom's Hub" and does not register below 16) |
-| `GloomsOverlays/GloomsOverlays_Pages.lua` | MINOR **17** (gloomUI; `_Editor.lua` and `_Preview.lua` are out of the TOC) |
+| `GloomsOverlays/GloomsOverlays_Pages.lua` | MINOR **20** — `UI.gBrackets` (the drag handles, called from the engine), gDial `fine` (bumped 2026-09-30; `_Editor.lua` and `_Preview.lua` are out of the TOC) |
+| `GloomsUnitFrames/GloomsUnitFrames_Pages.lua` | MINOR **20** — the same two (bumped 2026-09-30) |
 | ~~`GloomsPortraits`~~ | retired 2026-09-29 — folded into gloomUI |
 | `GloomsUnitFrames/GloomsUnitFrames_Tab.lua` | MINOR **12** — the kit, `UI.chip`, the picker's colour sources, the short dial (bumped 2026-09-21, redesign stage 2) |
 
@@ -684,9 +698,9 @@ added and the two files that call it were bumped **in the same commit**. GA foll
 same discipline on 2026-07-25 when its layout rework adopted `UI.tabHeader` — gate bumped
 in the commit that first called it, which is the only maintenance this gate ever needs.
 
-Hub currently ships **MINOR 18** (`Skin.lua`). 2026-09-30 changed behavior without an API a tool
-calls (every edit box joins the Tab ring via `UI.tabbable`; `UI.afterEdit` — the Hub's undo hook;
-`UI.gList` scales before it measures; `UI.gWindow` marks itself `_gWin`), so the MINOR stayed.
+Hub currently ships **MINOR 20** (`Skin.lua`): 19 = `UI.gDial`'s `fine` (a position dial keeps and
+shows a value between steps — one decimal — for the one-screen-pixel nudge), 20 = `UI.gBrackets`
+(corner brackets 10 screen px outside a frame — every drag handle, 2026-09-30).
 
 ⚠ **This line was stale for three weeks** — it still said MINOR 6 after 7 shipped on 2026-08-15, and
 was only caught on 09-08. It is the line a session reads to decide whether a `SKIN_NEEDS` bump is
@@ -708,14 +722,14 @@ or inadequate Hub fails **loudly and legibly**, rather than as a pile of nil-cal
 
 ## 7. The silhouette catalog (GloomsHub owns) — **NEW 2026-08-25**
 ```lua
-GloomsHub.SHAPES          -- key → { aspect, orient, label }   (21 shapes)
+GloomsHub.SHAPES          -- key → { aspect, orient, label, growX? }   (23 shapes)
 GloomsHub.SHAPE_ORDER     -- ordered keys, picker order
 GloomsHub.SHAPE_GROUPS    -- { {title="1:1", keys={…}}, Portrait, Landscape }
 GloomsHub.SHAPE_PARTS     -- { "base","outer","inner","rim","line","swipe" }
 GloomsHub:ShapeAsset(key, part)   -- → path, or nil for an unknown key
 GloomsHub:ShapeInfo(key)          -- → metadata, falling back to circle
 GloomsHub:HasSplitSwipe(key)      -- the five 2:1 portraits also ship swipe-t / swipe-b
-GloomsHub:GrowAnchor(tex, icon, grow)
+GloomsHub:GrowAnchor(tex, icon, grow, key?)   -- key: the shape, for its `growX` (below)
 ```
 Art lives in `Media\art\shapes\<key>-<part>.png`, tracked and shipped.
 
@@ -727,8 +741,15 @@ Art lives in `Media\art\shapes\<key>-<part>.png`, tracked and shipped.
   at `grow = 0` produces. `SetAllPoints` draws it at half size in a transparent border.
 - **A mask texture must be WHITE**; masks read LUMINANCE, not alpha. This art was whitened on
   import. Set it with `CLAMPTOBLACKADDITIVE` on both axes.
-- ⚠ `GrowAnchor` has a **twin**: `hgAnchor` in `GloomsBars/Skin.lua`, still used by GB's own layout.
-  Verified identical 2026-08-25. **Change the formula and you change both.** Backlog item 10.
+- `GrowAnchor` is the ONE copy since 2026-09-20 — GB's `hgAnchor` delegates to it (passing its
+  shape key since 2026-09-30).
+- **`growX`** (2026-09-30): a shape may carry a sideways multiplier on the GROWN part (never on
+  `grow = 0`). The two SLANTS (`slant-r` "/", `slant-l` "\", 3:2, Unit Frames' bar-end angle) carry
+  1.5 / cos(atan 0.5) = 1.677, because a box grown evenly reaches a slanted side at only 0.60 of the
+  thickness (the owner saw thin sides on a GB border). A caller that sizes a fill to the grown mask —
+  GB's border colour — must widen it by the same factor. Their art: `tools/gen-slant-shapes.py`
+  (each part read off the square's art as a function of edge distance; no generator survives for the
+  older shapes).
 
 ### 7b. The BAR-shape family (GloomsHub owns) — **NEW 2026-09-21**
 ```lua
