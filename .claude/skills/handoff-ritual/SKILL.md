@@ -109,8 +109,17 @@ message. Git identity must be `Gloom <gloom@handofdevastation.invalid>` — neve
 and never use a `…@users.noreply.github.com` address (it embeds the handle).
 
 ```bash
-git -C <repo> add -A && git -C <repo> commit -m "<message>" && git -C <repo> push
+git -C <repo> add -A
+git -C <repo> restore --staged -- SoundsManifest.lua 2>/dev/null   # Hub — one path per command:
+git -C <repo> restore --staged -- IconsManifest.lua 2>/dev/null    # Bars — a missing path fails the whole call
+git -C <repo> diff --cached --stat | grep -i manifest && echo "STOP: a manifest is staged"
+git -C <repo> commit -m "<message>" && git -C <repo> push
 ```
+
+⚠ **The two generated manifests are NEVER committed populated** — Hub `SoundsManifest.lua`, Bars
+`IconsManifest.lua` (tracked EMPTY on purpose; populated locally). 2026-10-04 a single
+`restore --staged SoundsManifest.lua IconsManifest.lua` failed on the path each repo lacks, unstaged
+nothing, and both shipped populated (reverted in the next commit). Check the staged stat before every commit.
 
 Then **report back in plain language**: what changed, in which repos, what was pushed, and what the
 next session will find waiting. He is not a developer — no jargon dump, no file listing without
