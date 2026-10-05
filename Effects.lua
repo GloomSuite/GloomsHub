@@ -412,7 +412,9 @@ function Sheen:Start(host, icon, key, p)
   inst.icon = icon
   inst.dir = (speed >= 0) and 1 or -1
   inst.travel = 0.85 * dim
-  inst.period = (aspd < 0.04) and nil or (SHEEN_MIN_PERIOD / aspd)
+  -- a near-0 speed means no repeating sweep (period nil). Not `c and nil or x`,
+  -- which is always x — it swept about once a minute instead (2026-10-01).
+  if aspd < 0.04 then inst.period = nil else inst.period = SHEEN_MIN_PERIOD / aspd end
   inst.t = 0   -- restart the cycle on every (re)trigger so a hover sweeps IMMEDIATELY,
                -- not after the leftover pause from the last time it ran (the felt "lag")
   local color = p.color or { 1, 1, 1 }

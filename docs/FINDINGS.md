@@ -1745,10 +1745,13 @@ image instead.
 - **`TESTED` (measured 2026-09-29):** the gloss's round-end rim art (`gloss-cap-*`) has **42% of its
   alpha OUTSIDE the half-disc** — it relies on a mask. Unmasked on the moving end it drew the white
   "crust" the owner saw (`OBSERVED`); now masked by the end's mask — the fix is `UNTESTED` in game.
-- **`OBSERVED` (the owner):** a faint SEAM where the fill meets its end piece. `SUSPECTED` cause: two
-  shapes butted at an edge that lands between pixels are each anti-aliased on their own. Fix built,
-  `UNTESTED`: the end pieces overlap the fill by one screen pixel; the track is one texture (masked),
-  no join.
+- **`TESTED` 2026-10-02 (the owner's screenshot, measured pixel by pixel):** the SEAM where the fill
+  meets its end piece was the one-pixel OVERLAP fix itself — the overlap hid the join in the solid
+  colour but drew the see-through GLOSS and GRADIENT twice: that column measured +129 brighter in the
+  gloss, +9 in the gradient, nothing in the plain colour under them. Fix: the fill's gloss / gradient
+  clips stop that pixel short (only the solid pieces overlap). The owner: "less pronounced … I can
+  live with it" — a faint FLICKER remains on a MOVING fill (the cast bar), its edge landing between
+  pixels frame to frame. Removing it means drawing fill + end as one piece; not wanted now.
 - **Fixed on the owner's screenshot (a flat red wedge beside a red→maroon fill):** the end's GRADIENT
   piece was one colour picked "where the end is" — wrong for a gradient ACROSS the bar. It is now the
   bar's own ramp, static in space, cut by a mask that rides the edge.
@@ -1756,6 +1759,8 @@ image instead.
 ### `KILLED`
 - ~~*"The end's gradient piece can be a single colour: the ramp's value at the end, as a curve of the
   percent."*~~ Right only for a gradient ALONG the bar. **KILLED** 2026-09-30.
+- ~~*"Overlapping the end pieces one pixel onto the fill removes the seam."*~~ It removed the solid
+  colour's join and CREATED a brighter one in the gloss and gradient. **KILLED** 2026-10-02.
 
 ---
 
@@ -1892,3 +1897,58 @@ Found building the texture browser (BACKLOG 21, closed). All in game, by the own
   its FILE as Columns × Rows: that is how big the atlas is, not how many frames it has. Every still
   atlas played and no flipbook came out right (the owner). There is no API for a flipbook's cut; it
   loads as a still and the owner sets the grid against drawn lines (remembered per name).
+
+---
+
+## §26 — A TARGET's "not interruptible" flag is SECRET in the open world too ✅ `TESTED` 2026-10-04
+
+**Measured** with a `/run` on a key, mid-cast on an open-world mob: `UnitCastingInfo("target")`'s
+`notInterruptible` → `issecretvalue = true`. (A delve already measured the whole target cast secret,
+§18.10.) So addon code can NEVER branch on it, anywhere tested.
+- **What still works:** handing it to the engine. Unit Frames' cast bar colours by it
+  (`C_CurveUtil.EvaluateColorValueFromBoolean`, §18.10). Gloom's Auras' **Target Casting** trigger
+  fades a display by it — the same call, turned into the display frame's alpha. `OBSERVED` (the owner,
+  open world): the Kick aura's icon appears when the conditions are met; a delve is pending.
+- **What can't:** a SOUND gated by it. Playing a sound is addon code deciding; nothing lets the engine
+  decide "play or not". GA now skips a trigger's sound while its interrupt filter rests on a secret
+  flag (`CDM:KickSecret`) — silent rather than wrong.
+- **Reading the colour back** doesn't launder it: a widget fed a secret returns the secret (§1's Tracked-Bar
+  `GetValue` → SECRET; §20's secret `IsShown`). Comparing that is the same blocked branch.
+- `UNTESTED` long shot, offered and not taken: whether `SetShown(secret)` is accepted (an `OnShow`
+  would leak it, so almost certainly not).
+### `KILLED`
+- ~~*"In the open world the flag reads plain, so the interrupt filter can be a real condition there."*~~
+  Built 2026-10-04 on that assumption (the plain branch is still in `CDM:EvalCondition`, harmless);
+  the measurement above **KILLED** it the same day.
+
+---
+
+## §27 — Trinkets in the Cooldown Manager: late, and absent from delves ✅ `TESTED` 2026-10-02/04
+
+- **Late:** an ITEM entry (a trinket in Utility: `equipSlot = 14`, its use-spell as `spellID`) fills
+  in after the spell entries. Entering a Story raid, GA's Discover ran first — `/ga trace`: "Font
+  Trinket Ready … `<not bound>`", reading READY (the cooldown-unknown default) all night; a later trace
+  showed it bound and correctly on cooldown. **Fix (shipped):** while a watched spell is unbound,
+  Discover looks again at 1 / 3 / 8 / 20 s; gear changes re-run it; the aura list redraws after each
+  (its "not in your Cooldown Manager" warning was stale).
+- **Absent from delves:** in a delve the Utility viewer listed 16 entries, the trinket's (cooldownID
+  198604) missing — measured with a `/run` over `UtilityCooldownViewer.itemFramePool`, ON cooldown and
+  again OFF it. Nothing was secret; the entry simply isn't there. Why Blizzard drops it is unknown.
+- **Fix (shipped):** GA's **Trinket Ready** trigger reads the ITEM's cooldown instead
+  (`CDM:ItemOnCooldown`): plain out of combat; in combat the (secret) start/duration go into a hidden
+  Cooldown widget, with the use-spell's duration object as the fallback. `TESTED` (the owner, a
+  delve): the aura disappeared on use. `UNTESTED`: that it comes back when the cooldown ends in combat
+  (the widget's OnHide is the only signal), and which route was used (`/ga trace` shows `route=`).
+### `KILLED`
+- ~~*"The trinket is missing because it's on cooldown."*~~ Missing off cooldown too. **KILLED** 2026-10-04.
+- ~~*"Inside instances the entry's spellID is secret, so it can't be matched."*~~ The entry is absent,
+  not secret. **KILLED** 2026-10-04.
+
+---
+
+## §28 — Charged ("supercharged") combo points read PLAIN, in combat too ✅ `TESTED` 2026-10-02
+
+`GetUnitChargedPowerPoints("player")` → a plain list of positions (`{1,2}`), `issecretvalue` false,
+**in combat on a training dummy** (`/gu charged`: `inCombat=true secret=false everSecret=false`).
+`UNIT_POWER_POINT_CHARGE` fires on change. Unit Frames colours those segments (`chargedColor`).
+

@@ -402,6 +402,13 @@ GU's `cNum` shows the live-stepping hook.
 - **`x and nil or false` is ALWAYS `false`** — `and nil` makes the whole left side nil, so `or false`
   wins both ways. A toggle written `t.flag = (not on) and nil or false` can switch off and never back
   on (Unit Frames' proportions bracket, 2026-09-27, the owner: "I can't REactivate it"). Write the `if`.
+  **It bit three more times (found 2026-10-02):** Auras' paired load checkboxes (`(a and b) and nil or …`
+  — neither box of a pair could ever change, since 2026-09-24), the Sheen's near-zero speed, Unit
+  Frames' Grow From on Resource. A comment warning about this sat 15 lines above the Auras one.
+  **After writing any toggle, grep the six repos for `and nil or`.**
+- **`a and b and f()` keeps only f's FIRST return** — an `and` truncates a multi-return call to one
+  value. `local w, h = X and X.Size and X:Size()` leaves `h` nil, silently (GB's drawn-size spacing,
+  2026-10-01 — caught only because a targeted harness test measured the positions). Write the `if`.
 - **A frame BUILT while it is being opened gets no `OnShow`** — a new frame is already shown, so the
   first `Show()` is no transition. A section that must react to being opened (Unit Frames' drag
   handle, Auras' dimming sync) needs the Hub's per-section `onShow` (it fires however the section
@@ -497,6 +504,12 @@ GU's `cNum` shows the live-stepping hook.
 - The gloss rim art is blurred PAST the silhouette (42% of its alpha outside it); every place that
   draws it must also mask it, or it paints a fringe (FINDINGS §21 addendum). Check an art file's
   alpha outside its shape before reusing it somewhere new.
+
+### Hub sounds vanish from every sound list? The manifest was reset (2026-10-04)
+`SoundsManifest.lua` is tracked EMPTY and populated locally by `tools/build-sound-manifest.sh`; a
+git operation that restores tracked files empties it, and every `Sounds/` file drops out of LSM —
+auras still PLAY a sound they saved (they keep the path), which hides it. Re-run the script, /reload.
+(Same shape for GB's `IconsManifest.lua` / `Rebuild Icons.command`.) Never commit either populated.
 
 ### The harness's blind spots, again (2026-09-27)
 - `SetAllPoints` records anchors but leaves `GetWidth/GetHeight` at 0 — a frame that SIZES from its
@@ -816,6 +829,16 @@ GU's `cNum` shows the live-stepping hook.
 ---
 
 ## Design & working with the owner
+
+- **★★ A new window IS a Suite window — `UI.gWindow` on the Suite root, built like the Texture
+  Browser** (Hub `Media.lua` `PickTexture`): the rounded panel, the close disc above the corner, the
+  title at 20,-20, controls on `content`, opened beside the tool's settings window. 2026-10-04 the
+  spell / shape / texture / sound pickers were first restyled with the NAME DIALOG's flat shell, and
+  the owner: *"We've got all these new design pages/panels/popouts that look absolutely consistent...
+  and you make this?"* A dialog shell is for a dialog. GA's `KitWindow` / `ShowKitWindow` (Config.lua)
+  are the copy to reuse.
+- **A new slash command exists only after a `/reload`** — give the reload FIRST, then the command,
+  then (for SavedVariables) a second reload. Giving "type it, then reload" cost a round 2026-10-04.
 
 - **★★ Build from the mock's NUMBERS, not from a grid you infer from it.** Stage 2 (2026-09-21)
   snapped Display Type to a "column" at x=276 because two other rows had controls there; the mock

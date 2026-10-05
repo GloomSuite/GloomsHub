@@ -159,6 +159,10 @@ function IsShiftKeyDown() return false end
 function IsControlKeyDown() return false end
 function IsAltKeyDown() return false end
 function InCombatLockdown() return false end
+function RegisterStateDriver() end
+function GetInventoryItemID() return nil end
+function UnregisterStateDriver() end
+function RegisterUnitWatch() end
 function UnitExists() return true end
 function UnitName() return "Gloombound" end
 function GetRealmName() return "Stormrage" end

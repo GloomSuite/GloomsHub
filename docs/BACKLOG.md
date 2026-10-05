@@ -6,14 +6,61 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-09-30, evening (item 21 CLOSED — the texture browser rebuilt: search, Game
-Art / Sheets / My Media / Favorites, sizes, grid lines, remembered grids; then gloomUI group On/Off,
-image-sized new overlays, one-screen-pixel nudges, corner-bracket handles, Unit Frames hiding
-Blizzard's cast bar + `[guild]` / `[title]`, the two Slant shapes, the spacebar as `_`. Item 22 says
-what is still untested in game. **No item is marked to start with — the owner's call.**)
+**Last updated:** 2026-10-04 (a long fix-and-build session across every tool — item 24 lists what is
+still waiting on the owner's use. **Next session, by the owner's choice: item 23**, a second-row
+offset for multi-row GB bars.)
 ---
 
 ## Open items
+
+### 23 · GB — a second-row OFFSET for multi-row bars ★ START HERE (the owner, 2026-10-04)
+**Repo:** `~/GloomsBars` (`Layout.lua` + the Bar Layout page in `Config.lua`) · **Size:** small–medium ·
+**Evidence:** none yet — a new feature.
+The owner wants a slider that shifts a multi-row bar's SECOND row sideways (rows after the first, on
+a horizontal bar; columns on a vertical one). **Ask first** what exactly he means before building:
+a fixed px shift of every other row (a stagger — the honeycomb look GB's HANDOFF calls "the geometry
+fork", which Layout now makes possible since it owns the containers), or only row 2, and whether it
+is per bar (yes, almost certainly — `barLayout[barKey]`, beside `gap` / `gapCross`).
+- The grid math is `applyBar` in `Layout.lua`: since 2026-10-01 each slot is the DRAWN size of the
+  button (`pw` / `ph`, from `Skin:DrawnSize`), not the square — an offset should be in the same units,
+  and the bounding box (`maxX` / `minY`, which centres a positioned bar) must include the shifted row.
+- The controls: the Bar Layout page (`Config.lua` ~1850: Icon Gap, Rows, Gap Between Rows — `perLabel`,
+  `ensureBarLayout(selBar)`, `apply()`), and Copy Layout (~1887) must copy the new field too.
+- Layout moves Blizzard's containers OUT OF COMBAT only (`ApplyAll` is combat-gated) — unchanged.
+
+**Read first:** `~/GloomsBars/CLAUDE.md` · `applyBar` in `~/GloomsBars/Layout.lua` · the Bar Layout
+page in `~/GloomsBars/Config.lua` (search "Gap Between Rows") · `~/GloomsBars/docs/HANDOFF.md` §
+"Positioning/spacing (honeycomb layout)"
+
+---
+
+### 24 · The 2026-10-01 → 04 builds — waiting on the owner's use
+**Repo:** all but Portraits · **Size:** his fixes as they come · **Evidence:** each harness-checked
+(0 errors in `sweep-v3.lua`, targeted scripts); ✓ = the owner confirmed in game.
+- **Hub:** the Slants widened to 424 × 256 ✓ (CONTRACTS §7) · the Sheen's near-0 speed now stops.
+- **Bars:** spacing by the DRAWN size (gap 0 = edge to edge) ✓ · custom icons survive any re-set
+  (stealth) ✓ · a bar on its own preset keeps its own count / keybind / cast glow when Blizzard
+  refreshes them ✓ · **Quick Keybind** in the new look + it now closes the two-window Suite — untested.
+- **Auras:** load-condition pairs tick ✓ · bar auras down to 1 px ✓ · **Target Casting** (FINDINGS §26 —
+  the visual works in the open world, `OBSERVED`; a delve pending; its SOUND is silent wherever the flag
+  is hidden, i.e. everywhere measured) · **Buff Running Low** ✓ (poisons) · **Trinket Ready** ✓ in a delve
+  (the return at cooldown end, in combat, untested — §27) · late Cooldown Manager icons rebind ✓ · the
+  spell / shape / texture / sound pickers rebuilt as Suite windows (`KitWindow`) — the owner saw the
+  sound picker; the others unseen.
+- **Unit Frames:** per-spec color-change count ✓ · charged combo points ✓ (§28) · the seam's cause fixed,
+  a faint flicker accepted (§21) · right-click menu + left-click target (secure click layer) — untested ·
+  Grow From hidden on Resource.
+- **Gloom's UI:** Show When Any / All · Hide When Mounted · the Visibility note's spacing · **group-level
+  visibility** (a gate in front of every member) — all untested in game.
+- **Soulstone Watch** — a SEPARATE tiny addon, NOT a suite member (`~/SoulstoneWatch`, no git, symlinked
+  into AddOns): warning when nobody has Soulstone in a raid instance, "X soulstoned Y" and a
+  ready-check report to raid chat, a window + minimap button. Its raid-night test is pending: can it
+  read buffs and post to raid chat inside a raid instance (`/ssw` window shows both).
+
+**Read first:** the item's repo `CLAUDE.md` · FINDINGS §26–§28 · `~/GloomsAuras/docs/HANDOFF.md` (the
+2026-10-04 block) · `~/GloomsBars/docs/HANDOFF.md` (the 2026-10-01 block)
+
+---
 
 ### 22 · The 2026-09-30 builds — waiting on the owner's use
 **Repo:** `~/GloomsHub` · `~/GloomsOverlays` · `~/GloomsUnitFrames` · `~/GloomsBars` · **Size:** his fixes as they come ·
@@ -25,8 +72,8 @@ confirmed in game what is marked ✓.
   group Scale — untested in game: that attaching leaves a group exactly in place (the harness can't
   tell), Hide With Its Frame, Scale.
 - **Unit Frames bar fills:** Fill End (round / angled / point) ✓, the track and the absorb stripes
-  cut to it ✓, Marker, Segments (dividers or Whole), Grow From — untested in game: the 1-px seam fix
-  (the owner saw seams), the masked gloss rim on a round end (his "white crust"), markers, segments.
+  cut to it ✓, Marker, Segments (dividers or Whole), Grow From — untested in game: the masked gloss
+  rim on a round end (his "white crust"), markers, segments. (The seam: item 24 / FINDINGS §21.)
 - **Hub:** the tool rail ✓, one place for every tool's windows ✓ (min selector height 340), the
   Texture Browser ✓, Tab through fields, UNDO ✓ ("nice, I like it") — untested: that one action is
   exactly one step, the Ctrl/Cmd+Z keys, arrow-key nudges.
@@ -46,8 +93,8 @@ confirmed in game what is marked ✓.
     are **corner brackets** ✓.
   - **Unit Frames:** **Hide Blizzard's Cast Bar** (its own, not EUI's — untested in game, incl. Edit
     Mode) · `[guild]` / `[title]` ✓.
-  - **Bars:** the **Slant / and Slant \ shapes** ✓ (size) — the **even-border fix** (`growX`) is
-    untested in game · the spacebar shows as **`_`** ✓.
+  - **Bars:** the **Slant / and Slant \ shapes** ✓ (widened 2026-10-04, item 24) — the **even-border
+    fix** (`growX`, recomputed for the new width) is untested in game · the spacebar shows as **`_`** ✓.
 
 **Read first:** `~/GloomsOverlays/CLAUDE.md` · the headers of `~/GloomsHub/Undo.lua` and
 `~/GloomsHub/Anchors.lua` · the TEXTURE BROWSER / ART LIST blocks in `~/GloomsHub/Media.lua` · the "THE FILL'S EDGE PIECES" comment in `NewBar`
@@ -72,8 +119,9 @@ selector is the frame still NAMED "gloomBars, preview window" at y 1002), "Dropd
 1. **His fixes from use** — BugSack text first. Unmocked choices to confirm if he raises them:
    Overlays' Class Color is one Off | Player | Target switch, Flip one None | Horiz | Vert | Both
    switch, an empty Tint = white.
-2. **Mocks needed from him:** the sound / font / shape / spell pickers, the color picker, the tooltip
-   — still the first design's kit. (The texture browser moved to the new kit 2026-09-30, built from
+2. **Mocks needed from him:** the font picker, the color picker, the tooltip — still the first
+   design's kit. (Auras' sound / shape / texture / spell pickers became Suite windows 2026-10-04,
+   built like the Texture Browser without a mock — item 24.) (The texture browser moved to the new kit 2026-09-30, built from
    the pages without a mock at his request; the confirm and name dialogs 2026-09-27.)
 3. Delete the unmounted previous editors once he approves: Auras `Config.lua`'s (`BuildTab`, the
    accordion, `Build*Section`s, ~2,000 lines — **keep `C.X` and all it exports**), Unit Frames'
@@ -82,48 +130,10 @@ selector is the frame still NAMED "gloomBars, preview window" at y 1002), "Dropd
 4. **Every tool has moved**, so the old big window's code (`Shell.lua`'s panel) and the first/second
    designs' kits can now be retired — check nothing still calls them first.
 
-**Decisions taken (do not re-ask):**
-- **Two windows per tool:** SELECTOR (240, never shorter than 340 — the tool rail) + SETTINGS (400).
-  Both closes / Escape close the tool; a pop-out's close only puts its section back. Height-only
-  resize. **ONE position and height per window, shared by every tool** (the owner, 2026-09-30: they
-  "bounced all over the place"); open section and pop-outs stay per tool.
-- **The TOOL RAIL** (the owner's Figma "Frame 614", 2026-09-30): vertical tabs FLUSH on the selector's
-  left edge — AURAS · BARS · UNIT FRAMES · OVERLAYS (gloomUI keeps that name) · MEDIA; violet + white,
-  the open tool lime + dark purple #0f051d. Art, since WoW can't turn text (`tools/gen-rail-art.py`).
-- **UNDO / REDO** (2026-09-30): ONE history for the whole suite (the owner: per-tool "would be weird"),
-  while the windows are open, 200 steps; curved arrows on the selector's title row (the tab strip's
-  right end is taken in Auras and Bars) + Ctrl/Cmd+Z, Shift for redo. Media is left out.
-- **One section open at a time**; pop out for more. **Global Settings is the Hub's**, same in every tool.
-- **Sansation only · dimmed = 30%, never hidden · close discs 20 above the top-right corner.**
-- **Layout:** a control's LABEL is Sansation **10** (the owner, 2026-09-27); the control sits **15**
-  under it (the label's 11 + his 4 gap), rows **41** apart, blocks **30**. Columns 170 · 20 · 170;
-  three-column 107 · 106 · 107. Text inside boxes is NOT nudged (`UI.G_NUDGE` = 0, measured).
-- **Lists** (`UI.gList`): a divider has 4 of space each side; a font list draws each name in its own face.
-- **An empty color** is a dotted outline: 1-unit dots, 3 apart (he changed it from 2-unit dashes).
-- **"Use Class Color" is in every two-window color picker** (the owner, 2026-09-27): it jumps to the
-  class color; left there, the color FOLLOWS the logged-in character's class; any edit disconnects it.
-  Saved as a normal color + `class = true`, re-colored at login (CONTRACTS §4). Unit Frames' fill /
-  font colors keep their own Class / Power / Resource sources, which follow the UNIT.
-- **World tooltips never cover our windows:** one that would is hidden (his option 1 of 3).
-- **Auras:** left-click the tab's aura name = the list of auras to switch to (NOT rename); right-click
-  = Rename · Duplicate · Move to Group · Delete. Show Charge Count REPLACES the Displayed Text, so the
-  text field dims while it is on. An aura's text draws ABOVE a bar (its own frame).
-- **Bars:** the preset menus as built; Casts & Channels keeps its extra color, labelled **"Cast
-  Complete Color"**. Addon UI Scale's steps up to 150% on his 4K are right.
-- **No mouse wheel on a dial** (the owner, 2026-09-27): the wheel only ever scrolls; the number box
-  steps with ↑/↓ (Shift ×10). **Tooltips wait 1 second** (`UI.TIP_DELAY`), everywhere.
-- **Auras: Icon, Texture and Bar are real TYPES** (the owner, 2026-09-27 — he rejected merging Icon
-  and Texture): an Icon starts with no art (its trigger's icon, the red question mark until then), a
-  Texture on the white sphere; the tab says which. **Right-click → Duplicate As… / Change Type…**
-  switch types; each type's settings are kept, and each side remembers its size. Settings that do
-  nothing for the type DIM (the audit); **Bar Fill & Readouts is LOCKED shut** on a non-bar (the
-  Hub's section `locked`). Every Auras setting has a tooltip.
-- **The EYE (Auras and Overlays):** each item's saved eye is its state while NOT selected; selecting
-  shows it regardless, the eye on the selected item toggles only for now, and deselecting returns it
-  to its saved eye. In Overlays the eye is this preview — ON/OFF is the Visibility section's switch.
-- **Unit Frames:** Copy Settings from TARGET/PLAYER + Reset to Defaults sit at the foot of Global
-  <Unit> Settings. "View Shortcodes" (a lime link) opens the Shortcodes popup; a code clicked goes into
-  the text being edited, at its cursor. Filters opens a popup in the new design.
+**Decisions taken (do not re-ask)** — the full list (two windows per tool, the tool rail, one
+suite-wide Undo, one section open, Sansation, the layout numbers, the eye, Auras' types, Unit Frames'
+buttons…) is in ARCHIVE.md, "Item 16's settled design decisions (moved 2026-10-04)". **Read it before
+changing anything about the windows' look or behavior.**
 
 **Read first:** the headers of `~/GloomsHub/Windows.lua`, `~/GloomsAuras/Pages.lua` and
 `~/GloomsUnitFrames/GloomsUnitFrames_Pages.lua`, the "THE TWO-WINDOW DESIGN" block at the end of
@@ -193,6 +203,20 @@ from him; each is: drop the files in, run the script, paste the rows.
 ## Not open — recorded so nobody re-raises them
 
 > Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
+
+- **A Kick SOUND that plays only on interruptible casts** — **IMPOSSIBLE as far as known, 2026-10-04**:
+  the flag is secret even in the open world (FINDINGS §26); a sound can't be gated by a secret, nor can
+  a widget's colour be read back. The visual version works. The one untested long shot
+  (`SetShown(secret)`) was offered; the owner didn't take it.
+- **Targeting the casting mob for you** — no addon may change target on a condition in combat; the
+  owner was given mouseover / focus Kick macros instead (2026-10-04).
+- **Soulstone Watch checking HEALERS only** — **declined by the owner 2026-10-03** ("only 1, no 2").
+- **Plain names for the red sounds** (SharedMedia_Causese colours its names) — the owner: not
+  important (2026-10-03).
+- **The last flicker of the cast bar's slanted-end seam** — the owner lives with it (2026-10-02).
+- **Option 2 of per-spec settings (a whole profile per spec)** — deferred by the owner 2026-10-01; he
+  envisions "a master profile, with spec-specific overrides" if more such cases appear. Unit Frames'
+  color-change count is the first override (`breakAtSpec`).
 
 - **Carrying the old Portraits settings into Gloom's UI** — **NOT WANTED by the owner, 2026-09-29**:
   *"you can delete any existing portrait settings … I'll rebuild."* A portrait is just an overlay TYPE

@@ -171,7 +171,7 @@ stretched `UI.gButton / gSwitch / gDrop / gField / gDial / gCheck / gColor` (the
 body · floating close · resize grip), `UI.gSectionHead`, `UI.gScrollArea` (fades + bar),
 `UI.gProfileBlock`, `UI.G_DIM` (30%), `UI.G_NUDGE` (0, measured), (MINOR 17) the class-color
 source + `UI.StampClassColors`, (MINOR 19) `fine` dials, (MINOR 20) `UI.gBrackets`** — the older widgets kept, drawing on the light plate for the tabs
-not yet rebuilt; `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are aliases) · **`Shapes.lua`** (the suite's silhouette catalog — 23 shapes, the two SLANTS added 2026-09-30,
+not yet rebuilt; `GloomsHub.COLOR/.FONT/.UI/.MEDIA` are aliases) · **`Shapes.lua`** (the suite's silhouette catalog — 23 shapes, the two SLANTS added 2026-09-30 and widened to 424 × 256 on 2026-10-04,
 `GloomsHub:ShapeAsset/ShapeInfo/GrowAnchor` — **the ONE grow-anchor; GB's `hgAnchor` delegates
 to it since 2026-09-20**) · **`Effects.lua`** (the eight shaped animation
 modules + `GloomsHub.Effects`) · `Shell.lua` (the Suite window: `RegisterTab`/`Open`/`FocusTab`/

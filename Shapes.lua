@@ -59,8 +59,10 @@ local SHAPE_DEF = {
     -- SLANTED (2026-09-30, the owner): a square skewed by Unit Frames' slanted
     -- bar-end angle (sideways half the height over the full height), to sit with
     -- those bars. "/" leans right, "\" left. Art: tools/gen-slant-shapes.py.
-    { "slant-r",       1.5, "landscape", "Slant /" },
-    { "slant-l",       1.5, "landscape", "Slant \\" },
+    -- Widened 2026-10-01 (the owner, Figma): flat edges 296 at a height of
+    -- 256, plus the 128 slant = 424 x 256.
+    { "slant-r",       424 / 256, "landscape", "Slant /" },
+    { "slant-l",       424 / 256, "landscape", "Slant \\" },
 }
 
 GloomsHub.SHAPES      = {}   -- key → { aspect, orient, label }
@@ -74,10 +76,15 @@ end
 -- slants' border was "thicker on top and bottom, narrow on the sides"). A border
 -- or bloom is the shape GROWN — `grow` px out on every side of its footprint
 -- box (GrowAnchor). That's exact for a straight side; a slanted one sits only
--- 2/3 of the half-width from the centre (its midpoint) and leans 26.6°, so the
--- same box growth reaches it at 2/3 x cos 26.6° = 0.60 of the thickness.
--- `growX` multiplies the sideways growth to even it: 1.5 / cos(atan 0.5) = 1.677.
-for _, k in ipairs({ "slant-r", "slant-l" }) do GloomsHub.SHAPES[k].growX = 1.5 / math.cos(math.atan(0.5)) end
+-- part-way out from the centre (its midpoint, a quarter-height in from the
+-- corner: f = (A/2 - 1/4) / (A/2) of the half-width, A the aspect) and leans
+-- 26.6°, so the same box growth reaches it at f x cos 26.6° of the thickness.
+-- `growX` multiplies the sideways growth to even it: 1 / (f x cos(atan 0.5)).
+-- (At the original 3:2, f = 2/3 and growX = 1.677; at 424:256 it is 1.601.)
+for _, k in ipairs({ "slant-r", "slant-l" }) do
+    local A = GloomsHub.SHAPES[k].aspect
+    GloomsHub.SHAPES[k].growX = (A / 2) / ((A / 2 - 0.25) * math.cos(math.atan(0.5)))
+end
 
 -- Grouped for a thumbnail-grid picker.
 GloomsHub.SHAPE_GROUPS = {

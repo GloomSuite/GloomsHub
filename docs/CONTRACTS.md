@@ -744,9 +744,11 @@ Art lives in `Media\art\shapes\<key>-<part>.png`, tracked and shipped.
 - `GrowAnchor` is the ONE copy since 2026-09-20 — GB's `hgAnchor` delegates to it (passing its
   shape key since 2026-09-30).
 - **`growX`** (2026-09-30): a shape may carry a sideways multiplier on the GROWN part (never on
-  `grow = 0`). The two SLANTS (`slant-r` "/", `slant-l` "\", 3:2, Unit Frames' bar-end angle) carry
-  1.5 / cos(atan 0.5) = 1.677, because a box grown evenly reaches a slanted side at only 0.60 of the
-  thickness (the owner saw thin sides on a GB border). A caller that sizes a fill to the grown mask —
+  `grow = 0`). The two SLANTS (`slant-r` "/", `slant-l` "\", Unit Frames' bar-end angle) are
+  **424 × 256** since 2026-10-04 (the owner widened them in Figma: flat edges 296, the 128 slant run;
+  aspect 1.65625; art on a 680 × 512 canvas, the usual half-height margin). Their `growX` is
+  (A/2) / ((A/2 − 1/4) · cos(atan 0.5)) for aspect A — 1.601 now (1.677 at the old 3:2) — because a
+  box grown evenly reaches a slanted side short of the thickness (the owner saw thin sides on a GB border). A caller that sizes a fill to the grown mask —
   GB's border colour — must widen it by the same factor. Their art: `tools/gen-slant-shapes.py`
   (each part read off the square's art as a function of edge distance; no generator survives for the
   older shapes).

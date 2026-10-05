@@ -2040,3 +2040,51 @@ collapsed, attach, hideWithAnchor, scale }; a member's x / y are an offset from 
 Move to Group, drag an overlay onto a group in the list, a green box on screen moves the group, a
 lime outline the selected overlay. The Portraits addon's AddOns symlink was removed (the repo kept).
 Follow-ups (attach to unit frames, scale, nudges, last selection) are BACKLOG 22.
+
+---
+
+## Item 16's settled design decisions (moved out of the BACKLOG 2026-10-04)
+
+The two-window design (BACKLOG 16, still open for the owner's fixes). These are LOCKED — do not re-ask.
+
+- **Two windows per tool:** SELECTOR (240, never shorter than 340 — the tool rail) + SETTINGS (400).
+  Both closes / Escape close the tool; a pop-out's close only puts its section back. Height-only
+  resize. **ONE position and height per window, shared by every tool** (the owner, 2026-09-30: they
+  "bounced all over the place"); open section and pop-outs stay per tool.
+- **The TOOL RAIL** (the owner's Figma "Frame 614", 2026-09-30): vertical tabs FLUSH on the selector's
+  left edge — AURAS · BARS · UNIT FRAMES · OVERLAYS (gloomUI keeps that name) · MEDIA; violet + white,
+  the open tool lime + dark purple #0f051d. Art, since WoW can't turn text (`tools/gen-rail-art.py`).
+- **UNDO / REDO** (2026-09-30): ONE history for the whole suite (the owner: per-tool "would be weird"),
+  while the windows are open, 200 steps; curved arrows on the selector's title row (the tab strip's
+  right end is taken in Auras and Bars) + Ctrl/Cmd+Z, Shift for redo. Media is left out.
+- **One section open at a time**; pop out for more. **Global Settings is the Hub's**, same in every tool.
+- **Sansation only · dimmed = 30%, never hidden · close discs 20 above the top-right corner.**
+- **Layout:** a control's LABEL is Sansation **10** (the owner, 2026-09-27); the control sits **15**
+  under it (the label's 11 + his 4 gap), rows **41** apart, blocks **30**. Columns 170 · 20 · 170;
+  three-column 107 · 106 · 107. Text inside boxes is NOT nudged (`UI.G_NUDGE` = 0, measured).
+- **Lists** (`UI.gList`): a divider has 4 of space each side; a font list draws each name in its own face.
+- **An empty color** is a dotted outline: 1-unit dots, 3 apart (he changed it from 2-unit dashes).
+- **"Use Class Color" is in every two-window color picker** (the owner, 2026-09-27): it jumps to the
+  class color; left there, the color FOLLOWS the logged-in character's class; any edit disconnects it.
+  Saved as a normal color + `class = true`, re-colored at login (CONTRACTS §4). Unit Frames' fill /
+  font colors keep their own Class / Power / Resource sources, which follow the UNIT.
+- **World tooltips never cover our windows:** one that would is hidden (his option 1 of 3).
+- **Auras:** left-click the tab's aura name = the list of auras to switch to (NOT rename); right-click
+  = Rename · Duplicate · Move to Group · Delete. Show Charge Count REPLACES the Displayed Text, so the
+  text field dims while it is on. An aura's text draws ABOVE a bar (its own frame).
+- **Bars:** the preset menus as built; Casts & Channels keeps its extra color, labelled **"Cast
+  Complete Color"**. Addon UI Scale's steps up to 150% on his 4K are right.
+- **No mouse wheel on a dial** (the owner, 2026-09-27): the wheel only ever scrolls; the number box
+  steps with ↑/↓ (Shift ×10). **Tooltips wait 1 second** (`UI.TIP_DELAY`), everywhere.
+- **Auras: Icon, Texture and Bar are real TYPES** (the owner, 2026-09-27 — he rejected merging Icon
+  and Texture): an Icon starts with no art (its trigger's icon, the red question mark until then), a
+  Texture on the white sphere; the tab says which. **Right-click → Duplicate As… / Change Type…**
+  switch types; each type's settings are kept, and each side remembers its size. Settings that do
+  nothing for the type DIM (the audit); **Bar Fill & Readouts is LOCKED shut** on a non-bar (the
+  Hub's section `locked`). Every Auras setting has a tooltip.
+- **The EYE (Auras and Overlays):** each item's saved eye is its state while NOT selected; selecting
+  shows it regardless, the eye on the selected item toggles only for now, and deselecting returns it
+  to its saved eye. In Overlays the eye is this preview — ON/OFF is the Visibility section's switch.
+- **Unit Frames:** Copy Settings from TARGET/PLAYER + Reset to Defaults sit at the foot of Global
+  <Unit> Settings. "View Shortcodes" (a lime link) opens the Shortcodes popup; a code clicked goes into
+  the text being edited, at its cursor. Filters opens a popup in the new design.

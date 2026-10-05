@@ -7,8 +7,10 @@ Frames' slanted bar ends, "in a basically square shape". So: a square skewed
 by that angle — top and bottom edges as long as the shape is tall, the slanted
 sides crossing HALF the height sideways over the full height (the Angled fill
 end, gloomsunitframes tools/gen-fill-art.py: a 64 x 128 piece, run = H / 2).
-Footprint 3:2 wide — the same canvas as `square32w` (640 x 512, footprint
-384 x 256 at 128, 128).
+The owner widened it on 2026-10-01 (Figma): the same slant, the flat top and
+bottom 40 longer (296 at a height of 256), so the footprint is 424 x 256
+(aspect 1.65625) on a 680 x 512 canvas — the usual half-height (128) margin
+on every side, which is what GrowAnchor assumes.
 
 The catalog's other button shapes were drawn outside this repo and no
 generator survives, so every PART is reproduced from the SQUARE's own art:
@@ -16,9 +18,9 @@ each part's alpha (and colour) is read off square-<part>.png as a function of
 the signed distance to the square's edge (its centre row, where that distance
 is exact), then laid over the parallelogram's exact signed distance. The
 glows, rim, line and fill therefore fall off exactly as every other shape's.
-  base    binary silhouette (as all base art)     640 x 512
-  base-s  the anti-aliased quarter-size copy       160 x 128
-  outer / inner / rim / line   the square's falloffs   640 x 512
+  base    binary silhouette (as all base art)     680 x 512
+  base-s  the anti-aliased quarter-size copy       170 x 128
+  outer / inner / rim / line   the square's falloffs   680 x 512
   swipe   the silhouette at alpha 0.8, the footprint stretched to 256 x 256
           (as square32w's: the engine stretches it back over the footprint)
 
@@ -29,8 +31,8 @@ import numpy as np
 from PIL import Image
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Media", "art", "shapes")
-CW, CH = 640, 512                 # canvas (square32w's)
-X0, Y0, FW, FH = 128, 128, 384, 256   # the footprint on it
+CW, CH = 680, 512                 # canvas: the footprint + 128 on every side
+X0, Y0, FW, FH = 128, 128, 424, 256   # the footprint on it (flat edges 296)
 RUN = FH / 2                      # the slant's sideways run over the full height
 
 def corners(lean):
