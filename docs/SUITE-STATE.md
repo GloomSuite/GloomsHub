@@ -218,7 +218,9 @@ the end of `Config.lua`. The per-bar Empty Icons is a Global / Show / Hide overr
 
 **`~/GloomsAuras`** — `main`. Hard-deps the Hub; since 2026-09-27 a TWO-WINDOW tool drawn by
 **`Pages.lua`** (the selector's groups and auras, the aura tab, six sections; it gates itself on
-LibGloomSkin 16; groups and auras have right-click menus, groups drag to reorder), running on `Config.lua`'s logic through its `C.X` exports; the previous editor's
+LibGloomSkin 16; groups and auras have right-click menus, groups drag to reorder; since 2026-10-05 a
+group is SELECTABLE and an ANCHOR — `g.x / g.y / g.scale / g.attach`, a member's `cfg.point` its offset,
+auras drag into / out of groups — Gloom's UI's model), running on `Config.lua`'s logic through its `C.X` exports; the previous editor's
 builders in `Config.lua` are unmounted and kept until the owner approves the new one.
 `Config.lua`'s own `SKIN_NEEDS = 6`. An aura now has a frame **Level** (`cfg.level`, applied in
 `Displays.lua`; nil = the frame's own). Since 2026-08-25 it
@@ -244,7 +246,8 @@ config), no minimap button, no floating panel. Each mode keeps its own size/posi
 
 **`~/GloomsUnitFrames`** — `GloomSuite/GloomsUnitFrames`, `master`, symlinked into AddOns. Hard-deps
 the Hub; four files — the ENGINE (`GloomsUnitFrames.lua`: the arc renderer of FINDINGS §18,
-`GloomsUnitFramesDB` **v2 = `{ profiles = { [name] = { player, target } }, charProfiles }`** — the
+`GloomsUnitFramesDB` **v2 = `{ profiles = { [name] = { player, target, focus, targettarget, pet } }, charProfiles }`**
+(the last three since 2026-10-05: health / power / texts / a cast BAR, no auras — `GU.SMALL`) — the
 engine's `db` is the ACTIVE profile, an unbound character lands on "Default", the v1 account-wide
 config became that profile — rings per unit in 16-level bands, class/reaction color, the shield
 wash of §19, DK runes counted via `GetRuneCooldown` (`UnitPowerPercent` does not take them), the

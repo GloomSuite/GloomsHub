@@ -1030,7 +1030,11 @@ Affliction: usable=false, aura correctly hidden, no mark). Informational only.
 overridden rather than removed, an automatic known-check would silently hide auras that currently
 work. That needs a trace before anything is built on it. Backlog item 6.
 
-### ▶ `UNTESTED` — player power is readable, but GA's power gate has never been run
+### ▶ ✅ `TESTED` 2026-10-05 (the owner, in game) — player power is readable; GA's power gate works
+(Was `UNTESTED`.) The owner built a trigger-less aura gated by Player Power (combo points) and reported
+"it works". Kept below as written.
+
+### (was) `UNTESTED` — player power is readable, but GA's power gate has never been run
 
 Nothing in the 12.1 notes, API-NOTES or this file restricts `UnitPower`; secrecy is aura-side
 (`UNIT_AURA` payloads, AuraData, aura instance IDs, AuraButtons). `EllesmereUIResourceBars` reads
@@ -1952,3 +1956,47 @@ Found building the texture browser (BACKLOG 21, closed). All in game, by the own
 **in combat on a training dummy** (`/gu charged`: `inCombat=true secret=false everSecret=false`).
 `UNIT_POWER_POINT_CHARGE` fires on change. Unit Frames colours those segments (`chargedColor`).
 
+
+
+## §29 — A state driver hands a number-like state over as a NUMBER ✅ `TESTED` 2026-10-05
+
+`RegisterStateDriver(h, "gbmount", "[mounted] 1; 0")` → the `_onstate-gbmount` snippet's `newstate`
+is the NUMBER 1, so `newstate == "1"` was false and GB's Hide When Mounted never hid. Measured with
+`/gb mountprobe`: the state read 1, the "hid it" mark stayed nil; setting the attribute by hand to the
+STRING "1" ran the hide. Fix: word states (`"mounted"` / `"walking"`). A `visibility` driver's
+`show` / `hide` are unaffected. The macro condition itself is fine (`[mounted]` = yes while mounted).
+
+## §30 — A CLAMPed cap mask turns the art's anti-aliased CORNER into a half-strength ROW ✅ `TESTED` 2026-10-05
+
+Unit Frames' Shaped Ends used the Fill End art as a CLAMP cap mask. `end-angled-r.png`'s inner column
+is solid except its last two texels (232, 120 — the slant's apex), and CLAMP carries that column the
+whole length of the bar: the track and fill drew their bottom pixel row at half strength while the
+(unmasked) moving end piece drew it solid — a one-row STEP. Measured pixel by pixel from the owner's
+4K screenshots (bar rows 35–70 / 9–44, the piece one row longer). Fix: `cap-<angled|point>-*.png`,
+the same shapes with the inner edge solid to the corner (`tools/gen-fill-art.py`).
+### `KILLED`
+- ~~*"The step is the end piece's anchor (centred vs pinned)"*~~ — the pin changes moved nothing; the
+  row was the mask's (above). Pinning by the bottom corner stays: harmless.
+- ~~*"Pinning the end piece by its corners stops it drawing"*~~ and ~~*"SetClipsChildren on endGate
+  hides the end pieces"*~~ — both were ONE bug: a helper read `edgeTex` before the line that declared
+  it (a nil global), so every piece was anchored to the SCREEN (`/gu endprobe`: piece L=-10, mid-screen).
+- ~~*"Turning the end art pixel-snapping off fixes the step"*~~ — measured: no change.
+
+## §31 — A clipping frame anchored to a StatusBar's texture misses the FIRST cast after a /reload ✅ `TESTED` 2026-10-05
+
+Unit Frames' gradient was cut by a `SetClipsChildren` frame anchored to the grad StatusBar's texture.
+On the first cast after every /reload the fill showed NO gradient (only the end piece's), every later
+cast was fine; mid-cast the ramp also trailed the edge by a strip of plain colour. `/gu endprobe` read
+every rectangle correct, so the fault is in what is DRAWN, not the layout. Fix: the clip holds the box
+only and a MASK anchored to the texture cuts the moving edge (`gradMask`, a 1024² white, CLAMPTOBLACK);
+then the clip frame's clipping turned OFF entirely — the owner: "everything looks fine". Which of the
+two changes cured the first cast is `SUSPECTED` (clipping), not isolated. Regions anchored to the
+texture (the Fill End pieces) never had either fault.
+
+## §32 — A Brewfest quest's meter IS the player cast bar ✅ `TESTED` 2026-10-05
+
+A Brewfest quest ("add ingredients when a bar fills to a point") showed no meter. The suite hides one
+Blizzard element: Unit Frames re-parents `PlayerCastingBarFrame` (Hide Blizzard's Cast Bar). Turning
+that off showed the meter. The owner flips it for the quest (a smarter filter was declined).
+- `OBSERVED` the same day, unrelated: BugSack's `ADDON_ACTION_FORBIDDEN … 'BugSack' … IsUserOAuthed()`
+  comes from Blizzard's Settings panel (Social page) under taint — not a suite addon.

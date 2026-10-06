@@ -2088,3 +2088,42 @@ The two-window design (BACKLOG 16, still open for the owner's fixes). These are 
 - **Unit Frames:** Copy Settings from TARGET/PLAYER + Reset to Defaults sit at the foot of Global
   <Unit> Settings. "View Shortcodes" (a lime link) opens the Shortcodes popup; a code clicked goes into
   the text being edited, at its cursor. Filters opens a popup in the new design.
+
+
+---
+
+## 2026-10-05 — closed: BACKLOG 23 (GB second-row offset), and the session's settled calls
+
+- **Item 23 — DONE and owner-confirmed.** It turned out to be a CUMULATIVE per-row shift, not a
+  stagger: `barLayout[barKey].rowOffset` px, row n slides (n-1) × offset along the flow (columns
+  slide down on a vertical bar), negative = left; the grid is re-normalised to (0,0) so the bounding
+  box and both anchor branches hold. Copy Styles From copies it. The original brief follows.
+
+#### (was) 23 · GB — a second-row OFFSET for multi-row bars ★ START HERE (the owner, 2026-10-04)
+**Repo:** `~/GloomsBars` (`Layout.lua` + the Bar Layout page in `Config.lua`) · **Size:** small–medium ·
+**Evidence:** none yet — a new feature.
+The owner wants a slider that shifts a multi-row bar's SECOND row sideways (rows after the first, on
+a horizontal bar; columns on a vertical one). **Ask first** what exactly he means before building:
+a fixed px shift of every other row (a stagger — the honeycomb look GB's HANDOFF calls "the geometry
+fork", which Layout now makes possible since it owns the containers), or only row 2, and whether it
+is per bar (yes, almost certainly — `barLayout[barKey]`, beside `gap` / `gapCross`).
+- The grid math is `applyBar` in `Layout.lua`: since 2026-10-01 each slot is the DRAWN size of the
+  button (`pw` / `ph`, from `Skin:DrawnSize`), not the square — an offset should be in the same units,
+  and the bounding box (`maxX` / `minY`, which centres a positioned bar) must include the shifted row.
+- The controls: the Bar Layout page (`Config.lua` ~1850: Icon Gap, Rows, Gap Between Rows — `perLabel`,
+  `ensureBarLayout(selBar)`, `apply()`), and Copy Layout (~1887) must copy the new field too.
+- Layout moves Blizzard's containers OUT OF COMBAT only (`ApplyAll` is combat-gated) — unchanged.
+
+**Read first:** `~/GloomsBars/CLAUDE.md` · `applyBar` in `~/GloomsBars/Layout.lua` · the Bar Layout
+page in `~/GloomsBars/Config.lua` (search "Gap Between Rows") · `~/GloomsBars/docs/HANDOFF.md` §
+"Positioning/spacing (honeycomb layout)"
+
+---
+
+
+- **Auras groups are SELECTABLE again (2026-10-05, the owner chose "like Gloom's UI").** This reverses
+  item 16's "groups are no longer selected": a header click selects, the triangle folds, a Group
+  section replaces the aura sections. Groups are ANCHORS (`g.x / g.y / g.scale / g.attach`); a member's
+  `cfg.point` is its offset — an old group (no x/y) reads every old absolute point unchanged.
+- **Unit Frames gained Focus / Target of Target / Pet (2026-10-05)** — health, power, texts, a cast BAR
+  only (never a ring), no auras; the owner asked after EllesmereUI's stopped showing.

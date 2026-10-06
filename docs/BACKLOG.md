@@ -6,31 +6,35 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-10-04 (a long fix-and-build session across every tool — item 24 lists what is
-still waiting on the owner's use. **Next session, by the owner's choice: item 23**, a second-row
-offset for multi-row GB bars.)
+**Last updated:** 2026-10-05 (a long build session: GB row offset + Hide When Mounted, Unit Frames'
+Focus / Target of Target / Pet + end shapes + fill textures, Auras' groups as anchors + game art and
+flipbooks, group-conflict notes in Auras and Gloom's UI. Item 25 lists what is waiting on the owner's
+use; item 23 closed.)
 ---
 
 ## Open items
 
-### 23 · GB — a second-row OFFSET for multi-row bars ★ START HERE (the owner, 2026-10-04)
-**Repo:** `~/GloomsBars` (`Layout.lua` + the Bar Layout page in `Config.lua`) · **Size:** small–medium ·
-**Evidence:** none yet — a new feature.
-The owner wants a slider that shifts a multi-row bar's SECOND row sideways (rows after the first, on
-a horizontal bar; columns on a vertical one). **Ask first** what exactly he means before building:
-a fixed px shift of every other row (a stagger — the honeycomb look GB's HANDOFF calls "the geometry
-fork", which Layout now makes possible since it owns the containers), or only row 2, and whether it
-is per bar (yes, almost certainly — `barLayout[barKey]`, beside `gap` / `gapCross`).
-- The grid math is `applyBar` in `Layout.lua`: since 2026-10-01 each slot is the DRAWN size of the
-  button (`pw` / `ph`, from `Skin:DrawnSize`), not the square — an offset should be in the same units,
-  and the bounding box (`maxX` / `minY`, which centres a positioned bar) must include the shifted row.
-- The controls: the Bar Layout page (`Config.lua` ~1850: Icon Gap, Rows, Gap Between Rows — `perLabel`,
-  `ensureBarLayout(selBar)`, `apply()`), and Copy Layout (~1887) must copy the new field too.
-- Layout moves Blizzard's containers OUT OF COMBAT only (`ApplyAll` is combat-gated) — unchanged.
+### 25 · The 2026-10-05 builds — waiting on the owner's use
+**Repo:** `~/GloomsBars` · `~/GloomsUnitFrames` · `~/GloomsAuras` · `~/GloomsOverlays` · **Size:** his fixes as
+they come · **Evidence:** each harness-checked (0 errors in `sweep-v3.lua`, targeted scripts); ✓ = the
+owner confirmed in game.
+- **Bars:** Row Offset (per bar, cumulative per row) ✓ · Hide When Mounted (per bar; mounts + druid
+  travel forms; a secure state driver — FINDINGS §29) ✓.
+- **Unit Frames:** Hide When Mounted (Global) ✓ · Shaped Ends + End Shape (round / angled / point) and the
+  square far end, the parallel slant, the square-off at a square end ✓ · the one-row step (§30) ✓ · the
+  gradient on the first cast after a /reload (§31) ✓ · **Focus, Target of Target, Pet** (health, power,
+  texts, a cast BAR; no auras) ✓ · hover TOOLTIP ✓ · the click box = health + power only — untested ·
+  **Fill Texture** on Rectangle bars (+ Gloss beside it) — untested: the join at the moving tip, and a
+  VERTICAL bar (the crop direction is assumed).
+- **Auras:** groups as ANCHORS (selectable, Attach To, Scale, position, drag into / out of groups in the
+  list, green brackets drag a group, arrow-key nudges) ✓ · the group-conflict note + coral warning ✓ ·
+  **Game Art & Flipbooks** (the Hub's texture browser, atlases, `cfg.sheet`) — untested in game ·
+  Duplicate in place — untested · group Scale may soften text (it is `SetScale`) — unseen.
+- **Gloom's UI:** the group-conflict note + list warning ✓.
+- **Diagnostics left in on purpose (the owner: "just leave them")**: `/gb mountprobe`, `/gu endprobe`.
 
-**Read first:** `~/GloomsBars/CLAUDE.md` · `applyBar` in `~/GloomsBars/Layout.lua` · the Bar Layout
-page in `~/GloomsBars/Config.lua` (search "Gap Between Rows") · `~/GloomsBars/docs/HANDOFF.md` §
-"Positioning/spacing (honeycomb layout)"
+**Read first:** the repo's `CLAUDE.md` · FINDINGS §29–§31 · `~/GloomsAuras/docs/HANDOFF.md` (the 2026-10-05
+block) · `~/GloomsUnitFrames/CLAUDE.md` (the 2026-10-05 block)
 
 ---
 
@@ -203,6 +207,15 @@ from him; each is: drop the files in, run the script, paste the rows.
 ## Not open — recorded so nobody re-raises them
 
 > Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
+
+- **Drop shadows on bars / unit frames** — **DECLINED by the owner 2026-10-05**: WoW has no blur, so a
+  shadow means pre-blurred art per shape in fixed steps — "just not worth the effort".
+- **Smarter "Hide Blizzard's Cast Bar" (let quest meters through)** — **DECLINED 2026-10-05**: a Brewfest
+  quest's meter IS the player cast bar (FINDINGS §32); the owner flips the setting off for it.
+- **A class-points OTHER TRIGGER in Auras** — **NOT NEEDED, 2026-10-05**: the Player Power LOAD condition
+  on a trigger-less aura does it (§29's addendum).
+- **Duplicate As… landing beside the original** — the owner's own 2026-09-27 ask; plain Duplicate stays
+  in place (2026-10-05).
 
 - **A Kick SOUND that plays only on interruptible casts** — **IMPOSSIBLE as far as known, 2026-10-04**:
   the flag is secret even in the open world (FINDINGS §26); a sound can't be gated by a secret, nor can

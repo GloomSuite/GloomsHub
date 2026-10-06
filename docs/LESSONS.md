@@ -367,6 +367,14 @@ GU's `cNum` shows the live-stepping hook.
 
 ## Lua & tooling
 
+- **★ A local function that names a local declared BELOW it reads a nil GLOBAL — silently.** 2026-10-05
+  a `pinEnd` helper was defined a few lines above `local edgeTex = …`; `SetPoint(…, edgeTex, …)` then
+  anchored every Fill End piece to the SCREEN, and every bar lost its slant. Four "fixes" chased other
+  causes first. Check after any refactor: `luajit -bl <file> | grep 'GGET.*"<name>"'` must print
+  nothing for a name meant to be local (do it for every file touched — it found nothing else).
+- **★ A state driver's state arrives as a NUMBER when it looks like one** (FINDINGS §29). Use words
+  (`"mounted"`, `"walking"`) for custom states, never `1; 0`.
+
 - **★ `x = (not v) and false or nil` is ALWAYS nil.** `false or nil` is nil, so the "off" branch never
   stores false. On 2026-09-30 gloomUI's group On/Off saved "on" when clicked Off, the switch (which
   paints from the saved value) never moved, and the group only seemed to hide because the same click
@@ -504,6 +512,11 @@ GU's `cNum` shows the live-stepping hook.
 - The gloss rim art is blurred PAST the silhouette (42% of its alpha outside it); every place that
   draws it must also mask it, or it paints a fringe (FINDINGS §21 addendum). Check an art file's
   alpha outside its shape before reusing it somewhere new.
+
+### A Media texture that never appears in a texture list? Check its FOLDER (2026-10-05)
+The Media tab files a TEXTURE under `GloomsHub/Textures/` and a GRAPHIC under `GloomsHub/Graphics/`. The
+owner added "Darkened Lower" as a texture with the file in Graphics/: saved fine, never listed. Copy
+(or move) the file to the matching folder; /reload.
 
 ### Hub sounds vanish from every sound list? The manifest was reset (2026-10-04)
 `SoundsManifest.lua` is tracked EMPTY and populated locally by `tools/build-sound-manifest.sh`; a

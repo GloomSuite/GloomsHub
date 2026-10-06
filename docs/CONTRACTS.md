@@ -116,7 +116,9 @@ GloomsHub:SuiteWindow(id, "sel"|"set")  -- a tool's window · GloomsHub:SuiteRoo
 -- tool's own change the Hub can't see (a slash command) is recorded at the next mouse release.
 
 -- ANCHORS (Anchors.lua, 2026-09-30) — frames one tool offers and another attaches to
-GloomsHub:RegisterAnchor(id, { label, frame = fn() → frame })   -- Unit Frames: "uf:player", "uf:target"
+GloomsHub:RegisterAnchor(id, { label, frame = fn() → frame })   -- Unit Frames: "uf:player", "uf:target",
+                                     -- "uf:focus", "uf:targettarget", "uf:pet" (2026-10-05)
+                                     -- consumers: Gloom's UI groups; Gloom's Auras groups (2026-10-05)
 GloomsHub:Anchors() → { { id, label } … } · :AnchorFrame(id) · :AnchorLabel(id)
 GloomsHub:AnchorsChanged()              -- the OFFERING tool, once its frames exist (addons load
 GloomsHub:OnAnchorsChanged(fn)          --   alphabetically — FINDINGS §24); takers re-place
