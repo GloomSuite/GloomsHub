@@ -220,7 +220,8 @@ the end of `Config.lua`. The per-bar Empty Icons is a Global / Show / Hide overr
 **`Pages.lua`** (the selector's groups and auras, the aura tab, six sections; it gates itself on
 LibGloomSkin 16; groups and auras have right-click menus, groups drag to reorder; since 2026-10-05 a
 group is SELECTABLE and an ANCHOR — `g.x / g.y / g.scale / g.attach`, a member's `cfg.point` its offset,
-auras drag into / out of groups — Gloom's UI's model), running on `Config.lua`'s logic through its `C.X` exports; the previous editor's
+auras drag into / out of groups and REORDER within them (`cfg.order`, 2026-10-06); shift-click
+multi-select moves several at once — Gloom's UI's model, which has the same), running on `Config.lua`'s logic through its `C.X` exports; the previous editor's
 builders in `Config.lua` are unmounted and kept until the owner approves the new one.
 `Config.lua`'s own `SKIN_NEEDS = 6`. An aura now has a frame **Level** (`cfg.level`, applied in
 `Displays.lua`; nil = the frame's own). Since 2026-08-25 it

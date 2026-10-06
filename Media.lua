@@ -822,11 +822,14 @@ end
 -- uRight, vTop, vBottom } — what Gloom's Overlays plays — or nil for a still
 -- texture (a 1 x 1 grid). `fileID` is whatever SetTexture takes: the media
 -- path, the file ID, an atlas's file (its cut as the u / v bounds) or the path.
-function GloomsHub:SheetFor(texture, cols, rows, frames, fps)
+-- `dir` (2026-10-06, the owner): nil / "fwd" = forward, "rev" = backward,
+-- "pong" = forward then back, EASED at each end (GloomsHub:SheetFrame).
+function GloomsHub:SheetFor(texture, cols, rows, frames, fps, dir)
     cols, rows = math.max(1, math.floor(cols or 1)), math.max(1, math.floor(rows or 1))
     if cols * rows <= 1 then return nil end
     local t = (texture or ""):match("^%s*(.-)%s*$")
     local sh = { cols = cols, rows = rows, fps = math.max(1, math.floor(fps or 15)),
+        dir = (dir == "rev" or dir == "pong") and dir or nil,
         frames = math.max(1, math.min(cols * rows, math.floor(frames or cols * rows))),
         uLeft = 0, uRight = 1, vTop = 0, vBottom = 1 }
     local path = GloomsHub:ResolveAssetPath(t)
@@ -838,6 +841,29 @@ function GloomsHub:SheetFor(texture, cols, rows, frames, fps)
         sh.uLeft, sh.uRight, sh.vTop, sh.vBottom = info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord
     elseif t ~= "" then sh.fileID = t end
     return sh
+end
+
+-- ★ WHICH FRAME a flipbook shows `t` seconds after it started (0-based) — the ONE
+-- timing every player uses (Auras, Gloom's UI, the browser's preview), so they
+-- all play alike. Forward and Reverse step at `fps`. PING-PONG (2026-10-06, the
+-- owner: "hard ping pongs always look jarring") runs a cosine over the frames —
+-- slow out of each end, fastest in the middle — at the same average speed. The
+-- game can't draw between frames, so easing HOLDS the end frames longer; with
+-- few frames it reads as a pause at each end.
+function GloomsHub:SheetFrame(sh, t)
+    local total = math.max(1, math.min(sh.frames or (sh.cols or 1) * (sh.rows or 1), (sh.cols or 1) * (sh.rows or 1)))
+    if total <= 1 then return 0 end
+    local fps = math.max(1, sh.fps or 15)
+    if sh.dir == "pong" then
+        local span = total - 1
+        local period = 2 * span / fps
+        local ph = (t % period) / period
+        local pos = (1 - math.cos(2 * math.pi * ph)) / 2 * span
+        return math.floor(pos + 0.5)
+    end
+    local i = math.floor(t * fps) % total
+    if sh.dir == "rev" then return total - 1 - i end
+    return i
 end
 
 -- The pixel size of ANY texture the suite takes — a Suite media name, an atlas,
@@ -910,7 +936,7 @@ local function DragBar(track, thumb, getOff, getMax, setOff)
     return hit
 end
 
-local TB_PREVIEW_H, TB_FAV_ROWS = 180, 8
+local TB_PREVIEW_H, TB_FAV_ROWS = 180, 6   -- 6 (was 8): the Direction row took two (2026-10-06)
 local function buildTextureBrowser(parent)
     local f = CreateFrame("Frame", nil, parent); f:SetSize(360, 500)
     local st = { text = "", cols = 1, rows = 1, frames = 1, fps = 15, playing = false }
@@ -978,13 +1004,14 @@ local function buildTextureBrowser(parent)
     local function play()
         if st.cols * st.rows <= 1 then return end
         st.playing = true
-        local total = math.max(1, math.min(st.frames, st.cols * st.rows))
-        local dur, t, i = 1 / math.max(1, st.fps), 0, 0
+        local sh = { cols = st.cols, rows = st.rows, frames = st.frames, fps = st.fps, dir = st.dir }
+        local t, shown = 0, GloomsHub:SheetFrame(sh, 0)
         fit()
-        pv:SetTexCoord(frameCoords(0))
+        pv:SetTexCoord(frameCoords(shown))
         box:SetScript("OnUpdate", function(_, dt)
             t = t + dt
-            if t >= dur then t = t - dur; i = (i + 1) % total; pv:SetTexCoord(frameCoords(i)) end
+            local i = GloomsHub:SheetFrame(sh, t)
+            if i ~= shown then shown = i; pv:SetTexCoord(frameCoords(i)) end
         end)
     end
     local function regrid(key)
@@ -1000,7 +1027,7 @@ local function buildTextureBrowser(parent)
         if not GloomsHubDB or (st.text or "") == "" then return end
         GloomsHubDB.textureGrids = GloomsHubDB.textureGrids or {}
         if st.cols * st.rows > 1 then
-            GloomsHubDB.textureGrids[st.text] = { cols = st.cols, rows = st.rows, frames = st.frames, fps = st.fps }
+            GloomsHubDB.textureGrids[st.text] = { cols = st.cols, rows = st.rows, frames = st.frames, fps = st.fps, dir = st.dir }
         else
             GloomsHubDB.textureGrids[st.text] = nil
         end
@@ -1018,7 +1045,14 @@ local function buildTextureBrowser(parent)
     local dRows = dial("Rows", "rows", 1, 64, 190, y0, function() st.frames = st.cols * st.rows end)
     local dFrames = dial("Frames", "frames", 1, 4096, 0, y0 + 41, nil, "How many cells to play — fewer than Columns x Rows when the last row isn't full.")
     local dFps = dial("Speed (frames per second)", "fps", 1, 60, 190, y0 + 41)
-    local bY = y0 + 82
+    -- DIRECTION (2026-10-06): Forward | Reverse | Ping-Pong (eased at each end)
+    local dirL = UI.gLabel(f, "Direction"); dirL:SetPoint("TOPLEFT", 0, -(y0 + 82))
+    local dDir = UI.gSwitch(f, { { "fwd", "Forward" }, { "rev", "Reverse" }, { "pong", "Ping-Pong" } },
+        function() return st.dir or "fwd" end,
+        function(v) st.dir = (v ~= "fwd") and v or nil; regrid("dir"); remember(); api.refresh() end, { w = 360 })
+    dDir:SetPoint("TOPLEFT", 0, -(y0 + 97))
+    UI.attachTip(dDir, "Direction", "Forward plays the frames in order; Reverse plays them backward; Ping-Pong plays forward, then back — slowing into each end and easing out of it, so the turn isn't a jolt.")
+    local bY = y0 + 123
     local playB = UI.gButton(f, "Play", { w = 60, h = 16, size = 10, onClick = function() play(); api.refresh() end })
     playB:SetPoint("TOPLEFT", 0, -bY)
     local stopB = UI.gButton(f, "Stop", { w = 60, h = 16, size = 10, onClick = function() stop(); api.refresh() end })
@@ -1034,7 +1068,7 @@ local function buildTextureBrowser(parent)
                 say("Already a favorite with these settings."); return
             end
         end
-        table.insert(favs, { name = st.text, cols = st.cols, rows = st.rows, fps = st.fps, frames = st.frames })
+        table.insert(favs, { name = st.text, cols = st.cols, rows = st.rows, fps = st.fps, frames = st.frames, dir = st.dir })
         say("Added to favorites.", true)
         api.refresh()
         if MP.renderSelector then MP.renderSelector() end
@@ -1051,7 +1085,7 @@ local function buildTextureBrowser(parent)
             b:ClearAllPoints(); b:SetPoint("TOPLEFT", ((i - 1) % 2) * 190, -(aY + math.floor((i - 1) / 2) * 24))
             b:SetScript("OnClick", function()
                 if (st.text or "") == "" then say("Load a texture first.", false); return end
-                a.fn(st.text, GloomsHub:SheetFor(st.text, st.cols, st.rows, st.frames, st.fps))
+                a.fn(st.text, GloomsHub:SheetFor(st.text, st.cols, st.rows, st.frames, st.fps, st.dir))
             end)
             b:Show()
             if a.tip then UI.attachTip(b, a.label, a.tip) end
@@ -1076,7 +1110,7 @@ local function buildTextureBrowser(parent)
         r.x = UI.gX(r); r.x:SetPoint("RIGHT", 4, 0)
         r:SetScript("OnClick", function(self)
             local fav = self.fav; if not fav then return end
-            api.load(fav.name, { cols = fav.cols or 1, rows = fav.rows or 1, frames = fav.frames, fps = fav.fps or 15 })
+            api.load(fav.name, { cols = fav.cols or 1, rows = fav.rows or 1, frames = fav.frames, fps = fav.fps or 15, dir = fav.dir })
         end)
         r.x:SetScript("OnClick", function()
             local favs = TextureFavorites()
@@ -1108,7 +1142,7 @@ local function buildTextureBrowser(parent)
         base.u0, base.u1, base.v0, base.v1 = 0, 1, 0, 1
         natW, natH = 256, 256
         pv:SetTexCoord(0, 1, 0, 1)
-        st.cols, st.rows, st.frames, st.fps = 1, 1, 1, st.fps or 15
+        st.cols, st.rows, st.frames, st.fps, st.dir = 1, 1, 1, st.fps or 15, nil
         if text == "" then pv:SetTexture(nil); say("Enter a Suite media name, an atlas, a file ID or an Interface\\ path."); api.refresh(); return end
         local path = GloomsHub:ResolveAssetPath(text)
         local info = (not path) and C_Texture and C_Texture.GetAtlasInfo(text)
@@ -1155,6 +1189,7 @@ local function buildTextureBrowser(parent)
             st.cols, st.rows = sheet.cols or 1, sheet.rows or 1
             st.frames = sheet.frames or st.cols * st.rows
             st.fps = sheet.fps or 15
+            st.dir = sheet.dir
         end
         stop()
         if sheet and st.cols * st.rows > 1 then play() end
@@ -1162,9 +1197,9 @@ local function buildTextureBrowser(parent)
     end
 
     function api.refresh()
-        for _, d in ipairs({ dCols, dRows, dFrames, dFps }) do d:refresh() end
+        for _, d in ipairs({ dCols, dRows, dFrames, dFps, dDir }) do d:refresh() end
         local anim = st.cols * st.rows > 1
-        dFrames:setEnabled(anim); dFps:setEnabled(anim)
+        dFrames:setEnabled(anim); dFps:setEnabled(anim); dDir:setEnabled(anim); dirL:SetAlpha(anim and 1 or UI.G_DIM)
         playB:SetEnabled(anim and not st.playing); stopB:SetEnabled(st.playing)
         local rowsN = math.ceil(#actions / 2)
         local fy = (#actions > 0) and (aY + rowsN * 24 + 10) or (bY + 36)
@@ -1252,7 +1287,7 @@ local function FavArt()
     for _, fav in ipairs(TextureFavorites()) do
         local total = (fav.cols or 1) * (fav.rows or 1)
         out[#out + 1] = { name = fav.name, low = fav.name:lower(),
-            sheet = { cols = fav.cols or 1, rows = fav.rows or 1, frames = fav.frames, fps = fav.fps or 15 },
+            sheet = { cols = fav.cols or 1, rows = fav.rows or 1, frames = fav.frames, fps = fav.fps or 15, dir = fav.dir },
             meta = total > 1 and ("%d x %d · %d fps"):format(fav.cols, fav.rows, fav.fps or 15) or "still" }
     end
     return out

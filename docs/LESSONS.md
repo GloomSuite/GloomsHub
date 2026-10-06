@@ -372,6 +372,8 @@ GU's `cNum` shows the live-stepping hook.
   anchored every Fill End piece to the SCREEN, and every bar lost its slant. Four "fixes" chased other
   causes first. Check after any refactor: `luajit -bl <file> | grep 'GGET.*"<name>"'` must print
   nothing for a name meant to be local (do it for every file touched — it found nothing else).
+  2026-10-06 it caught a second one (`POWERS`, declared below the Appearance section that used it)
+  BEFORE it shipped — run it after every edit that uses a file-level local.
 - **★ A state driver's state arrives as a NUMBER when it looks like one** (FINDINGS §29). Use words
   (`"mounted"`, `"walking"`) for custom states, never `1; 0`.
 

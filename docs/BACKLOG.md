@@ -6,13 +6,34 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-10-05 (a long build session: GB row offset + Hide When Mounted, Unit Frames'
-Focus / Target of Target / Pet + end shapes + fill textures, Auras' groups as anchors + game art and
-flipbooks, group-conflict notes in Auras and Gloom's UI. Item 25 lists what is waiting on the owner's
-use; item 23 closed.)
+**Last updated:** 2026-10-06 (flipbook Direction + eased Ping-Pong, Auras' Color Change, multi-select and
+drag-to-reorder in Auras and Gloom's UI. **Next session, by the owner's choice: item 26** — multi-select
+EDITS settings, and the selection becomes Shift = range, Alt = add one.)
 ---
 
 ## Open items
+
+### 26 · Multi-select, second pass — EDIT all selected; Shift = range, Alt = one ★ START HERE (the owner, 2026-10-06)
+**Repo:** `~/GloomsAuras` (`Pages.lua`, `Displays.lua`) · `~/GloomsOverlays` (`GloomsOverlays_Pages.lua`,
+`GloomsOverlays.lua`) · **Size:** medium–large (Auras' many sections) · **Evidence:** a reversal of his own
+2026-10-06 call; the first pass (move-only, settings dimmed) is ✓ in game.
+1. **Settings stay LIVE with several selected, and a CHANGE applies to every selected item at once**
+   ("a huge time saver … combo point setup"). He reversed "fine if it disables settings". Ask/decide:
+   the controls SHOW the last-clicked (primary) item's values; only the setting actually changed is
+   written to all — never copy the whole look. Auras: every control writes through `Cfg()` — the likely
+   route is one place that maps a write over the set (`X.Cfg` / `Reapply` / `P.sync`), not 100 setters
+   edited by hand; Triggers and the texture/shape pickers need the same. Position dials: relative
+   (each keeps its own place) or absolute? — **ask**. Gloom's UI: `LiveApply(field, v)` is the single
+   writer, so it's the easy half.
+2. **The selection gestures change:** **Shift-click = a RANGE** (from the last-clicked to this one, in
+   list order — groups' members as listed), **Alt-click = add / drop ONE** (today's shift behaviour).
+   Both tools: `P.toggleMulti` (Auras) / `toggleMulti` (Gloom's UI), the list rows' OnClick.
+
+**Read first:** `~/GloomsAuras/CLAUDE.md` · `~/GloomsAuras/docs/HANDOFF.md` (the 2026-10-05/06 blocks) ·
+`~/GloomsOverlays/CLAUDE.md` (the 2026-10-06 block) · in `Pages.lua`: `P.toggleMulti`, `P.sync`, `add()` ·
+in `GloomsOverlays_Pages.lua`: `toggleMulti`, `LiveApply`
+
+---
 
 ### 25 · The 2026-10-05 builds — waiting on the owner's use
 **Repo:** `~/GloomsBars` · `~/GloomsUnitFrames` · `~/GloomsAuras` · `~/GloomsOverlays` · **Size:** his fixes as
@@ -31,6 +52,11 @@ owner confirmed in game.
   **Game Art & Flipbooks** (the Hub's texture browser, atlases, `cfg.sheet`) — untested in game ·
   Duplicate in place — untested · group Scale may soften text (it is `SetScale`) — unseen.
 - **Gloom's UI:** the group-conflict note + list warning ✓.
+- **2026-10-06:** multi-select (shift-click; lime brackets move the set; arrow keys; drag a set into a
+  group) ✓ in both · Auras' **Color Change** (Change When: a state or a resource At or Above → Change
+  To) and flipbook **Direction** (Forward / Reverse / eased Ping-Pong, Hub `SheetFrame`) — the owner:
+  "everything else is working great", not checked one by one · **drag-to-reorder** within a group in
+  both lists (Auras `cfg.order`, Gloom's UI the overlay list's order) — untested in game.
 - **Diagnostics left in on purpose (the owner: "just leave them")**: `/gb mountprobe`, `/gu endprobe`.
 
 **Read first:** the repo's `CLAUDE.md` · FINDINGS §29–§31 · `~/GloomsAuras/docs/HANDOFF.md` (the 2026-10-05

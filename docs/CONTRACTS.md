@@ -164,8 +164,11 @@ GloomsHub.SOUND_MANIFEST             -- GENERATED index of Sounds\; see SoundsMa
 GloomsHub:PickTexture({ tool, text, sheet, actions = { { label, fn(text, sheet), tip } … } })
                                      -- the Texture Browser window beside `tool`'s settings window
 GloomsHub:ClosePicker() · :PickerShown()
-GloomsHub:SheetFor(texture, cols, rows, frames, fps) → { fileID, cols, rows, frames, fps, uLeft,
-                                     --   uRight, vTop, vBottom } or nil (a 1 x 1 still texture)
+GloomsHub:SheetFor(texture, cols, rows, frames, fps[, dir]) → { fileID, cols, rows, frames, fps, dir,
+                                     --   uLeft, uRight, vTop, vBottom } or nil (a 1 x 1 still texture)
+                                     -- dir (2026-10-06): nil/"fwd" · "rev" · "pong" (eased at each end)
+GloomsHub:SheetFrame(sheet, t) → the 0-based frame `t` seconds in — THE one flipbook timing; Gloom's UI,
+                                     -- Gloom's Auras and the browser's preview all play through it
 GloomsHub:TextureSize(texture, onReady) → w, h now, or nil and onReady(w, h) once the file loads
                                      -- (2026-09-30) any texture the suite takes: a media name, an
                                      -- atlas (answers at once), a file ID or a path. A file's size is
