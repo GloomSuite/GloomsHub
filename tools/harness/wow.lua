@@ -158,6 +158,7 @@ function IsMouseButtonDown() return false end
 function IsShiftKeyDown() return false end
 function IsControlKeyDown() return false end
 function IsAltKeyDown() return false end
+function IsMetaKeyDown() return false end
 function InCombatLockdown() return false end
 function RegisterStateDriver() end
 function GetInventoryItemID() return nil end

@@ -29,10 +29,10 @@ and its public copy untouched — the owner's call what happens to them). StoneT
 Frames untagged. Versions drift by design — do not "level" them. What's left is in
 [BACKLOG.md](BACKLOG.md).
 
-**★ Patch 12.1 went LIVE on 2026-08-11, and every suite TOC declares `## Interface: 120100`**
+**★ Patch 12.1 went LIVE on 2026-08-11, and every suite TOC declares `## Interface: 120100, 120105` (12.1.5 added 2026-10-15)**
 (bumped 2026-08-12; the number was read off the installed addon set, not assumed).
 
-**Known live bugs in shipped code: none the owner has reported.** (The Quick Keybind concern that
+**Known live bugs: the vanishing action bars have a fix not yet seen surviving a real occurrence (FINDINGS §35, BACKLOG 27); otherwise none the owner has reported.** (The Quick Keybind concern that
 used to sit here was CLOSED as not a GB bug — FINDINGS §8 — and the two bugs found since, FINDINGS
 §13 and §5, were fixed the day they were found and are in `v1.4.0`/master.)
 

@@ -284,6 +284,20 @@ dialog, an "add" form, a nudge step read at click time) are the only Enter-drive
 `flatEditBox` (MINOR 10) gives every box Tab / Shift-Tab and Up / Down so the pattern has a home;
 GU's `cNum` shows the live-stepping hook.
 
+## ★★ A probe the owner must type: count it, and prefer the addon's own data
+
+WoW's chat box silently cuts input at 255 characters, so a long `/run` does nothing and looks like nothing happened
+(2026-10-06: 258). Count with `printf '%s' '<line>' | wc -c` and say the count. Walking Blizzard's frames by guess also
+prints nothing (`GetChildren` on a viewer; the items live in `itemFramePool`). Ask GA's / GB's own tables first.
+And a 20-second probe can't catch a random bug: **a quiet, always-on watch that says what it saw did it in one shot**
+(`debugstack` in OnHide named Blizzard_UIModeManager after days of guessing). — 2026-10-14.
+
+## ★★ A diagnostic's early return can hide the very case you're hunting
+
+The stray-hide watch returned on `isShownExternal == false` ("Blizzard's own hide"), and that was the bug's exact
+state, so it stayed silent while the bars were gone. Read the live state during the failure before trusting a
+watcher's silence. — 2026-10-15.
+
 ## Verification & evidence
 
 - **★ Drive the control the owner clicks, not the field behind it.** The group On/Off test set
@@ -618,6 +632,13 @@ auras still PLAY a sound they saved (they keep the path), which hides it. Re-run
 ---
 
 ## WoW client behaviour
+
+- **★ `FontString:SetText` RAISES on a string that never had a font ("Font not set").** A readout built lazily and
+  never shown has none; clearing it with `SetText("")` threw on panel close (BugSack, 2026-10-08). The harness doesn't
+  enforce this. Guard with `fs:GetFont()`.
+- **★ A Cooldown Manager row hidden by Edit Mode's Visibility has no data** — FINDINGS §34. Before debugging an unbound
+  spell, ask what the row's Visibility is. `/ga charges` reads the category list and looks fine regardless.
+- **★ Fonts warm per (file, size).** A new draw size for a font list means a new warm entry — FINDINGS §37.
 
 - **★ An image EXACTLY 6:1 (480 × 80) loads scrambled and reads as a square** (FINDINGS §25 — likely
   taken for a cube map). A pixel wider fixes it. Two wrong theories (a remembered old version, Figma's

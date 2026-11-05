@@ -2127,3 +2127,104 @@ page in `~/GloomsBars/Config.lua` (search "Gap Between Rows") · `~/GloomsBars/d
   `cfg.point` is its offset — an old group (no x/y) reads every old absolute point unchanged.
 - **Unit Frames gained Focus / Target of Target / Pet (2026-10-05)** — health, power, texts, a cast BAR
   only (never a ring), no auras; the owner asked after EllesmereUI's stopped showing.
+
+---
+
+## Backlog items closed or moved 2026-11-04
+
+**Item 26 closed:** built 2026-10-06; the record of what shipped is BACKLOG 27. The brief as written:
+
+### 26 · Multi-select, second pass — EDIT all selected; Shift = range, Alt = one ★ START HERE (the owner, 2026-10-06)
+**Repo:** `~/GloomsAuras` (`Pages.lua`, `Displays.lua`) · `~/GloomsOverlays` (`GloomsOverlays_Pages.lua`,
+`GloomsOverlays.lua`) · **Size:** medium–large (Auras' many sections) · **Evidence:** a reversal of his own
+2026-10-06 call; the first pass (move-only, settings dimmed) is ✓ in game.
+1. **Settings stay LIVE with several selected, and a CHANGE applies to every selected item at once**
+   ("a huge time saver … combo point setup"). He reversed "fine if it disables settings". Ask/decide:
+   the controls SHOW the last-clicked (primary) item's values; only the setting actually changed is
+   written to all — never copy the whole look. Auras: every control writes through `Cfg()` — the likely
+   route is one place that maps a write over the set (`X.Cfg` / `Reapply` / `P.sync`), not 100 setters
+   edited by hand; Triggers and the texture/shape pickers need the same. Position dials: relative
+   (each keeps its own place) or absolute? — **ask**. Gloom's UI: `LiveApply(field, v)` is the single
+   writer, so it's the easy half.
+2. **The selection gestures change:** **Shift-click = a RANGE** (from the last-clicked to this one, in
+   list order — groups' members as listed), **Alt-click = add / drop ONE** (today's shift behaviour).
+   Both tools: `P.toggleMulti` (Auras) / `toggleMulti` (Gloom's UI), the list rows' OnClick.
+
+**Read first:** `~/GloomsAuras/CLAUDE.md` · `~/GloomsAuras/docs/HANDOFF.md` (the 2026-10-05/06 blocks) ·
+`~/GloomsOverlays/CLAUDE.md` (the 2026-10-06 block) · in `Pages.lua`: `P.toggleMulti`, `P.sync`, `add()` ·
+in `GloomsOverlays_Pages.lua`: `toggleMulti`, `LiveApply`
+
+---
+
+
+**Moved, still partly untested (not closed by proof, retired by age):**
+
+### 24 · The 2026-10-01 → 04 builds — waiting on the owner's use
+**Repo:** all but Portraits · **Size:** his fixes as they come · **Evidence:** each harness-checked
+(0 errors in `sweep-v3.lua`, targeted scripts); ✓ = the owner confirmed in game.
+- **Hub:** the Slants widened to 424 × 256 ✓ (CONTRACTS §7) · the Sheen's near-0 speed now stops.
+- **Bars:** spacing by the DRAWN size (gap 0 = edge to edge) ✓ · custom icons survive any re-set
+  (stealth) ✓ · a bar on its own preset keeps its own count / keybind / cast glow when Blizzard
+  refreshes them ✓ · **Quick Keybind** in the new look + it now closes the two-window Suite — untested.
+- **Auras:** load-condition pairs tick ✓ · bar auras down to 1 px ✓ · **Target Casting** (FINDINGS §26 —
+  the visual works in the open world, `OBSERVED`; a delve pending; its SOUND is silent wherever the flag
+  is hidden, i.e. everywhere measured) · **Buff Running Low** ✓ (poisons) · **Trinket Ready** ✓ in a delve
+  (the return at cooldown end, in combat, untested — §27) · late Cooldown Manager icons rebind ✓ · the
+  spell / shape / texture / sound pickers rebuilt as Suite windows (`KitWindow`) — the owner saw the
+  sound picker; the others unseen.
+- **Unit Frames:** per-spec color-change count ✓ · charged combo points ✓ (§28) · the seam's cause fixed,
+  a faint flicker accepted (§21) · right-click menu + left-click target (secure click layer) — untested ·
+  Grow From hidden on Resource.
+- **Gloom's UI:** Show When Any / All · Hide When Mounted · the Visibility note's spacing · **group-level
+  visibility** (a gate in front of every member) — all untested in game.
+- **Soulstone Watch** — a SEPARATE tiny addon, NOT a suite member (`~/SoulstoneWatch`, no git, symlinked
+  into AddOns): warning when nobody has Soulstone in a raid instance, "X soulstoned Y" and a
+  ready-check report to raid chat, a window + minimap button. Its raid-night test is pending: can it
+  read buffs and post to raid chat inside a raid instance (`/ssw` window shows both).
+
+**Read first:** the item's repo `CLAUDE.md` · FINDINGS §26–§28 · `~/GloomsAuras/docs/HANDOFF.md` (the
+2026-10-04 block) · `~/GloomsBars/docs/HANDOFF.md` (the 2026-10-01 block)
+
+---
+
+
+### 22 · The 2026-09-30 builds — waiting on the owner's use
+**Repo:** `~/GloomsHub` · `~/GloomsOverlays` · `~/GloomsUnitFrames` · `~/GloomsBars` · **Size:** his fixes as they come ·
+**Evidence:** each harness-checked (0 errors in `sweep-v3.lua`, targeted scripts); the owner
+confirmed in game what is marked ✓.
+- **Gloom's UI** (`~/GloomsOverlays`, folder unchanged): portraits are an overlay TYPE; groups with a
+  shared anchor, drag-into-group ✓, the eye hides as well as shows ✓, spritesheet settings, last
+  selection remembered ✓, **Attach To** a unit frame ✓ (the login-order fix ✓), Hide With Its Frame,
+  group Scale — untested in game: that attaching leaves a group exactly in place (the harness can't
+  tell), Hide With Its Frame, Scale.
+- **Unit Frames bar fills:** Fill End (round / angled / point) ✓, the track and the absorb stripes
+  cut to it ✓, Marker, Segments (dividers or Whole), Grow From — untested in game: the masked gloss
+  rim on a round end (his "white crust"), markers, segments. (The seam: item 24 / FINDINGS §21.)
+- **Hub:** the tool rail ✓, one place for every tool's windows ✓ (min selector height 340), the
+  Texture Browser ✓, Tab through fields, UNDO ✓ ("nice, I like it") — untested: that one action is
+  exactly one step, the Ctrl/Cmd+Z keys, arrow-key nudges.
+- **Waiting on his approval to DELETE:** `~/GloomsOverlays/GloomsOverlays_Preview.lua` (the old
+  drawer) and `GloomsOverlays_Editor.lua`, both out of the TOC. **The Portraits addon is retired**
+  (its AddOns symlink removed 2026-09-29; the repo untouched) — what happens to the repo and its
+  public GitHub copy is his call.
+
+- **Built 2026-09-30 (second half), harness-checked:**
+  - **Texture Browser** (Hub `Media.lua`): sources Game Art ✓ (15,043) · Sheets ✓ · My Media ✓ ·
+    Favorites; search ✓; pixel sizes on My Media and in the catalogs ✓; grid lines over a stopped
+    sheet ✓; the freeze fix ✓ — untested: **remembered grids**, **dragging the scrollbars**, the 6:1
+    warning's wording.
+  - **gloomUI:** a group **On/Off** (the save bug fixed after his report — the FIX is untested in
+    game) · a new overlay starts at its **image's size** (untested in game).
+  - **Hub:** arrow keys move **one screen pixel** + `fine` dials ✓ ("that's better") · drag handles
+    are **corner brackets** ✓.
+  - **Unit Frames:** **Hide Blizzard's Cast Bar** (its own, not EUI's — untested in game, incl. Edit
+    Mode) · `[guild]` / `[title]` ✓.
+  - **Bars:** the **Slant / and Slant \ shapes** ✓ (widened 2026-10-04, item 24) — the **even-border
+    fix** (`growX`, recomputed for the new width) is untested in game · the spacebar shows as **`_`** ✓.
+
+**Read first:** `~/GloomsOverlays/CLAUDE.md` · the headers of `~/GloomsHub/Undo.lua` and
+`~/GloomsHub/Anchors.lua` · the TEXTURE BROWSER / ART LIST blocks in `~/GloomsHub/Media.lua` · the "THE FILL'S EDGE PIECES" comment in `NewBar`
+(`~/GloomsUnitFrames/GloomsUnitFrames.lua`) · FINDINGS §21's 2026-09-29/30 addendum
+
+---
+

@@ -100,6 +100,21 @@ function Media:VerifyFonts()
             warm[#warm + 1] = { FONT_PATH .. entry.file, size }
         end
     end
+    -- ★ EVERY FONT IN THE FONT LISTS, AT 10 (2026-10-11, the owner: "huge swaths
+    -- of NOTHING" in the font list on every fresh launch, fine after a /reload).
+    -- The tools' font dropdowns (UI.gList) draw each name in its own face at
+    -- size 10 — a size nothing warmed, and for the OTHER addons' fonts (BigWigs,
+    -- SharedMedia packs) no size at all. Warmed through UI.RegisterWarmPairs,
+    -- which only DRAWS: the font load-check below never names these, since a
+    -- face another addon registers is that addon's to keep valid.
+    local lsm = GetLSM()
+    if lsm and lsm.HashTable and GloomsHub.UI.RegisterWarmPairs then
+        local list = {}
+        for _, path in pairs(lsm:HashTable("font") or {}) do
+            if type(path) == "string" then list[#list + 1] = { path, 10 } end
+        end
+        GloomsHub.UI.RegisterWarmPairs(list)
+    end
     -- Warming runs AFTER registration now (it used to run just before it, in the
     -- same function; the two were split 2026-09-19) and reports which faces would not
     -- load — the only existence check the client permits (there is no

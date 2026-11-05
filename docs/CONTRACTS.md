@@ -485,7 +485,8 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     (21 ticks, the value's tick white, the box fills the rest), `UI.gColor(parent, {w, required, dot})`
     (checkbox + a color PILL, `UI.gPill`; `dot` keeps the small disc), `UI.gCheck(parent, label, get,
     set, size)`, `UI.gButton(parent, label, {w, h (15), pad (4), size (9), danger (coral at rest)})`.
-    `UI.gList` = the owner's Dropdown/Popup mock (sentence case; `upper = true` capitalizes); an
+    `UI.gList` = the owner's Dropdown/Popup mock (opens scrolled to `current`, 2026-10-08; a `font` row that
+    measures width 0 falls back to Sansation) (sentence case; `upper = true` capitalizes); an
     option's `font` draws its line in that face; a `divider` gets 4 of space each side. `UI.gField`
     exposes `.bg`. `UI.gSectionHead` has `:SetTitle(t)`.
   · **Disabled = `UI.G_DIM` (0.3)**, never hidden. Boxed text is NOT nudged (`UI.G_NUDGE` = 0).

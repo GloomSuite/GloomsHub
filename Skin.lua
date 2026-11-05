@@ -3913,7 +3913,7 @@ function UI.gList(anchor, options, current, onPick, opts)
   -- same text renders a little wider than the width it was given.
   local es = anchor and anchor:GetEffectiveScale() or 1
   fly:SetScale(es / UIParent:GetEffectiveScale())
-  local y, widest, shownH = 0, 0, 0
+  local y, widest, shownH, curY = 0, 0, 0, nil
   for i, opt in ipairs(options) do
     if opt.divider and i > 1 then y = y - GL_DIV end
     local row = fly.rows[i]
@@ -3941,8 +3941,16 @@ function UI.gList(anchor, options, current, onPick, opts)
     local lbl = tostring(opt.label or opt.value or "")
     UI.setFont(row.text, opt.font or FONT.sa, 10)
     row.text:SetText(opts.upper and lbl:upper() or lbl)
+    -- a font that can't draw its own name (added since the game last launched —
+    -- WoW loads fonts only at launch) would be a blank row: name it in ours
+    -- (the owner's font list, 2026-10-08)
+    if opt.font and lbl ~= "" and (row.text:GetStringWidth() or 0) < 1 then
+      UI.setFont(row.text, FONT.sa, 10)
+      row.text:SetText(opts.upper and lbl:upper() or lbl)
+    end
     widest = math.max(widest, row.text:GetStringWidth())
     row._cur = (current ~= nil and opt.value == current)
+    if row._cur then curY = -y end
     row._off, row._danger, row._hot = opt.disabled and true or false, opt.danger, false
     row.rule:SetShown((opt.divider and i > 1) and true or false)
     row:paintRow()
@@ -3958,7 +3966,12 @@ function UI.gList(anchor, options, current, onPick, opts)
   local w = math.max(math.ceil(widest) + 21, opts.minW or 0, (not opts.cursor and anchor and anchor:GetWidth()) or 0)
   fly.child:SetSize(w - 2, math.max(10, -y))
   fly:SetSize(w, shownH + 2 * GL_PAD)
-  fly.scroll:SetVerticalScroll(0)
+  -- ★ OPEN AT THE CURRENT CHOICE (the owner, 2026-10-08: a font far down the
+  -- long list opened at the top every time) — scrolled so it sits mid-list
+  local range = math.max(0, -y - shownH)
+  local to = curY and math.min(range, math.max(0, curY - shownH / 2 + GL_ROW_H / 2)) or 0
+  if fly.scroll.UpdateScrollChildRect then fly.scroll:UpdateScrollChildRect() end
+  fly.scroll:SetVerticalScroll(to)
   -- (The list lives on UIParent and wears the anchor's effective scale so it
   -- lines up with a scaled window — set at the top, before the measuring.)
   UI.gHairRefresh()   -- its lines are one pixel at the scale it now wears

@@ -2000,3 +2000,61 @@ Blizzard element: Unit Frames re-parents `PlayerCastingBarFrame` (Hide Blizzard'
 that off showed the meter. The owner flips it for the quest (a smarter filter was declined).
 - `OBSERVED` the same day, unrelated: BugSack's `ADDON_ACTION_FORBIDDEN … 'BugSack' … IsUserOAuthed()`
   comes from Blizzard's Settings panel (Social page) under taint — not a suite addon.
+
+
+## §33 — On a Mac, Command-click reaches an addon as a plain right-click ✅ `TESTED` 2026-10-06
+Probe button (`RegisterForClicks("AnyUp")`, the owner's client): Command-click and a real right-click printed
+identically — `RightButton false false false` (button, `IsMetaKeyDown`, Control, Alt). A key frame's OnKeyDown
+sees `LMETA` / `LALT`. `MODIFIER_STATE_CHANGED` reports `LMETA 1 / 0`.
+**`OBSERVED`:** a key frame never received Command's key-up during a Command-click (the flag stuck, plain clicks
+kept adding); tracking MODIFIER_STATE_CHANGED then failed too (the menu opened).
+**`SUSPECTED`, never tested:** WoW reports Command up just before the converted click (one extra 1/0 pair).
+Abandoned by the owner: BACKLOG "Not open". **KILLED:** ~~`IsMetaKeyDown()` is true during a Command-click~~.
+
+## §34 — A Cooldown Manager row set to "In Combat" is EMPTY out of combat ✅ `TESTED` 2026-10-10
+Edit Mode → Essential Cooldowns → Visibility = In Combat: the row's five active pool frames had
+`GetCooldownInfo() == nil` and were hidden, out of combat. GA's `Discover` walks those frames, so nothing on the
+row bound: `isCharge[185313]` nil with `maxCharges` 2 (only the BuffBar frame bound, `kind = buff`), and "At max"
+never appeared. Set to Always Visible (with Hide Blizzard CDM, which is alpha only): ✓ the owner.
+`C_CooldownViewer.GetCooldownViewerCategorySet` still lists the row (`36124 185313 185313`) — `/ga charges`
+reads that, so it looks healthy while the row is unbound.
+**KILLED:** ~~the buff entry overwrites `isCharge`~~ (only cooldown-kind frames set it) · ~~the cooldown entry
+has a different spell number~~ (the same 185313).
+
+## §35 — Blizzard's UI modes hide action bars and leave "Always Visible" bars behind ✅ `TESTED` 2026-10-15 (the cause) · fix `SUSPECTED`
+Symptom: every bar but bar 1 gone, "after dismounting", remount brought them back.
+- `TESTED` (`/gb mountprobe`, 2026-10-14): armed on foot, bar 2 already `shown: false`, `state: walking` — so
+  **not** the dismount. **KILLED:** ~~GB misses the mark when a bar is hidden at the moment of mounting~~ as the
+  cause (the dismount re-assert it prompted stays as a net).
+- `TESTED` (the stray-hide watch's chat line): `MainActionBar … Hidden by: Blizzard_UIModeManager.lua:103 < :23 <
+  Blizzard_UIModeUtil.lua:29 < Camera.lua:1150 …`. What the player was doing: unknown.
+- `TESTED` (2026-10-15, live, bars gone): `shown false · visible false · isShownExternal FALSE · state walking ·
+  gbhid nil · uiModeHid nil · parent UIParent shown`; `MultiBarBottomLeft:SetShown(true)` brought bar 2 back.
+  GB's show path obeyed `isShownExternal == false`, and the watch returned early on it, hence no chat line.
+- `SUSPECTED`: the UI mode's SetShown(false) is what left the mark. The last occurrence was never caught at the moment.
+- Fix: `applyBar` clears the mark on a vis = "show" bar outside vehicle / override / possess / pet battle / mount /
+  UI mode; a hide with the mark re-checks after 1 s; UI-mode hides are recognised by file name in `debugstack` (no
+  12.1 source on disk — `BlizzardInterfaceCode` predates it). **Not yet seen surviving a real occurrence.**
+
+## §36 — Aura latency: Player Power waited on a 0.2 s poll ✅ `TESTED` by reading · buffs `OBSERVED`
+`TESTED` (code): a Player Power load condition was re-checked only by the 0.2 s visibility poll. Now
+`UNIT_POWER_FREQUENT` filtered to the power tokens conditions name (harness: an ENERGY event 0 refreshes, COMBO_POINTS
+1). The owner hasn't reported how it feels.
+`OBSERVED` (the owner, 2026-10-08): buff / proc auras "feel" late. The code path is immediate (`OnActiveStateChanged`
+→ RefreshDisplays → SetShown, no fade); whether Blizzard's CDM itself lags is unproven. BACKLOG 28.
+
+## §37 — Blank stretches in font lists on a fresh launch `OBSERVED` · cause `SUSPECTED`
+`OBSERVED` (the owner, repeatedly): large gaps in Font dropdowns after a client restart, never after /reload; every
+font draws in its own face after that. Nothing added in weeks. **KILLED:** ~~fonts added since launch~~ (the owner) ·
+~~my width-0 fallback fixed it~~ (none fell back; it came back a day later).
+`SUSPECTED`: a cold (file, size) pair draws blank, per the warmer's own record: the rows draw at 10, a size the
+warmer never covered, and other addons' fonts were never warmed at all. Now `Media:VerifyFonts` queues every LSM font
+at 10 (harness: 22 of 22 queued). **The fresh-launch result was never reported.**
+
+## §38 — Soulstone Watch in a raid `OBSERVED` 2026-10-07
+One cast posted twice when cast on others (the code: `UNIT_SPELLCAST_SUCCEEDED` for `player` AND `raidN`, each counted
+as a cast). Once, `ADDON_ACTION_BLOCKED` on the send, with one message seen. `SUSPECTED`: the second copy was the
+blocked one; the combat-timing alternative is unproven — he recalled no pull. `OBSERVED`: "the target can't be read
+here" on a pre-pull self-cast, so buffs read HIDDEN at least once in a raid instance.
+⚠ `pcall(SendChatMessage)` cannot catch a blocked call; its window can say "posted" for one that wasn't.
+
