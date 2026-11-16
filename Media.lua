@@ -123,10 +123,11 @@ function Media:VerifyFonts()
     -- filename or a deleted font sits in SavedVariables forever.
     --
     -- ⚠ This is a WARNING ONLY — registration below is deliberately NOT made
-    -- conditional on it. WoW indexes fonts at launch, so a font added this
-    -- session (file present, restart pending) may well fail the probe while
-    -- being perfectly valid. Skipping registration on that signal would
-    -- silently drop a good font, which is worse than the problem being fixed.
+    -- conditional on it. A font whose first draw fails may still be perfectly
+    -- valid (the cold-draw case below), so skipping registration on that signal
+    -- would silently drop a good font, which is worse than the problem being fixed.
+    -- (The old "fonts load at launch, restart pending" reasoning was wrong — a
+    -- /reload loads a new font fine; the owner, 2026-11-04. LESSONS has the record.)
     --
     -- ★ THE VERDICT IS NOW THE SECOND DRAW, NOT THE FIRST (2026-09-08, lib
     -- MINOR 8). The first draw of a COLD font reliably fails — that is the very
@@ -141,7 +142,7 @@ function Media:VerifyFonts()
             if stillDead[FONT_PATH .. entry.file] then
                 GloomsHub:Print("|cffff9900Font \"" .. entry.name .. "\" did not load|r — GloomsHub\\Fonts\\"
                     .. entry.file .. " is missing or misnamed. Check the filename, or remove it in the Media tab. "
-                    .. "(If you only just added it, restart WoW first — fonts load at launch.)")
+                    .. "(If you only just added it, /reload once more.)")
             end
         end
     end)
@@ -1696,7 +1697,7 @@ local SPECS = {
         id = "fonts", title = "Fonts", addLabel = "Add Font",
         namePh = "My Font", filePh = "MyFont.ttf",
         hint = "The file's name in GloomsHub\\Fonts\\ — .ttf only (WoW can't use .otf).",
-        note = "Registered into LibSharedMedia, so every addon that lists fonts can use them. Put the .ttf into GloomsHub\\Fonts\\ first. A new font needs a full restart of the game — WoW loads fonts at launch, so /reload isn't enough.",
+        note = "Registered into LibSharedMedia, so every addon that lists fonts can use them. Put the .ttf into GloomsHub\\Fonts\\ first. Then /reload — that is enough; no restart needed.",
         empty = "No fonts yet — add one above.",
         getEntries = function() return GloomsHubDB and GloomsHubDB.fonts or {} end,
         add = function(n, f) return Media:AddFont(n, f) end,

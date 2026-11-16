@@ -735,8 +735,13 @@ auras still PLAY a sound they saved (they keep the path), which hides it. Re-run
   `.ogg` files into `GloomsHub\Sounds\`, restarted the client, saw nothing, and reasonably assumed
   it was broken — because the instruction to copy them in omitted that a rebuild step existed.
   ⚠ **A generated manifest ships EMPTY** (his media is git-ignored). Never commit a populated one.
-- **★ ONE EXCEPTION — FONTS.** WoW loads font files at LAUNCH, so a new `.ttf` genuinely needs a
-  full restart. The Media tab's Fonts warning is CORRECT — do not "fix" it.
+- ~~**★ ONE EXCEPTION — FONTS.** WoW loads font files at LAUNCH, so a new `.ttf` genuinely needs a
+  full restart. The Media tab's Fonts warning is CORRECT — do not "fix" it.~~
+  **★ NOT TRUE — corrected by the owner 2026-11-04. A `/reload` loads new fonts too.** `OBSERVED`:
+  NiceDamage (three fonts the client had never loaded) was copied into the WoW Forever AddOns folder
+  while the client was running; he `/reload`ed and the fonts drew — "as per usual". **Do not tell him
+  to restart for fonts.** Still carrying the old claim, to be cleaned up: the Media tab's Fonts note
+  and the "restart WoW first" chat line (`Media.lua`), CONTRACTS §4, the Bars and Overlays `CLAUDE.md`.
 - **Textures are NOT an exception** — verified 2026-07-25 by replacing two in place; a bare
   `/reload` picked up the new art, which is the harder case than a brand-new file.
 - **★ DISABLING an addon does not make its media missing.** Unchecking it in the addon list stops

@@ -34,7 +34,10 @@ local SKIP = { ["Libs/LibDataBroker-1.1/LibDataBroker-1.1.lua"] = true, ["Libs/L
                ["MinimapButton.lua"] = true }
 local function loadAddon(name)
   local dir = HOME .. "/" .. name
-  for _, f in ipairs(tocFiles(dir, name .. ".toc")) do
+  -- TOC_OVERRIDE = { GloomsBars = "GloomsBars_Camelot.toc" } loads a flavor manifest instead
+  -- (set it before dofile: luajit -e 'TOC_OVERRIDE={GloomsBars="GloomsBars_Camelot.toc"}' sweep-v3.lua).
+  local toc = (TOC_OVERRIDE and TOC_OVERRIDE[name]) or (name .. ".toc")
+  for _, f in ipairs(tocFiles(dir, toc)) do
     if f:match("%.lua$") and not SKIP[f] then
       local chunk, err = loadfile(dir .. "/" .. f)
       if not chunk then print("LOAD ERROR " .. name .. "/" .. f .. ": " .. err)

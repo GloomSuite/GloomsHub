@@ -1517,7 +1517,7 @@ local function profileActions(api, after)
   -- character you are on, who is always on the active profile.
   local function others(name)
     if not api.users then return nil end
-    local me, out = UnitName("player"), {}
+    local me, out = (GloomsHub.CharacterKeyName and GloomsHub.CharacterKeyName()) or UnitName("player"), {}
     for _, key in ipairs(api.users(name) or {}) do
       local char = tostring(key):match("^%s*([^-]-)%s*%-") or tostring(key)
       if char ~= me then out[#out + 1] = char end

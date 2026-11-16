@@ -19,6 +19,32 @@ function GloomsHub:Print(msg)
     print("|cff936bffGloom's Hub|r: " .. msg)
 end
 
+-- ★ WHICH GAME, and WHO IS THIS CHARACTER (2026-11-16). WoW Forever (client
+-- flavor "Camelot", Interface 16001) runs retail's UI code, and its characters
+-- carry a first AND a last name — but at PLAYER_LOGIN, when the tools bind a
+-- character, UnitName("player") hands back the FIRST name only (TESTED: the key
+-- "Gloomriven-…" was written at login while, in the world minutes later, UnitName,
+-- UnitFullName, GetUnitName and UnitPVPName ALL returned "Gloomriven Candlewick").
+-- Bars, Auras and Unit Frames key every per-character binding on that name, so
+-- two "Gloom …" on one realm (the owner has two) would silently share one profile
+-- — and a key built from the full name would differ between a cold login and a
+-- /reload. CharacterKeyName is the name those keys use: retail = UnitName,
+-- unchanged; Forever = first name + the character's own ID, the same at any moment.
+GloomsHub.IS_FOREVER = (WOW_PROJECT_ID ~= nil and WOW_PROJECT_CAMELOT ~= nil and WOW_PROJECT_ID == WOW_PROJECT_CAMELOT)
+function GloomsHub.CharacterKeyName()
+    local name = UnitName("player")
+    if not GloomsHub.IS_FOREVER or not name then return name end
+    -- The character's own ID (the GUID's tail) tells alts apart; it never changes.
+    local guid = UnitGUID and UnitGUID("player")
+    local tail = guid and guid:match("%-(%x+)$")
+    return tail and (name .. " #" .. tail:sub(-4):upper()) or name
+end
+-- What a key built before 2026-11-16 used for the name (the first name alone
+-- in Forever; identical to CharacterKeyName in retail). A tool that finds a
+-- binding under the old key and none under the new adopts it ONCE — the first
+-- character to log in — and drops the old key, so a later alt starts fresh.
+function GloomsHub.LegacyCharacterKeyName() return UnitName("player") end
+
 -- ============================================================
 -- One-time migration from StoneTweaks (NON-DESTRUCTIVE)
 -- COPY — never move — so StoneTweaksDB stays untouched and

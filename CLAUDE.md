@@ -171,9 +171,10 @@ the ledger recorded two suspicions in the same confident voice as its measuremen
    "silence is not evidence" section of [docs/LESSONS.md](docs/LESSONS.md) — it has cost real time
    four separate times.
 4. **★ `/reload` is enough, including for NEW files.** The old "new files → full client restart"
-   rule is RETIRED; it cost him restarts he never needed. **The one exception is FONTS** — WoW loads
-   them at launch, so a new `.ttf` needs a real restart. Textures do not. SavedVariables are written
-   on `/reload`, so they are never a reason to restart either.
+   rule is RETIRED; it cost him restarts he never needed. **FONTS ARE NOT AN EXCEPTION** — the old
+   "a new `.ttf` needs a real restart" line was wrong (the owner, 2026-11-04: new fonts drew after a
+   plain `/reload`, "as per usual"; LESSONS has the record). **Never tell him to restart for fonts.**
+   SavedVariables are written on `/reload`, so they are never a reason to restart either.
 5. **GB is the UI reference for the suite, not GA.**
 6. **US spelling** in user-visible text ("Favorites", "color").
 7. **Never rush toward closing a session.** He works structured and catalog-first.
