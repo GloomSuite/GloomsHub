@@ -6,11 +6,34 @@
 > **Closed items do not live here.** They move to [ARCHIVE.md](ARCHIVE.md) the moment they close.
 > If this file grows past ~80 lines, something is being kept that should have been archived.
 
-**Last updated:** 2026-11-04 (records the 2026-10-06 → 15 work: multi-select edits, charged points, two new
-cooldown triggers, the vanishing bars, fonts. **Next: ask whether the bars have vanished again.**)
+**Last updated:** 2026-11-25 (the 2026-11-04 → 20 WoW Forever work is DONE and the owner has since dropped
+Forever — ARCHIVE; item 29 is the next job. **Next: item 29, the Evoker's empowered casts.** Also still
+unanswered: have the bars vanished again?)
 ---
 
 ## Open items
+
+### 29 · Empowered casts (Evoker) have no indication on the cast ring / bar ★ START HERE
+**Repo:** `~/GloomsUnitFrames` · **Size:** medium · **Evidence:** the owner's description only (2026-11-25); nothing
+looked at in game yet. He is playing his Evoker more, so this matters.
+
+The owner's words: *"some abilities are channeled but can be ended earlier than the full duration to modify the
+results … there's no indication in the addon on the castbar for this kind of ability cast/channel."* That is an
+**EMPOWERED cast** (Fire Breath, Eternity Surge, Upheaval …): the game reports it as a CHANNEL whose
+`UnitChannelInfo` tenth return `numStages` is > 0; each stage has its own length (`GetUnitEmpowerStageDuration(unit,
+stage)`), plus a hold-at-max window (`GetUnitEmpowerHoldAtMaxTime`); the events are `UNIT_SPELLCAST_EMPOWER_START /
+UPDATE / STOP`. Blizzard's bar draws the stage DIVIDERS and lights each stage as it is reached. Today `CastState`
+treats it as a plain channel, so the ring / bar drains with nothing marking the stages or which one is held.
+Decide with him what the indication should be (dividers on the ring / bar like Blizzard's · a color per stage ·
+a text piece naming the stage) before building. Remember 12.1's secrecy rules for a TARGET's cast (FINDINGS §21);
+the player's own stage durations should be plain numbers — check first.
+
+**Read first:** `~/GloomsUnitFrames/CLAUDE.md` · `CastState` and the cast section around it in
+`~/GloomsUnitFrames/GloomsUnitFrames.lua` (~line 2720) · Blizzard's
+`_retail_/BlizzardInterfaceCode/Interface/AddOns/Blizzard_UIPanels_Game/Mainline/CastingBarFrame.lua` — the
+`UnitChannelInfo` call with `numStages` (~line 419), `AddStages` (~line 1022) and the empower events · FINDINGS §21
+
+---
 
 ### 27 · The 2026-10-06 → 15 builds — waiting on the owner's use ★ START HERE
 **Repo:** `~/GloomsAuras` · `~/GloomsOverlays` · `~/GloomsBars` · `~/GloomsHub` · `~/SoulstoneWatch` (no git) ·
@@ -34,7 +57,8 @@ scripts); ✓ = the owner confirmed in game. Everything else is UNTESTED in game
 - **Bars:** the lime macro dot ✓.
 - **Hub:** dropdowns open at the current choice (unconfirmed) · a font that can't draw its name falls back to
   Sansation · **every LSM font warmed at 10** — **the fresh-launch result was never reported** (FINDINGS §37).
-- **All six TOCs + Soulstone Watch declare `120100, 120105`** (12.1.5).
+- **All six TOCs + Soulstone Watch declare `120100, 120105`** (12.1.5). (Five of the suite TOCs also carry
+  `16001`, WoW Forever — see ARCHIVE; Forever is dropped, the line is harmless.)
 - **Soulstone Watch:** one cast no longer posts twice (the same caster within 2 s) — untested in a group; its
   raid-night test: buffs read HIDDEN at least once in a raid; the "hold a post until combat ends" fix was
   offered, not built. FINDINGS §38.
@@ -183,6 +207,16 @@ from him; each is: drop the files in, run the script, paste the rows.
 
 > Full records in [ARCHIVE.md](ARCHIVE.md). Only what a session might realistically re-raise.
 
+- **WoW Forever** — **DROPPED by the owner 2026-11-25** ("I'm going to stop playing Forever"). The support built
+  2026-11-04 → 20 stays in the code, gated on `GloomsHub.IS_FOREVER` / `GB.IS_FOREVER`, inert in retail; the
+  Forever install (`_forever_`, symlinks, copied settings) is left as it is. Record in ARCHIVE. Do not extend it,
+  do not strip it.
+- **The glow's outer bloom hiding under neighboring buttons on the slanted shapes (Bars)** — **DROPPED by the owner
+  2026-11-20**. It is by design (the bloom is drawn UNDER the button); lifting the glowing button's frame level was
+  tried and reverted the same day — `SetFrameLevel` is PROTECTED in combat (FINDINGS §42). The only real fix is
+  hollow outer art per silhouette in the Hub; he said "drop it". The note at the top of `Glows.lua`'s reconciler says why.
+- **Probing retail for the same `flyoutDirection` taint Forever showed** (FINDINGS §39's retail `SUSPECTED`) — the owner,
+  2026-11-16: "I don't want to address now." Moot unless retail ever shows Edit Mode / flyout taint errors.
 - **Command-click to add to a multi-select** — **ABANDONED by the owner 2026-10-06** ("I'll just learn to use
   option"). WoW turns it into a plain right-click (FINDINGS §33). Three attempts, removed. Don't retry.
 - **Stack thresholds (a bar / text color at N, "show at 1 or less", a Min Stacks layering trick)** — the count

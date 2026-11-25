@@ -30,7 +30,11 @@ Frames untagged. Versions drift by design — do not "level" them. What's left i
 [BACKLOG.md](BACKLOG.md).
 
 **★ Patch 12.1 went LIVE on 2026-08-11, and every suite TOC declares `## Interface: 120100, 120105` (12.1.5 added 2026-10-15)**
-(bumped 2026-08-12; the number was read off the installed addon set, not assumed).
+(bumped 2026-08-12; the number was read off the installed addon set, not assumed). **WoW Forever (client 1.60.1,
+Interface `16001`, `WOW_PROJECT_CAMELOT`) was supported 2026-11-04 → 20 — Hub, Auras, Gloom's UI and Unit Frames
+add `16001` to their TOCs, Bars has a `GloomsBars_Camelot.toc` — and DROPPED by the owner on 2026-11-25** (he stopped
+playing it). The code stays, gated on `GloomsHub.IS_FOREVER` / `GB.IS_FOREVER` and inert in retail; the Forever
+install stays as it is. The record is in [ARCHIVE.md](ARCHIVE.md); the evidence in FINDINGS §39–§42.
 
 **Known live bugs: the vanishing action bars have a fix not yet seen surviving a real occurrence (FINDINGS §35, BACKLOG 27); otherwise none the owner has reported.** (The Quick Keybind concern that
 used to sit here was CLOSED as not a GB bug — FINDINGS §8 — and the two bugs found since, FINDINGS
@@ -55,6 +59,10 @@ of it.
 
 ## Locked decisions — do not reopen
 
+- **Character identity comes from the Hub** (2026-11-16 → 20, CONTRACTS §9): Bars, Auras and Unit Frames key every
+  per-character binding on `GloomsHub.CharacterKeyName()` + `GloomsHub.CharacterRealm()` and adopt older spellings
+  through `GloomsHub.AdoptCharacterBinding`. In retail that is exactly the old `UnitName` + `GetRealmName()` key — nothing
+  moved for a retail character. No tool builds its own key again.
 - **Gloom's UI = Overlays + Portraits, in the `GloomsOverlays` FOLDER** (2026-09-29, the owner): the
   folder and `VibeOverlayDB` never renamed; a portrait is an overlay TYPE; the old portrait settings
   were not carried over. Groups attach to other tools' frames through the Hub's ANCHORS (CONTRACTS §2).
@@ -287,8 +295,9 @@ collision.
   copy of the pre-rename Overlays source; git never held it) and
   `~/Desktop/StoneTweaks-retired-2026-07-24` (the rollback for the Hub's media half). Details in
   [ARCHIVE.md](ARCHIVE.md).
-- **Every suite addon points at its normal repo on BOTH the retail and PTR clients**, so an edit is
-  live on both. Remember that before editing during PTR work.
+- **Every suite addon points at its normal repo on the retail, PTR AND WoW Forever clients** (the
+  `_forever_` symlinks were made 2026-11-04 and left in place when Forever was dropped), so an edit is
+  live on all of them. Remember that before editing during PTR work.
 - **★ `~/GloomsBars/IconsHD/` is the ONLY copy of the owner's hand-authored action-bar icons.** It is
   gitignored by design (his art must never enter a public repo), so git holds nothing and deleting
   the folder destroys the work permanently. `IconsManifest.lua` IS tracked, but it is only an index

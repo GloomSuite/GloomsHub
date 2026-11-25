@@ -633,6 +633,20 @@ auras still PLAY a sound they saved (they keep the path), which hides it. Re-run
 
 ## WoW client behaviour
 
+- **★★ PROBE AN IDENTITY API BEFORE BUILDING A KEY ON IT — and a wait with a fallback that does the WRONG
+  thing is worse than no wait.** 2026-11-20 (FINDINGS §40): three fixes in a row assumed Forever would hand
+  over the realm name, then the full name, "a moment after login". Neither comes through the call retail
+  uses: `GetRealmName()` is `""` for a whole cold-login session, `UnitName` is the first name forever, the
+  full name is behind `GetUnitName(unit, true)`. The 60 s wait's fallback bound the owner's character under a
+  junk key and created a profile named after it — the one thing the fix existed to prevent. One `/run`
+  printing the candidates at the start would have replaced the afternoon. Rule: when a key or a name is
+  built from a client API in a NEW client, ask the owner for one probe FIRST; never fall back to the
+  unready value — bind only on what cannot change (the GUID), and let the cosmetic part wait.
+- **★ `SetFrameLevel` on an action button is PROTECTED in combat** (FINDINGS §42, `ADDON_ACTION_BLOCKED`).
+  Anything about a secure button that must move in combat lives on our own frames.
+- **★ A behavior "that worked yesterday" may have worked only on a `/reload`.** Forever's cold login and its
+  `/reload` are different worlds (FINDINGS §40); the 2026-11-04 bindings looked right for two weeks because
+  every check was a `/reload`. When a fix touches login, make the owner QUIT AND RELAUNCH once.
 - **★ `FontString:SetText` RAISES on a string that never had a font ("Font not set").** A readout built lazily and
   never shown has none; clearing it with `SetText("")` threw on panel close (BugSack, 2026-10-08). The harness doesn't
   enforce this. Guard with `fs:GetFont()`.
@@ -740,8 +754,8 @@ auras still PLAY a sound they saved (they keep the path), which hides it. Re-run
   **★ NOT TRUE — corrected by the owner 2026-11-04. A `/reload` loads new fonts too.** `OBSERVED`:
   NiceDamage (three fonts the client had never loaded) was copied into the WoW Forever AddOns folder
   while the client was running; he `/reload`ed and the fonts drew — "as per usual". **Do not tell him
-  to restart for fonts.** Still carrying the old claim, to be cleaned up: the Media tab's Fonts note
-  and the "restart WoW first" chat line (`Media.lua`), CONTRACTS §4, the Bars and Overlays `CLAUDE.md`.
+  to restart for fonts.** The old claim was scrubbed from `Media.lua`, CONTRACTS §4 and the Bars and
+  Overlays `CLAUDE.md` (2026-11-16 / 25).
 - **Textures are NOT an exception** — verified 2026-07-25 by replacing two in place; a bare
   `/reload` picked up the new art, which is the harder case than a brand-new file.
 - **★ DISABLING an addon does not make its media missing.** Unchecking it in the addon list stops

@@ -2058,3 +2058,45 @@ blocked one; the combat-timing alternative is unproven — he recalled no pull. 
 here" on a pre-pull self-cast, so buffs read HIDDEN at least once in a raid instance.
 ⚠ `pcall(SendChatMessage)` cannot catch a blocked call; its window can say "posted" for one that wasn't.
 
+
+## §39 — WoW Forever: Gloom's Bars' own anchoring tainted Blizzard's `flyoutDirection` ✅ `TESTED` 2026-11-16 · retail `SUSPECTED`
+Forever (client 1.60.1, Interface `16001`, `WOW_PROJECT_ID == WOW_PROJECT_CAMELOT`) runs the 12.1.5 UI code, and there
+Bars' layout engine threw Edit Mode and `UpdateFlyout` errors in combat. `TESTED` (the taint log + an `issecurevariable`
+probe on every bar, three rounds): `bf:SetPoint` from the layout goes through `EditModeSystemMixin:SetPointOverride` →
+`EditModeManagerFrame:OnEditModeSystemAnchorChanged` → every bar's `UpdateSpellFlyoutDirection` writes
+`flyoutDirection` — insecurely, since the call began in the addon; so do Blizzard's `UpdateVisibility` → `UpdateActionBarLayout`
+(`snappedToFrame` on the right / pet bars) and `SetShown`. Every `ActionButton:UpdateFlyout` and Edit Mode pass then reads
+the tainted field. Fix (Forever only, `GB.IS_FOREVER`): anchor with `SetPointBase` / `ClearAllPointsBase`, never call
+`UpdateVisibility`, show with `ShowBase`, skip the release re-lay. The probe came back clean after the second pass.
+`SUSPECTED`: retail carries the same taint silently (the same code paths exist; retail may just never trip over it).
+The same probe in retail would decide it; the owner deferred it. **Also in Forever (both `TESTED` by use):** `/ga` crashed
+on `GetSpecializationInfo` (absent there; `GetNumSpecializations` exists) and Blizzard's Cooldown Manager viewers came
+back after every `/reload` (now re-hidden on `PLAYER_ENTERING_WORLD` and on any `SetAlpha` while hidden).
+
+## §40 — WoW Forever: what the client knows about the character, and when ✅ `TESTED` 2026-11-16 → 20
+Costly. Every claim below was proved by the owner's `/run` probes or by the save files; the wrong ones are struck.
+- `UnitName("player")` is the FIRST name only — **always**, not just at login ("Gloomriven"). ~~`UnitName` gives
+  "First Last" a moment after PLAYER_LOGIN~~ **KILLED 2026-11-20** (the probe on a cold login, in world: still "Gloomriven").
+  The full name is `GetUnitName("player", true)` or `UnitPVPName("player")` — "Gloomriven Candlewick". `UnitFullName` is
+  the first name too.
+- `GetRealmName()` is `""` for the WHOLE of a cold-login session (the name is "CAMWOW US1 Realm 3 PvE" — never shown
+  to a player; Forever has no realm choice). A `/reload` session has it at once. ~~It arrives a moment after login~~
+  **KILLED 2026-11-20**: a 60 s wait for it ran out, and the fallback bound the character under "Name #ID-" and made a
+  junk profile — the session's worst moment. The realm half of a key is now the realm ID in the GUID
+  (`Player-6921-…` → `6921`), there at PLAYER_LOGIN in both clients.
+- Two of the owner's characters share a first name ("Gloom"), so a key must carry the GUID tail (`Gloom #A7BD`).
+- The save files are the evidence trail: `_forever_/WTF/Account/AELWYN/SavedVariables/<Addon>.lua` plus the client's
+  own `.lua.bak` (one save back). Comparing `Forever Default` against both showed the owner's profile was never
+  overwritten; only the BINDING was wrong. Say that first next time.
+
+## §41 — The Selected glow stayed on after an auto-shot / auto-attack ended ✅ `TESTED` 2026-11-16, fixed
+Seen in Forever on Shoot, the same path in retail. Blizzard clears the checked state inside `UpdateState`, which runs
+from many paths, but Bars re-read `GetChecked` only on `ACTIONBAR_UPDATE_STATE` (and the pet / stance events). The
+probe: `HasAlert` false, `IsSpellOverlayed` nil, `GetChecked()` false — and the gold glow still up. Fix: `hooksecurefunc(btn,
+"UpdateState")` re-reads the checked state right after Blizzard writes it (`Glows.lua`, both clients). Confirmed by the owner.
+
+## §42 — `SetFrameLevel` on an action button is a PROTECTED call in combat ✅ `TESTED` 2026-11-20
+`ADDON_ACTION_BLOCKED … 'ActionButton2:SetFrameLevel()'` the first time a proc fired in combat after the glow started
+lifting the glowing button above its neighbors. Reverted the same day. So: a button's frame level is fixed for us
+once combat starts, exactly like its anchors — anything that must change in combat has to live on OUR frames, not the
+button. The outer bloom therefore stays under overlapping neighbors (BACKLOG "Not open").

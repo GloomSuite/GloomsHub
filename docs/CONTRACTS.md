@@ -408,8 +408,9 @@ same tables. Consumers: **GB since Phase C, GA since Phase D, Overlays since Pha
     it, this is the **only existence check the client permits**: WoW exposes no filesystem API,
     so a failed draw is the one way to learn a saved filename is a typo or its file is gone.
     `Media.lua` uses it to name a broken catalog entry in chat. ⚠ **Do not gate LSM registration
-    on it** — a font added this session with a restart pending may fail the probe while being
-    perfectly valid (fonts load at launch), and dropping a good font is worse than the warning.
+    on it** — a font added this session can fail its first probe while being perfectly valid (the
+    owner, 2026-11-04: a `/reload` is enough for new fonts, no restart), and dropping a good font is
+    worse than the warning.
   - **`UI.grid(parent, yTop, opts?)` → the TWO-COLUMN placer (MINOR 9).** The owner, 2026-09-19:
     EUI "compacts the settings panels into dropdowns and side-by-side display, whereas you tend to
     just stack things endlessly." `g:cell(h, build)` → a half-width Frame (two per line; a
@@ -838,3 +839,27 @@ UI.WarmFonts(extraPairs, onVerified)         -- the Hub calls this ONCE at PLAYE
   the trustworthy answer, and the only one that should reach the user. FINDINGS §5.
 - ⚠ **Registration is never gated on either result.** Silently dropping a good font is worse than
   the false warning this replaced.
+
+
+## 9. Character identity (GloomsHub owns) — **NEW 2026-11-16 → 20**
+Built for WoW Forever (dropped 2026-11-25; the code stays) — in retail every call below collapses to what the
+tools did before, so a retail character's key and profile names are unchanged. FINDINGS §40 has the evidence.
+```lua
+GloomsHub.IS_FOREVER                    -- WOW_PROJECT_ID == WOW_PROJECT_CAMELOT
+GloomsHub.CharacterKeyName()            -- retail: UnitName. Forever: "First #TAIL" (the GUID's last 4 hex) — alts share first names
+GloomsHub.CharacterRealm()              -- retail: GetRealmName(). Forever: the realm ID in the GUID ("6921") — GetRealmName is "" on a cold login
+GloomsHub.AdoptCharacterBinding(tbl, sep, valid)
+                                        -- ONE call at login per tool: key = KeyName..sep..Realm; adopts a binding held under
+                                        --   the pre-2026-11-16 key or (Forever) any other realm spelling, prefers the one `valid`
+                                        --   accepts, drops the old keys; returns the key. Retail: a no-op.
+GloomsHub.DefaultProfileName()          -- the profile a tool CREATES for a new character: retail "Name - Realm", Forever "First Last"
+GloomsHub.CharacterFullName()           -- retail UnitName; Forever GetUnitName(unit, true) (UnitName is the first name only)
+GloomsHub.CharacterKeyReady()           -- is the full name known? retail: always
+GloomsHub.WhenCharacterKeyReady(fn)     -- fn now if ready, else on a 0.2 s ticker, at most 10 s then anyway — ONLY for naming
+GloomsHub.FullNameFor(cur, exists)      -- Forever: the full name to RENAME an auto-named profile `cur` to, or nil
+GloomsHub.LegacyCharacterKeyName()      -- the pre-2026-11-16 name half (first name)
+```
+Rules: **a BINDING never waits** — `CharacterKeyName` and `CharacterRealm` are complete at PLAYER_LOGIN in both clients;
+only the NAME of a brand-new profile (and the rename of an auto-named one) goes through `WhenCharacterKeyReady`.
+Consumers: Bars (`GB:CharKey`, `Core.lua` PLAYER_LOGIN), Auras (`CharKey`, `SetupActiveProfile`), Unit Frames
+(`GU:CharKey`, PLAYER_LOGIN). Each guards with `GloomsHub and GloomsHub.X and`, so no `SKIN_NEEDS` bump.

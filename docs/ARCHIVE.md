@@ -20,6 +20,34 @@
 ---
 
 
+# WoW Forever support — 2026-11-04 → 20 — DONE, then DROPPED by the owner 2026-11-25
+
+WoW Forever launched 2026-11-04 (client 1.60.1, Interface `16001`, flavor "Camelot", `WOW_PROJECT_ID ==
+WOW_PROJECT_CAMELOT`; the 12.1.5 UI code; secret values apply more broadly; no `GetSpecializationInfo`; action bars
+are enabled in Options, not Edit Mode). The owner asked whether the suite would run there, then had it set up:
+symlinks for the five tools in `/Applications/World of Warcraft/_forever_/Interface/AddOns/`, retail's Bars /
+Gloom's UI / Unit Frames / Hub settings copied into `_forever_/WTF/Account/AELWYN/SavedVariables/` (not Auras —
+"very much character/class/spec specific"), NiceDamage copied for its fonts. All five tools ran. What it took:
+- **Hub:** `16001` in the TOC; `IS_FOREVER`; the character-identity API (CONTRACTS §9); the harness takes
+  `TOC_OVERRIDE` and `UNIT_NAME_OVERRIDE` via `-e` so a Forever sweep runs beside the retail one.
+- **Bars:** `GloomsBars_Camelot.toc` (retail's manifest untouched); the layout engine's Forever-only anchoring
+  (FINDINGS §39 — the tainted `flyoutDirection`); the Selected glow fix (§41, both clients); `/gb mountprobe` guarded.
+- **Auras:** `16001`; the `/ga` spec guard; the Cooldown Manager re-hidden after `/reload` (§39); the keys.
+- **Gloom's UI:** `16001`. **Unit Frames:** `16001`; the keys.
+- **The character-key saga (§40):** first names shared by alts → the GUID tail in the key (11-16); the realm name
+  absent on a cold login → the GUID's realm ID (11-20); the full name behind `GetUnitName(unit, true)` → auto-named
+  profiles rename to "First Last" and new ones are created with it. Two misfires on 11-20 bound the owner under
+  junk keys and created junk profiles ("Gloomriven #9540 - ", "Gloomriven"); his real profiles were never touched
+  (verified against the client's `.bak` and retail). The junk cleans itself up at login. He deleted the leftover
+  Auras entries by hand.
+- **Not done, on purpose:** the retail `flyoutDirection` probe (deferred, then moot); the outer bloom under
+  neighboring slanted buttons (dropped — §42).
+- **Dropped 2026-11-25:** the owner stopped playing Forever. Everything above stays in the code, gated; the Forever
+  install is left as it is. Nothing to maintain unless he returns to it.
+
+---
+
+
 # BACKLOG item 21 — the texture browser, and how assets get in — CLOSED 2026-09-30, owner-QA'd
 
 Opened as a discussion; the owner found the browser "doesn't do anything" beyond loading a typed

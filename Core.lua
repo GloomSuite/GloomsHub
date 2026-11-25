@@ -31,9 +31,26 @@ end
 -- /reload. CharacterKeyName is the name those keys use: retail = UnitName,
 -- unchanged; Forever = first name + the character's own ID, the same at any moment.
 GloomsHub.IS_FOREVER = (WOW_PROJECT_ID ~= nil and WOW_PROJECT_CAMELOT ~= nil and WOW_PROJECT_ID == WOW_PROJECT_CAMELOT)
-function GloomsHub.CharacterKeyName()
+-- ★ The FIRST name, always: in Forever UnitName("player") is "First" alone,
+-- and a key must not depend on which spelling it got.
+local function firstName()
     local name = UnitName("player")
-    if not GloomsHub.IS_FOREVER or not name then return name end
+    return name and name:match("^%S+") or name
+end
+-- The FULL name. Retail: UnitName. Forever (TESTED 2026-11-20, the owner's
+-- probe on a cold login): UnitName and UnitFullName give "Gloomriven" only;
+-- GetUnitName(unit, true) and UnitPVPName give "Gloomriven Candlewick".
+local function fullName()
+    if not GloomsHub.IS_FOREVER then return UnitName("player") end
+    local name = (GetUnitName and GetUnitName("player", true)) or (UnitPVPName and UnitPVPName("player"))
+    if name and name ~= "" then return name end
+    return UnitName("player")
+end
+GloomsHub.CharacterFullName = fullName
+function GloomsHub.CharacterKeyName()
+    if not GloomsHub.IS_FOREVER then return UnitName("player") end
+    local name = firstName()
+    if not name then return nil end
     -- The character's own ID (the GUID's tail) tells alts apart; it never changes.
     local guid = UnitGUID and UnitGUID("player")
     local tail = guid and guid:match("%-(%x+)$")
@@ -43,7 +60,101 @@ end
 -- in Forever; identical to CharacterKeyName in retail). A tool that finds a
 -- binding under the old key and none under the new adopts it ONCE — the first
 -- character to log in — and drops the old key, so a later alt starts fresh.
-function GloomsHub.LegacyCharacterKeyName() return UnitName("player") end
+function GloomsHub.LegacyCharacterKeyName()
+    if not GloomsHub.IS_FOREVER then return UnitName("player") end
+    return firstName()
+end
+-- The realm half of a character key. Retail: GetRealmName(). Forever: the realm
+-- ID inside the player GUID ("Player-6921-03EC9540" → "6921"), because
+-- GetRealmName() is "" for the WHOLE of a cold-login session there (TESTED
+-- 2026-11-20: a 60 s wait for it never ended; a /reload has it at once) and a
+-- key must be the same on both. The GUID is there at PLAYER_LOGIN in either.
+function GloomsHub.CharacterRealm()
+    local realm = GetRealmName()
+    if not GloomsHub.IS_FOREVER then return realm end
+    local guid = UnitGUID and UnitGUID("player")
+    local id = guid and guid:match("^Player%-(%d+)%-")
+    return id or ((realm ~= nil and realm ~= "") and realm or nil)
+end
+-- Bind this character once, under its current key, in a tool's binding table
+-- (`tbl[key] = profileName`), adopting what older keys hold:
+--   · the pre-2026-11-16 key (first name, no ID), and
+--   · in Forever, any key with this character's name + ID but another realm
+--     spelling — the realm NAME of a /reload session, or the EMPTY realm of a
+--     cold login (both 2026-11-20) — preferring the one whose profile `valid`
+--     accepts and, among those, the longest key (a named realm over an empty one).
+-- The old keys are dropped. Returns the key. Retail: the legacy key IS the key,
+-- the scan is Forever-only, so this is a no-op there.
+function GloomsHub.AdoptCharacterBinding(tbl, sep, valid)
+    local name, realm = GloomsHub.CharacterKeyName(), GloomsHub.CharacterRealm()
+    local key = (name or "?") .. sep .. (realm or "?")
+    if type(tbl) ~= "table" then return key end
+    local best, bestKey
+    local function consider(k)
+        if k == key or tbl[k] == nil then return end
+        local ok = (not valid) or valid(tbl[k])
+        if ok and (not bestKey or #k > #bestKey) then best, bestKey = tbl[k], k end
+    end
+    consider(((GloomsHub.LegacyCharacterKeyName() or "?") .. sep .. (GetRealmName() or "?")))
+    if GloomsHub.IS_FOREVER and name then
+        local prefix = name .. sep
+        for k in pairs(tbl) do
+            if type(k) == "string" and k ~= key and k:sub(1, #prefix) == prefix then consider(k) end
+        end
+    end
+    if bestKey then
+        if tbl[key] == nil or not ((not valid) or valid(tbl[key])) then tbl[key] = best end
+        -- drop every old spelling of this character
+        tbl[bestKey] = nil
+        if GloomsHub.IS_FOREVER and name then
+            local prefix = name .. sep
+            for k in pairs(tbl) do
+                if type(k) == "string" and k ~= key and k:sub(1, #prefix) == prefix then tbl[k] = nil end
+            end
+        end
+    end
+    return key
+end
+-- The name a tool gives the profile it CREATES for a new character. Retail:
+-- "Name - Realm", the convention since Auras. Forever: the full "First Last" —
+-- one realm, so the realm says nothing, and the ID is bookkeeping for the key.
+function GloomsHub.DefaultProfileName()
+    local name = fullName()
+    if not name then return nil end
+    if GloomsHub.IS_FOREVER then return name end
+    return name .. " - " .. (GetRealmName() or "?")
+end
+-- Forever: a profile a tool auto-named for this character before 2026-11-20
+-- ("First - Realm", "First #ID - Realm", "First #ID - " or "First") is renamed
+-- to the full "First Last" the first time that name is known (the owner: "I
+-- just want it to be the character name"). Returns the new name when `cur` is
+-- such a name and nothing else is called that yet, else nil. Retail: nil.
+function GloomsHub.FullNameFor(cur, exists)
+    if not GloomsHub.IS_FOREVER or type(cur) ~= "string" then return nil end
+    local full = fullName()
+    if not (full and full:find(" ", 1, true)) or cur == full or (exists and exists(full)) then return nil end
+    local first, keyed = GloomsHub.LegacyCharacterKeyName(), GloomsHub.CharacterKeyName()
+    if not (first and keyed) then return nil end
+    if cur == first or cur:sub(1, #first + 3) == first .. " - " or cur:sub(1, #keyed + 3) == keyed .. " - " then return full end
+    return nil
+end
+-- Is the full name known yet? Retail: always. Forever: fullName() above, which
+-- may lag PLAYER_LOGIN by a moment, so a tool waits at most 10 s and then goes
+-- on; only the NAME of a brand-new profile (or the rename of an auto-named one)
+-- depends on it — the key never does (see CharacterRealm).
+function GloomsHub.CharacterKeyReady()
+    if not GloomsHub.IS_FOREVER then return true end
+    local name = fullName()
+    return name ~= nil and name:find(" ", 1, true) ~= nil and UnitGUID("player") ~= nil
+end
+function GloomsHub.WhenCharacterKeyReady(fn)
+    if GloomsHub.CharacterKeyReady() then fn() return end
+    local ticks, ticker = 0, nil
+    ticker = C_Timer.NewTicker(0.2, function()
+        ticks = ticks + 1
+        if GloomsHub.CharacterKeyReady() or ticks >= 50 then ticker:Cancel(); fn() end
+    end)
+end
 
 -- ============================================================
 -- One-time migration from StoneTweaks (NON-DESTRUCTIVE)

@@ -165,7 +165,7 @@ function GetInventoryItemID() return nil end
 function UnregisterStateDriver() end
 function RegisterUnitWatch() end
 function UnitExists() return true end
-function UnitName() return "Gloombound" end
+function UnitName() return UNIT_NAME_OVERRIDE or "Gloombound" end   -- UNIT_NAME_OVERRIDE via -e: a Forever full name
 function GetRealmName() return "Stormrage" end
 function GetNormalizedRealmName() return "Stormrage" end
 function UnitClass() return "Rogue", "ROGUE", 4 end
